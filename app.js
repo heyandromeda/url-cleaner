@@ -2,38 +2,164 @@ import { cleanUrl } from "./cleaner.js";
 
 const form = document.querySelector("#clean-form");
 const input = document.querySelector("#url-input");
+const pasteButton = document.querySelector("#paste-button");
+const cleanOnPaste = document.querySelector("#clean-on-paste");
+const autoCopy = document.querySelector("#auto-copy");
 const resultPanel = document.querySelector("#result-panel");
 const output = document.querySelector("#cleaned-url");
 const copyButton = document.querySelector("#copy-button");
 const message = document.querySelector("#message");
 const removedList = document.querySelector("#removed-list");
+
+const CLEAN_ON_PASTE_KEY = "url-cleaner.clean-on-paste";
+const AUTO_COPY_KEY = "url-cleaner.auto-copy";
 let cleanedValue = "";
+
+function readSetting(key, fallback) {
+  try {
+    const value = localStorage.getItem(key);
+    return value === null ? fallback : value === "true";
+  } catch {
+    return fallback;
+  }
+}
+
+function saveSetting(key, value) {
+  try {
+    localStorage.setItem(key, String(value));
+  } catch {
+    // Settings are a convenience; the cleaner still works if storage is unavailable.
+  }
+}
+
+function showMessage(text, kind = "info") {
+  message.textContent = text;
+  message.dataset.kind = kind;
+}
+
+function renderRemoved(parameters) {
+  removedList.replaceChildren();
+
+  if (parameters.length === 0) {
+    const item = document.createElement("li");
+    item.textContent = "None";
+    item.className = "muted";
+    removedList.append(item);
+    return;
+  }
+
+  for (const parameter of parameters) {
+    const item = document.createElement("li");
+    item.textContent = parameter;
+    removedList.append(item);
+  }
+}
+
+async function copyText(value) {
+  if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+    return false;
+  }
+
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function showCleanResult(result, { allowAutoCopy = true } = {}) {
+  cleanedValue = result.url;
+  output.textContent = result.url;
+  renderRemoved(result.removedParameters);
+  resultPanel.hidden = false;
+  copyButton.disabled = false;
+
+  const baseMessage = result.changed
+    ? "Tracking parameters removed."
+    : "Already clean — no tracking parameters found.";
+
+  showMessage(baseMessage, "success");
+
+  if (allowAutoCopy && autoCopy.checked) {
+    copyText(cleanedValue).then((copied) => {
+      showMessage(
+        copied ? `${baseMessage} Copied to clipboard.` : `${baseMessage} Clipboard copy was unavailable.`,
+        copied ? "success" : "info"
+      );
+    });
+  }
+}
+
+function runClean(options = {}) {
+  resultPanel.hidden = true;
+  copyButton.disabled = true;
+  cleanedValue = "";
+
+  try {
+    showCleanResult(cleanUrl(input.value), options);
+  } catch (error) {
+    showMessage(error.message, "error");
+  }
+}
+
+async function pasteFromClipboard() {
+  if (!navigator.clipboard || typeof navigator.clipboard.readText !== "function") {
+    showMessage("Clipboard access is unavailable. Paste the URL manually.", "error");
+    return;
+  }
+
+  try {
+    input.value = await navigator.clipboard.readText();
+    input.focus();
+    if (cleanOnPaste.checked) {
+      runClean();
+    } else {
+      showMessage("URL pasted.");
+    }
+  } catch {
+    showMessage("Clipboard permission was denied. Paste the URL manually.", "error");
+  }
+}
+
+cleanOnPaste.checked = readSetting(CLEAN_ON_PASTE_KEY, true);
+autoCopy.checked = readSetting(AUTO_COPY_KEY, false);
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
-  resultPanel.hidden = true;
-  copyButton.disabled = true;
-  try {
-    const result = cleanUrl(input.value);
-    cleanedValue = result.url;
-    output.textContent = result.url;
-    removedList.replaceChildren(...(result.removedParameters.length
-      ? result.removedParameters.map((name) => Object.assign(document.createElement("li"), { textContent: name }))
-      : [Object.assign(document.createElement("li"), { textContent: "None" })]));
-    resultPanel.hidden = false;
-    copyButton.disabled = false;
-    message.textContent = result.changed ? "Tracking parameters removed." : "Already clean — no tracking parameters found.";
-  } catch (error) {
-    message.textContent = error.message;
+  runClean();
+});
+
+pasteButton.addEventListener("click", pasteFromClipboard);
+
+input.addEventListener("paste", () => {
+  if (cleanOnPaste.checked) {
+    // Wait for the browser to insert the pasted text before cleaning once.
+    window.setTimeout(() => runClean(), 0);
   }
+});
+
+cleanOnPaste.addEventListener("change", () => {
+  saveSetting(CLEAN_ON_PASTE_KEY, cleanOnPaste.checked);
+});
+
+autoCopy.addEventListener("change", () => {
+  saveSetting(AUTO_COPY_KEY, autoCopy.checked);
 });
 
 copyButton.addEventListener("click", async () => {
   if (!cleanedValue) return;
-  try {
-    await navigator.clipboard.writeText(cleanedValue);
-    message.textContent = "Cleaned URL copied.";
-  } catch {
-    message.textContent = "Copy failed. Select the URL and copy it manually.";
+
+  if (await copyText(cleanedValue)) {
+    showMessage("Cleaned URL copied.", "success");
+  } else {
+    showMessage("Copy failed. Select the URL and copy it manually.", "error");
   }
 });
+
+const sharedUrl = new URL(window.location.href).searchParams.get("url");
+if (sharedUrl) {
+  input.value = sharedUrl;
+  runClean({ allowAutoCopy: false });
+  window.history.replaceState(null, "", window.location.pathname);
+}
