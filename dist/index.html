@@ -19,8 +19,15 @@
           <label for="url-input">URL to clean</label>
           <div class="input-row">
             <input id="url-input" name="url" type="url" inputmode="url" autocomplete="off" placeholder="https://example.com/page?utm_source=newsletter" required />
+            <button id="paste-button" type="button" class="secondary-button">Paste</button>
             <button type="submit" class="primary-button">Clean URL</button>
           </div>
+
+          <fieldset class="settings">
+            <legend>Settings</legend>
+            <label class="setting"><input id="clean-on-paste" type="checkbox" checked /> Clean on paste</label>
+            <label class="setting"><input id="auto-copy" type="checkbox" /> Auto-copy cleaned URL</label>
+          </fieldset>
         </form>
 
         <p id="message" class="message" role="status" aria-live="polite"></p>
