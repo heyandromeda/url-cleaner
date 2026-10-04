@@ -1,0 +1,8 @@
+{
+  "name": "url-cleaner",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/url-cleaner.test.js"
+  }
+}
