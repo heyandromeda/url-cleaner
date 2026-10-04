@@ -1,21 +1,46 @@
-:root { font-family: Arial, sans-serif; color: #222; background: #fff; }
+:root {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #222;
+  background: #fff;
+}
+
 * { box-sizing: border-box; }
 body { min-width: 320px; margin: 0; }
+button, input { font: inherit; }
 .app-shell { width: min(100% - 2rem, 700px); margin: 0 auto; padding: 3rem 0; }
-h1 { margin: 0 0 .5rem; font-size: 2rem; }
-.intro { margin: 0 0 1.5rem; color: #555; }
-label, h2 { font-size: .95rem; font-weight: 700; }
-label { display: block; margin-bottom: .4rem; }
-.input-row { display: flex; gap: .5rem; }
-input { min-width: 0; flex: 1; border: 1px solid #999; border-radius: 4px; padding: .7rem; }
-button { cursor: pointer; border: 1px solid #222; border-radius: 4px; padding: .7rem 1rem; font-weight: 700; }
-button:disabled { cursor: not-allowed; opacity: .5; }
-.input-row button { color: #fff; background: #222; }
-#message { min-height: 1.5rem; margin: 1rem 0 0; color: #555; }
-#result-panel { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ddd; }
-.result-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.result-heading h2 { margin: 0 0 .5rem; }
-#cleaned-url { display: block; overflow-wrap: anywhere; line-height: 1.5; }
-#removed-list { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0; padding: 0; list-style: none; }
-#removed-list li { padding: .25rem .4rem; border: 1px solid #ddd; border-radius: 3px; background: #f7f7f7; font: .8rem monospace; }
-@media (max-width: 580px) { .input-row { flex-direction: column; } .input-row button { width: 100%; } }
+.cleaner-card { padding: 0; }
+.eyebrow { margin-bottom: 0.5rem; color: #666; font-size: 0.75rem; letter-spacing: 0.08em; }
+h1 { margin: 0 0 0.5rem; font-size: 2rem; }
+.intro { margin: 0 0 1.5rem; color: #555; line-height: 1.5; }
+.clean-form label, h2 { font-size: 0.95rem; font-weight: 700; }
+.clean-form label { display: block; margin-bottom: 0.4rem; }
+.input-row { display: flex; gap: 0.5rem; }
+input { min-width: 0; flex: 1; border: 1px solid #999; border-radius: 4px; padding: 0.7rem; color: #222; background: #fff; }
+input:focus { border-color: #222; outline: 2px solid #ddd; outline-offset: 1px; }
+button { cursor: pointer; border: 1px solid #222; border-radius: 4px; padding: 0.7rem 1rem; font-weight: 700; }
+button:focus-visible { outline: 2px solid #555; outline-offset: 2px; }
+button:disabled { cursor: not-allowed; opacity: 0.5; }
+.primary-button { color: #fff; background: #222; }
+.secondary-button { color: #222; background: #fff; }
+.settings { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0 0; padding: 0; border: 0; }
+.settings legend { padding: 0; color: #555; font-size: 0.85rem; font-weight: 700; }
+.setting { display: inline-flex; align-items: center; gap: 0.4rem; color: #555; font-size: 0.85rem; }
+.setting input { flex: none; width: 1rem; height: 1rem; accent-color: #222; }
+.message { min-height: 1.5rem; margin: 1rem 0 0; color: #555; font-size: 0.9rem; }
+.message[data-kind="success"] { color: #176b36; }
+.message[data-kind="error"] { color: #a12626; }
+.result-panel { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ddd; }
+.result-heading, .removed-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.result-heading h2, .removed-heading h2 { margin: 0 0 0.5rem; }
+.url-output { display: block; overflow-wrap: anywhere; line-height: 1.5; }
+.removed-heading { margin-top: 1.25rem; }
+.removed-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+.removed-list li { padding: 0.25rem 0.4rem; border: 1px solid #ddd; border-radius: 3px; color: #444; background: #f7f7f7; font: 0.8rem monospace; }
+.removed-list li.muted { border: 0; padding-left: 0; color: #777; background: transparent; }
+.privacy-note { margin: 1.5rem 0 0; color: #777; font-size: 0.8rem; }
+@media (max-width: 580px) {
+  .input-row { flex-wrap: wrap; }
+  .input-row input { flex-basis: 100%; }
+  .input-row button { flex: 1; }
+  .settings { flex-direction: column; gap: 0.65rem; }
+}
