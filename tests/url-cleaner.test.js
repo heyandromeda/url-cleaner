@@ -49,3 +49,10 @@ test("matches tracker names case-insensitively", () => {
   assert.equal(result.url, "https://example.com/?keep=yes");
   assert.deepEqual(result.removedParameters, ["UTM_Source", "FbClId"]);
 });
+
+test("removes additional ad, analytics, and affiliate trackers", () => {
+  const result = cleanUrl("https://example.com/article?gbraid=g1&srsltid=s1&hsa_acc=123&mtm_campaign=spring&irclickid=i1&keep=important");
+
+  assert.equal(result.url, "https://example.com/article?keep=important");
+  assert.deepEqual(result.removedParameters, ["gbraid", "srsltid", "hsa_acc", "mtm_campaign", "irclickid"]);
+});
