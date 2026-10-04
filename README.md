@@ -36,6 +36,18 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Handles invalid URLs clearly
 - Runs entirely in the browser with no backend, accounts, analytics, database, or external API
 
+## Why choose URL Cleaner
+
+Choose URL Cleaner when you want a link-cleaning tool that stays simple, transparent, and privacy-friendly:
+
+- **Conservative by design:** removes recognized trackers while preserving unknown parameters that may be required by a page.
+- **Private by default:** cleaning happens in your browser; URLs and clipboard contents are not uploaded or stored.
+- **No account or setup:** open the live tool and use it immediately.
+- **Easy on mobile:** paste from the clipboard, clean automatically on paste, or use the Copy button.
+- **Share Sheet friendly:** use the included Apple Shortcut flow from iPhone, iPad, or Mac.
+- **Open and reusable:** the source is public, MIT-licensed, and easy to run locally.
+- **Small and understandable:** plain HTML, CSS, and JavaScript with no framework or backend.
+
 ## Example
 
 Before:
