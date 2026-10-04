@@ -96,6 +96,7 @@ The test suite covers:
 | [cleaner.js](./cleaner.js) | URL-cleaning logic and tracker lists |
 | [app.js](./app.js) | Form, results, and copy interactions |
 | [tests/url-cleaner.test.js](./tests/url-cleaner.test.js) | Automated tests |
+| [LICENSE](./LICENSE) | MIT License |
 | [dist/](./dist) | Static-site copy used by the hosted deployment |
 
 ## Extend the tracker lists
@@ -119,4 +120,13 @@ URL cleaning happens locally in your browser. URLs are not uploaded, stored, or 
 
 ## License
 
-This repository does not currently include a license. If you want others to reuse or redistribute the code, add a license that matches your intended terms.
+This project is released under the [MIT License](./LICENSE).
+
+You are free to:
+
+- Use it privately or commercially
+- Copy, modify, and fork it
+- Redistribute it
+- Include it in other projects
+
+The only requirement is to keep the copyright and license notice with copies or substantial portions of the software. The software is provided without warranty.
