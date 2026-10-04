@@ -3,6 +3,7 @@
   color: #222;
   background: #fff;
 }
+
 * { box-sizing: border-box; }
 body { min-width: 320px; margin: 0; }
 button, input { font: inherit; }
@@ -21,6 +22,10 @@ button:focus-visible { outline: 2px solid #555; outline-offset: 2px; }
 button:disabled { cursor: not-allowed; opacity: 0.5; }
 .primary-button { color: #fff; background: #222; }
 .secondary-button { color: #222; background: #fff; }
+.settings { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0 0; padding: 0; border: 0; }
+.settings legend { padding: 0; color: #555; font-size: 0.85rem; font-weight: 700; }
+.setting { display: inline-flex; align-items: center; gap: 0.4rem; color: #555; font-size: 0.85rem; }
+.setting input { flex: none; width: 1rem; height: 1rem; accent-color: #222; }
 .message { min-height: 1.5rem; margin: 1rem 0 0; color: #555; font-size: 0.9rem; }
 .message[data-kind="success"] { color: #176b36; }
 .message[data-kind="error"] { color: #a12626; }
@@ -33,4 +38,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .removed-list li { padding: 0.25rem 0.4rem; border: 1px solid #ddd; border-radius: 3px; color: #444; background: #f7f7f7; font: 0.8rem monospace; }
 .removed-list li.muted { border: 0; padding-left: 0; color: #777; background: transparent; }
 .privacy-note { margin: 1.5rem 0 0; color: #777; font-size: 0.8rem; }
-@media (max-width: 580px) { .input-row { flex-direction: column; } .primary-button { width: 100%; } }
+@media (max-width: 580px) {
+  .input-row { flex-wrap: wrap; }
+  .input-row input { flex-basis: 100%; }
+  .input-row button { flex: 1; }
+  .settings { flex-direction: column; gap: 0.65rem; }
+}
