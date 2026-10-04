@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Remove common tracking parameters from URLs locally in your browser." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231b2333'/%3E%3Cpath d='M9 16h14M18 10l6 6-6 6' fill='none' stroke='%23b8f36b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>URL Cleaner</title>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="cleaner-card" aria-labelledby="page-title">
+        <div class="eyebrow">LOCAL UTILITY</div>
+        <h1 id="page-title">URL Cleaner</h1>
+        <p class="intro">Remove common tracking parameters while keeping the query values your link needs.</p>
+        <form id="clean-form" class="clean-form">
+          <label for="url-input">URL to clean</label>
+          <div class="input-row">
+            <input id="url-input" name="url" type="url" inputmode="url" autocomplete="off" placeholder="https://example.com/page?utm_source=newsletter" required />
+            <button type="submit" class="primary-button">Clean URL</button>
+          </div>
+        </form>
+        <p id="message" class="message" role="status" aria-live="polite"></p>
+        <section id="result-panel" class="result-panel" aria-labelledby="result-title" hidden>
+          <div class="result-heading">
+            <h2 id="result-title">Cleaned URL</h2>
+            <button id="copy-button" type="button" class="secondary-button" disabled>Copy</button>
+          </div>
+          <output id="cleaned-url" class="url-output" aria-label="Cleaned URL"></output>
+          <div class="removed-heading"><h2>Removed parameters</h2></div>
+          <ul id="removed-list" class="removed-list"></ul>
+        </section>
+      </section>
+      <p class="privacy-note">Runs entirely in your browser. Nothing is uploaded or stored.</p>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
