@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>URL Cleaner</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <h1>URL Cleaner</h1>
+    <p class="intro">Remove common tracking parameters while keeping useful query parameters.</p>
+    <form id="clean-form">
+      <label for="url-input">URL to clean</label>
+      <div class="input-row">
+        <input id="url-input" type="url" inputmode="url" placeholder="https://example.com/page?utm_source=newsletter" required>
+        <button type="submit">Clean URL</button>
+      </div>
+    </form>
+    <p id="message" role="status" aria-live="polite"></p>
+    <section id="result-panel" hidden>
+      <div class="result-heading">
+        <h2>Cleaned URL</h2>
+        <button id="copy-button" type="button" disabled>Copy</button>
+      </div>
+      <output id="cleaned-url"></output>
+      <h2>Removed parameters</h2>
+      <ul id="removed-list"></ul>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
