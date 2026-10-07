@@ -30,7 +30,8 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Optionally cleans automatically whenever you paste
 - Optionally copies every successfully cleaned URL automatically
 - Remembers the two settings locally without storing URLs or clipboard contents
-- Shows exactly which parameters were removed
+- Shows a mobile-friendly before/after view and highlights exactly which parameters were removed
+- Warns when a shortened link hides a destination that cannot be inspected locally
 - Copies the cleaned URL with one click
 - Supports pressing Enter to clean
 - Handles invalid URLs clearly
@@ -46,6 +47,7 @@ Choose URL Cleaner when you want a link-cleaning tool that stays simple, transpa
 - **Easy on mobile:** paste from the clipboard, clean automatically on paste, or use the Copy button.
 - **Share Sheet friendly:** use the included Apple Shortcut flow from iPhone, iPad, or Mac.
 - **Open and reusable:** the source is public, MIT-licensed, and easy to run locally.
+- **Honest about limits:** shortened links get an informational notice instead of a false safety claim.
 - **Small and understandable:** plain HTML, CSS, and JavaScript with no framework or backend.
 
 ## Example
@@ -62,7 +64,11 @@ After:
 https://www.youtube.com/watch?v=abc123#comments
 ```
 
-The YouTube video ID and page fragment stay intact.
+The YouTube video ID and page fragment stay intact. The before/after view highlights the removed parameters so the change is easy to verify.
+
+## Shortened links
+
+Known shortened links receive an informational notice. URL Cleaner cleans the visible short URL but does not follow its redirect, make a network request, or claim to inspect the hidden destination.
 
 ## Use the live tool
 
@@ -132,6 +138,7 @@ The test suite covers:
 - Hash fragments
 - Invalid input
 - Case-insensitive tracker names
+- Known opaque URL shorteners
 
 ## Project structure
 
