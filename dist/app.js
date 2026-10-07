@@ -1,4 +1,4 @@
-import { cleanUrl } from "./cleaner.js";
+import { cleanUrl, isOpaqueShortener } from "./cleaner.js";
 
 const form = document.querySelector("#clean-form");
 const input = document.querySelector("#url-input");
@@ -6,7 +6,9 @@ const pasteButton = document.querySelector("#paste-button");
 const cleanOnPaste = document.querySelector("#clean-on-paste");
 const autoCopy = document.querySelector("#auto-copy");
 const resultPanel = document.querySelector("#result-panel");
+const originalOutput = document.querySelector("#original-url");
 const output = document.querySelector("#cleaned-url");
+const shortenerWarning = document.querySelector("#shortener-warning");
 const copyButton = document.querySelector("#copy-button");
 const message = document.querySelector("#message");
 const removedList = document.querySelector("#removed-list");
@@ -55,6 +57,26 @@ function renderRemoved(parameters) {
   }
 }
 
+function renderOriginalUrl(value, removedParameters) {
+  const url = new URL(value.trim());
+  const removedNames = new Set(removedParameters.map((name) => name.toLowerCase()));
+  const base = url.href.slice(0, url.href.length - url.search.length - url.hash.length);
+
+  originalOutput.replaceChildren(document.createTextNode(base));
+
+  const entries = [...url.searchParams.entries()];
+  entries.forEach(([name, parameterValue], index) => {
+    originalOutput.append(document.createTextNode(index === 0 ? "?" : "&"));
+    const segment = document.createElement(removedNames.has(name.toLowerCase()) ? "mark" : "span");
+    segment.textContent = new URLSearchParams([[name, parameterValue]]).toString();
+    originalOutput.append(segment);
+  });
+
+  if (url.hash) {
+    originalOutput.append(document.createTextNode(url.hash));
+  }
+}
+
 async function copyText(value) {
   if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
     return false;
@@ -68,10 +90,12 @@ async function copyText(value) {
   }
 }
 
-function showCleanResult(result, { allowAutoCopy = true } = {}) {
+function showCleanResult(result, { allowAutoCopy = true, originalValue = "" } = {}) {
   cleanedValue = result.url;
+  renderOriginalUrl(originalValue, result.removedParameters);
   output.textContent = result.url;
   renderRemoved(result.removedParameters);
+  shortenerWarning.hidden = !isOpaqueShortener(originalValue);
   resultPanel.hidden = false;
   copyButton.disabled = false;
 
@@ -97,7 +121,8 @@ function runClean(options = {}) {
   cleanedValue = "";
 
   try {
-    showCleanResult(cleanUrl(input.value), options);
+    const originalValue = input.value;
+    showCleanResult(cleanUrl(originalValue), { ...options, originalValue });
   } catch (error) {
     showMessage(error.message, "error");
   }
