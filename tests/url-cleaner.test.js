@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanUrl } from "../dist/cleaner.js";
+import { cleanUrl, isOpaqueShortener } from "../dist/cleaner.js";
 
 test("removes a URL containing only UTM parameters", () => {
   const result = cleanUrl("https://example.com/article?utm_source=news&utm_campaign=spring");
@@ -55,4 +55,11 @@ test("removes additional ad, analytics, and affiliate trackers", () => {
 
   assert.equal(result.url, "https://example.com/article?keep=important");
   assert.deepEqual(result.removedParameters, ["gbraid", "srsltid", "hsa_acc", "mtm_campaign", "irclickid"]);
+});
+
+test("recognizes opaque URL shorteners without resolving them", () => {
+  assert.equal(isOpaqueShortener("https://bit.ly/example"), true);
+  assert.equal(isOpaqueShortener("https://www.tinyurl.com/example"), true);
+  assert.equal(isOpaqueShortener("https://example.com/page"), false);
+  assert.equal(isOpaqueShortener("not a URL"), false);
 });

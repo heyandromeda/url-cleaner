@@ -84,9 +84,32 @@ export const TRACKING_PARAMETER_PREFIXES = [
   "_ga_"
 ];
 
+export const OPAQUE_SHORTENER_HOSTS = new Set([
+  "bit.ly",
+  "buff.ly",
+  "cutt.ly",
+  "goo.gl",
+  "is.gd",
+  "ow.ly",
+  "rebrand.ly",
+  "shorturl.at",
+  "t.co",
+  "tiny.cc",
+  "tinyurl.com"
+]);
+
 function isTrackingParameter(name) {
   const normalizedName = name.toLowerCase();
   return TRACKING_PARAMETER_PREFIXES.some((prefix) => normalizedName.startsWith(prefix)) || TRACKING_PARAMETERS.has(normalizedName);
+}
+
+export function isOpaqueShortener(input) {
+  try {
+    const hostname = new URL(input.trim()).hostname.toLowerCase().replace(/^www\./, "");
+    return OPAQUE_SHORTENER_HOSTS.has(hostname);
+  } catch {
+    return false;
+  }
 }
 
 export function cleanUrl(input) {
