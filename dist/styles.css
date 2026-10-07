@@ -12,7 +12,7 @@ button, input { font: inherit; }
 .eyebrow { margin-bottom: 0.5rem; color: #666; font-size: 0.75rem; letter-spacing: 0.08em; }
 h1 { margin: 0 0 0.5rem; font-size: 2rem; }
 .intro { margin: 0 0 1.5rem; color: #555; line-height: 1.5; }
-.clean-form label, h2 { font-size: 0.95rem; font-weight: 700; }
+.clean-form label, h2, h3 { font-size: 0.95rem; font-weight: 700; }
 .clean-form label { display: block; margin-bottom: 0.4rem; }
 .input-row { display: flex; gap: 0.5rem; }
 input { min-width: 0; flex: 1; border: 1px solid #999; border-radius: 4px; padding: 0.7rem; color: #222; background: #fff; }
@@ -31,8 +31,13 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .message[data-kind="error"] { color: #a12626; }
 .result-panel { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ddd; }
 .result-heading, .removed-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.result-heading h2, .removed-heading h2 { margin: 0 0 0.5rem; }
+.result-panel > h2 { margin: 0 0 1rem; }
+.result-heading h3, .removed-heading h2, .url-block h3 { margin: 0 0 0.5rem; }
+.url-block { margin-bottom: 1rem; }
 .url-output { display: block; overflow-wrap: anywhere; line-height: 1.5; }
+.url-output mark { padding: 0.1rem 0.15rem; border-radius: 2px; color: #7a1f1f; background: #ffe0e0; }
+.notice { margin-top: 1rem; padding: 0.8rem; border-left: 3px solid #b57900; color: #5f4300; background: #fff8e7; }
+.notice p { margin: 0.3rem 0 0; line-height: 1.45; }
 .removed-heading { margin-top: 1.25rem; }
 .removed-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
 .removed-list li { padding: 0.25rem 0.4rem; border: 1px solid #ddd; border-radius: 3px; color: #444; background: #f7f7f7; font: 0.8rem monospace; }
