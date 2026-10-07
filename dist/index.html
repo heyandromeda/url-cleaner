@@ -33,11 +33,21 @@
         <p id="message" class="message" role="status" aria-live="polite"></p>
 
         <section id="result-panel" class="result-panel" aria-labelledby="result-title" hidden>
-          <div class="result-heading">
-            <h2 id="result-title">Cleaned URL</h2>
+          <h2 id="result-title">Before and after</h2>
+          <div class="url-block">
+            <h3>Before</h3>
+            <div id="original-url" class="url-output" aria-label="Original URL"></div>
+          </div>
+          <div class="result-heading url-block">
+            <h3>After</h3>
             <button id="copy-button" type="button" class="secondary-button" disabled>Copy</button>
           </div>
           <output id="cleaned-url" class="url-output" aria-label="Cleaned URL"></output>
+
+          <aside id="shortener-warning" class="notice" hidden>
+            <strong>Shortened link</strong>
+            <p>Its destination cannot be inspected locally without following the redirect. The visible URL was cleaned, but the hidden destination was not opened or checked.</p>
+          </aside>
 
           <div class="removed-heading">
             <h2>Removed parameters</h2>
