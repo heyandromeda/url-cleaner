@@ -15,6 +15,20 @@ export const TRACKING_PARAMETERS = new Set([
 
 export const TRACKING_PARAMETER_PREFIXES = ["utm_", "hsa_", "mtm_", "pk_", "piwik_", "_ga_"];
 
+export const OPAQUE_SHORTENER_HOSTS = new Set([
+  "bit.ly", "buff.ly", "cutt.ly", "goo.gl", "is.gd", "ow.ly",
+  "rebrand.ly", "shorturl.at", "t.co", "tiny.cc", "tinyurl.com"
+]);
+
+export function isOpaqueShortener(input) {
+  try {
+    const hostname = new URL(input.trim()).hostname.toLowerCase().replace(/^www\./, "");
+    return OPAQUE_SHORTENER_HOSTS.has(hostname);
+  } catch {
+    return false;
+  }
+}
+
 export function cleanUrl(input) {
   const value = input.trim();
   if (!value) throw new TypeError("Enter a URL to clean.");
