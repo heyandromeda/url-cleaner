@@ -2,6 +2,8 @@
 
 Remove common tracking parameters from URLs without stripping parameters that a page actually needs.
 
+> 🧪 **Want the experimental version? [Open URL Cleaner Nightly](https://url-cleaner-nightly.heyandromeda.chatgpt.site).** It is deployed separately from the stable `main` build.
+
 > **Branch channels:** `main` is the stable version. `nightly` contains experimental features that may change or behave imperfectly.
 
 > **Built entirely with [ChatGPT Codex](https://openai.com/codex/).**
