@@ -2,6 +2,8 @@
 
 Remove common tracking parameters from URLs without stripping parameters that a page actually needs.
 
+> **Branch channels:** `main` is the stable version. `nightly` contains experimental features that may change or behave imperfectly.
+
 > **Built entirely with [ChatGPT Codex](https://openai.com/codex/).**
 
 [![Open live tool](https://img.shields.io/badge/TRY%20IT-Live%20URL%20Cleaner-2563eb?style=for-the-badge)](https://url-cleaner.heyandromeda.chatgpt.site)
@@ -36,6 +38,19 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Supports pressing Enter to clean
 - Handles invalid URLs clearly
 - Runs entirely in the browser with no backend, accounts, analytics, database, or external API
+
+### Nightly experiments
+
+The `nightly` branch additionally includes:
+
+- Local unwrapping of an allowlist of known redirect URLs, limited to five layers
+- An optional URL X-Ray with decoded nested values and parameter categories
+- A transparent tracking fingerprint count and severity label
+- Opt-in aggressive cleaning using a separate, clearly reported ruleset
+- Plain-language flags for unusual URL structure without declaring a URL malicious
+- Safe removal of repeated identical parameter/value pairs while preserving multi-value parameters
+
+All inspection and cleaning remains local. Redirects are parsed but never followed over the network. Experimental behavior stays off `main` until it is ready for the stable channel.
 
 ## Why choose URL Cleaner
 

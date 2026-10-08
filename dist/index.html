@@ -6,14 +6,14 @@
     <meta name="description" content="Remove common tracking parameters from URLs locally in your browser." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231b2333'/%3E%3Cpath d='M9 16h14M18 10l6 6-6 6' fill='none' stroke='%23b8f36b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="./styles.css" />
-    <title>URL Cleaner</title>
+    <title>URL Cleaner Nightly</title>
   </head>
   <body>
     <main class="app-shell">
       <section class="cleaner-card" aria-labelledby="page-title">
-        <div class="eyebrow">LOCAL UTILITY</div>
+        <div class="eyebrow">LOCAL UTILITY <span class="nightly-badge">NIGHTLY</span></div>
         <h1 id="page-title">URL Cleaner</h1>
-        <p class="intro">Remove common tracking parameters while keeping the query values your link needs.</p>
+        <p class="intro">Try experimental URL inspection and cleaning features before they reach the stable version.</p>
 
         <form id="clean-form" class="clean-form">
           <label for="url-input">URL to clean</label>
@@ -27,6 +27,7 @@
             <legend>Settings</legend>
             <label class="setting"><input id="clean-on-paste" type="checkbox" checked /> Clean on paste</label>
             <label class="setting"><input id="auto-copy" type="checkbox" /> Auto-copy cleaned URL</label>
+            <label class="setting experimental-setting"><input id="aggressive-mode" type="checkbox" /> Aggressive cleaning <span class="experimental-label">experimental</span></label>
           </fieldset>
         </form>
 
@@ -49,10 +50,33 @@
             <p>Its destination cannot be inspected locally without following the redirect. The visible URL was cleaned, but the hidden destination was not opened or checked.</p>
           </aside>
 
+          <section class="nightly-summary" aria-labelledby="fingerprint-title">
+            <div>
+              <h2 id="fingerprint-title">Tracking fingerprint</h2>
+              <p id="fingerprint-summary"></p>
+            </div>
+            <strong id="fingerprint-count" class="score"></strong>
+          </section>
+
+          <div id="redirect-summary" class="notice experiment-notice" hidden></div>
+          <div id="duplicate-summary" class="notice experiment-notice" hidden></div>
+
           <div class="removed-heading">
             <h2>Removed parameters</h2>
           </div>
           <ul id="removed-list" class="removed-list"></ul>
+
+          <details id="xray-panel" class="xray-panel">
+            <summary>URL X-Ray <span>experimental</span></summary>
+            <dl id="url-parts" class="url-parts"></dl>
+            <h3>Parameters</h3>
+            <div id="parameter-breakdown" class="parameter-breakdown"></div>
+            <section id="weirdness-panel" class="weirdness-panel" hidden>
+              <h3>Unusual characteristics</h3>
+              <p>These signals are not proof that a URL is malicious.</p>
+              <ul id="weirdness-list"></ul>
+            </section>
+          </details>
         </section>
       </section>
       <p class="privacy-note">Runs entirely in your browser. Nothing is uploaded or stored.</p>
