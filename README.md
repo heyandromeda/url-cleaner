@@ -9,8 +9,8 @@ Remove common tracking parameters from URLs without stripping parameters that a 
 > **Built entirely with [ChatGPT Codex](https://openai.com/codex/).**
 
 [![Open live tool](https://img.shields.io/badge/TRY%20IT-Live%20URL%20Cleaner-2563eb?style=for-the-badge)](https://url-cleaner.heyandromeda.chatgpt.site)
-[![Browser only](https://img.shields.io/badge/RUNS%20LOCALLY-No%20backend-16a34a?style=flat-square)](https://github.com/heyandromeda/url-cleaner)
 [![Nightly build](https://img.shields.io/badge/TRY%20NIGHTLY-Experimental-f59e0b?style=for-the-badge)](https://url-cleaner-nightly.heyandromeda.chatgpt.site)
+[![Browser only](https://img.shields.io/badge/RUNS%20LOCALLY-No%20backend-16a34a?style=flat-square)](https://github.com/heyandromeda/url-cleaner)
 
 **[Open the stable tool](https://url-cleaner.heyandromeda.chatgpt.site)** · **[Use the nightly build](https://url-cleaner-nightly.heyandromeda.chatgpt.site)** · **[Browse the source](https://github.com/heyandromeda/url-cleaner)** · **[View the tests](https://github.com/heyandromeda/url-cleaner/blob/main/tests/url-cleaner.test.js)**
 
