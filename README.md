@@ -44,14 +44,17 @@ That means search terms, product IDs, page numbers, language settings, invite co
 
 ### Nightly experiments
 
-The `nightly` branch additionally includes:
+**[Open the public nightly build](https://url-cleaner-nightly.heyandromeda.chatgpt.site)** to try all seven experiments:
 
-- Local unwrapping of an allowlist of known redirect URLs, limited to five layers
-- An optional URL X-Ray with decoded nested values and parameter categories
-- A transparent tracking fingerprint count and severity label
-- Opt-in aggressive cleaning using a separate, clearly reported ruleset
-- Plain-language flags for unusual URL structure without declaring a URL malicious
-- Safe removal of repeated identical parameter/value pairs while preserving multi-value parameters
+| Linear issue | Experiment | How to try it |
+| --- | --- | --- |
+| DEV-1 | Redirect unwrapping | Leave **Redirect unwrapping** enabled and clean a supported Google, Facebook, YouTube, LinkedIn, Outlook, or VK redirect URL. |
+| DEV-2 | URL X-Ray | Enter any URL and select **Inspect URL** to see its structural breakdown. |
+| DEV-3 | Tracking fingerprint | Clean or inspect a URL to see its tracking count, categories, and severity label. |
+| DEV-7 | Encoded value decoder | Inspect a URL containing encoded or double-encoded query values; decoded versions appear in URL X-Ray. |
+| DEV-9 | Aggressive cleaning | Explicitly opt in on its experiment card, then clean a URL containing broader referral parameters. |
+| DEV-11 | Weirdness detector | Inspect a URL with repeated parameters, punycode, credentials, unusual ports, or nested fragments. |
+| DEV-12 | Duplicate cleanup | Explicitly opt in to remove repeated identical pairs. Leave it off for signed URLs. |
 
 All inspection and cleaning remains local. Redirects are parsed but never followed over the network. Experimental behavior stays off `main` until it is ready for the stable channel.
 

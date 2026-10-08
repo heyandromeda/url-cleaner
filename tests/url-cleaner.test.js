@@ -126,10 +126,17 @@ test("aggressive mode is opt-in and reports its broader removals", () => {
 });
 
 test("removes only identical duplicate parameter pairs", () => {
-  const result = cleanUrl("https://example.com/?tag=a&tag=a&tag=b&item=1&item=2");
+  const result = cleanUrl("https://example.com/?tag=a&tag=a&tag=b&item=1&item=2", { removeDuplicateParameters: true });
 
   assert.equal(result.url, "https://example.com/?tag=a&tag=b&item=1&item=2");
   assert.deepEqual(result.duplicateParameters, ["tag"]);
+});
+
+test("duplicate cleanup is opt-in so signed URLs remain untouched by default", () => {
+  const input = "https://example.com/?x=1&x=1&signature=abc";
+
+  assert.equal(cleanUrl(input).url, input);
+  assert.equal(cleanUrl(input, { removeDuplicateParameters: true }).url, "https://example.com/?x=1&signature=abc");
 });
 
 test("removes all repeated known trackers", () => {
@@ -155,6 +162,14 @@ test("tracking fingerprint has a transparent count and severity", () => {
   assert.equal(score.count, 3);
   assert.equal(score.label, "Tracker confetti");
   assert.deepEqual(score.categories, { tracking: 2, affiliate: 1, wrappers: 0 });
+});
+
+test("tracking fingerprint counts trackers inside a known redirect destination", () => {
+  const destination = "https://example.com/?utm_source=a&fbclid=b";
+  const score = trackingFingerprint(`https://www.google.com/url?q=${encodeURIComponent(destination)}`);
+
+  assert.equal(score.count, 3);
+  assert.deepEqual(score.categories, { tracking: 2, affiliate: 0, wrappers: 1 });
 });
 
 test("weirdness detector reports unusual structure without a threat verdict", () => {

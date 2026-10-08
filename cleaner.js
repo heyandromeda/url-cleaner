@@ -154,13 +154,17 @@ export function detectWeirdness(input) {
 
 export function trackingFingerprint(input) {
   const original = parseUrl(input);
-  const wrappers = unwrapRedirectUrl(original.href).layers.length;
+  const redirect = unwrapRedirectUrl(original.href);
+  const wrappers = redirect.layers.length;
   let tracking = 0;
   let affiliate = 0;
-  for (const [name] of original.searchParams) {
-    const category = categorizeParameter(name);
-    if (category === "tracking") tracking += 1;
-    if (category === "affiliate/referral") affiliate += 1;
+  const inspectedUrls = new Map([[original.href, original], [redirect.url.href, redirect.url]]);
+  for (const url of inspectedUrls.values()) {
+    for (const [name] of url.searchParams) {
+      const category = categorizeParameter(name);
+      if (category === "tracking") tracking += 1;
+      if (category === "affiliate/referral") affiliate += 1;
+    }
   }
   const count = tracking + affiliate + wrappers;
   const label = count === 0 ? "Clean slate" : count <= 2 ? "Lightly tracked" : count <= 5 ? "Tracker confetti" : "Tracking parade";
@@ -190,7 +194,7 @@ export function inspectUrl(input) {
 export function cleanUrl(input, options = {}) {
   const value = input.trim();
   if (!value) throw new TypeError("Enter a URL to clean.");
-  const { aggressive = false, unwrapRedirects = true, removeDuplicateParameters = true } = options;
+  const { aggressive = false, unwrapRedirects = true, removeDuplicateParameters = false } = options;
   const redirect = unwrapRedirects ? unwrapRedirectUrl(value) : { url: parseUrl(value), layers: [] };
   const url = redirect.url;
   const keptParameters = new URLSearchParams();
