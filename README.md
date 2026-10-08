@@ -14,6 +14,18 @@ Remove common tracking parameters from URLs without stripping parameters that a 
 
 **[Open the stable tool](https://url-cleaner.heyandromeda.chatgpt.site)** · **[Use the nightly build](https://url-cleaner-nightly.heyandromeda.chatgpt.site)** · **[Browse the source](https://github.com/heyandromeda/url-cleaner)** · **[View the tests](https://github.com/heyandromeda/url-cleaner/blob/main/tests/url-cleaner.test.js)**
 
+### Try the nightly lab
+
+The separate **[public nightly build](https://url-cleaner-nightly.heyandromeda.chatgpt.site)** currently includes seven experiments that are not part of stable `main`:
+
+- DEV-1 — Redirect unwrapping
+- DEV-2 — URL X-Ray
+- DEV-3 — Tracking fingerprint
+- DEV-7 — Encoded value decoder
+- DEV-9 — Opt-in aggressive cleaning
+- DEV-11 — URL weirdness detector
+- DEV-12 — Opt-in identical-duplicate cleanup
+
 ## Why this exists
 
 Many shared links contain analytics and advertising parameters that are useful to marketers but unnecessary for the person opening the link.
