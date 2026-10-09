@@ -4,6 +4,8 @@ Remove common tracking parameters from URLs without stripping parameters that a 
 
 > 🧪 **Want the experimental version? [Open URL Cleaner Nightly](https://url-cleaner-nightly.heyandromeda.chatgpt.site).** It is deployed separately from the stable `main` build.
 
+> **Branch channels:** `main` is the stable version. `nightly` contains experimental features that may change or behave imperfectly.
+
 > **Built entirely with [ChatGPT Codex](https://openai.com/codex/).**
 
 [![Open live tool](https://img.shields.io/badge/TRY%20IT-Live%20URL%20Cleaner-2563eb?style=for-the-badge)](https://url-cleaner.heyandromeda.chatgpt.site)
@@ -51,6 +53,22 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Supports pressing Enter to clean
 - Handles invalid URLs clearly
 - Runs entirely in the browser with no backend, accounts, analytics, database, or external API
+
+### Nightly experiments
+
+**[Open the public nightly build](https://url-cleaner-nightly.heyandromeda.chatgpt.site)** to try all seven experiments:
+
+| Linear issue | Experiment | How to try it |
+| --- | --- | --- |
+| DEV-1 | Redirect unwrapping | Leave **Redirect unwrapping** enabled and clean a supported Google, Facebook, YouTube, LinkedIn, Outlook, or VK redirect URL. |
+| DEV-2 | URL X-Ray | Enter any URL and select **Inspect URL** to see its structural breakdown. |
+| DEV-3 | Tracking fingerprint | Clean or inspect a URL to see its tracking count, categories, and severity label. |
+| DEV-7 | Encoded value decoder | Inspect a URL containing encoded or double-encoded query values; decoded versions appear in URL X-Ray. |
+| DEV-9 | Aggressive cleaning | Explicitly opt in on its experiment card, then clean a URL containing broader referral parameters. |
+| DEV-11 | Weirdness detector | Inspect a URL with repeated parameters, punycode, credentials, unusual ports, or nested fragments. |
+| DEV-12 | Duplicate cleanup | Explicitly opt in to remove repeated identical pairs. Leave it off for signed URLs. |
+
+All inspection and cleaning remains local. Redirects are parsed but never followed over the network. Experimental behavior stays off `main` until it is ready for the stable channel.
 
 ## Why choose URL Cleaner
 

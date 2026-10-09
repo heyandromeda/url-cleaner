@@ -6,14 +6,67 @@
     <meta name="description" content="Remove common tracking parameters from URLs locally in your browser." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231b2333'/%3E%3Cpath d='M9 16h14M18 10l6 6-6 6' fill='none' stroke='%23b8f36b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="./styles.css" />
-    <title>URL Cleaner</title>
+    <title>URL Cleaner Nightly</title>
   </head>
   <body>
     <main class="app-shell">
       <section class="cleaner-card" aria-labelledby="page-title">
-        <div class="eyebrow">LOCAL UTILITY</div>
+        <div class="eyebrow">LOCAL UTILITY <span class="nightly-badge">NIGHTLY</span></div>
         <h1 id="page-title">URL Cleaner</h1>
-        <p class="intro">Remove common tracking parameters while keeping the query values your link needs.</p>
+        <p class="intro">A separate testing ground for seven experimental URL tools. Nothing here changes the stable build.</p>
+
+        <section class="experiment-grid" aria-labelledby="experiments-title">
+          <div class="experiment-heading">
+            <div>
+              <p class="section-kicker">NIGHTLY LAB</p>
+              <h2 id="experiments-title">Seven experiments are live</h2>
+            </div>
+            <a href="https://github.com/heyandromeda/url-cleaner/tree/nightly" class="branch-link">View nightly branch</a>
+          </div>
+
+          <article class="experiment-card">
+            <span class="issue-id">DEV-1</span>
+            <h3>Redirect unwrapping</h3>
+            <p>Extract destinations from known redirect wrappers, locally and up to five layers.</p>
+            <label class="feature-switch"><input id="unwrap-redirects" type="checkbox" checked /> Enabled</label>
+          </article>
+          <article class="experiment-card">
+            <span class="issue-id">DEV-2</span>
+            <h3>URL X-Ray</h3>
+            <p>Inspect the scheme, host, port, path, fragment, and every query parameter.</p>
+            <span class="feature-state">Included in Inspect URL</span>
+          </article>
+          <article class="experiment-card">
+            <span class="issue-id">DEV-3</span>
+            <h3>Tracking fingerprint</h3>
+            <p>Count known tracking, affiliate, and redirect signals with a plain breakdown.</p>
+            <span class="feature-state">Shown after analysis</span>
+          </article>
+          <article class="experiment-card">
+            <span class="issue-id">DEV-7</span>
+            <h3>Encoded value decoder</h3>
+            <p>Reveal encoded and double-encoded URL values without opening or fetching them.</p>
+            <span class="feature-state">Included in URL X-Ray</span>
+          </article>
+          <article class="experiment-card">
+            <span class="issue-id">DEV-9</span>
+            <h3>Aggressive cleaning</h3>
+            <p>Optionally remove broader referral and tracking-like parameters.</p>
+            <label class="feature-switch caution"><input id="aggressive-mode" type="checkbox" /> Opt in</label>
+          </article>
+          <article class="experiment-card">
+            <span class="issue-id">DEV-11</span>
+            <h3>Weirdness detector</h3>
+            <p>Explain unusual URL structure without claiming that the URL is malicious.</p>
+            <span class="feature-state">Shown after analysis</span>
+          </article>
+          <article class="experiment-card">
+            <span class="issue-id">DEV-12</span>
+            <h3>Duplicate cleanup</h3>
+            <p>Optionally remove only repeated identical name/value pairs. Leave off for signed URLs.</p>
+            <label class="feature-switch caution"><input id="remove-duplicates" type="checkbox" /> Opt in</label>
+          </article>
+        </section>
 
         <form id="clean-form" class="clean-form">
           <label for="url-input">URL to clean</label>
@@ -21,10 +74,11 @@
             <input id="url-input" name="url" type="url" inputmode="url" autocomplete="off" placeholder="https://example.com/page?utm_source=newsletter" required />
             <button id="paste-button" type="button" class="secondary-button">Paste</button>
             <button type="submit" class="primary-button">Clean URL</button>
+            <button id="inspect-button" type="button" class="inspect-button">Inspect URL</button>
           </div>
 
           <fieldset class="settings">
-            <legend>Settings</legend>
+            <legend>Convenience settings</legend>
             <label class="setting"><input id="clean-on-paste" type="checkbox" checked /> Clean on paste</label>
             <label class="setting"><input id="auto-copy" type="checkbox" /> Auto-copy cleaned URL</label>
           </fieldset>
@@ -49,10 +103,36 @@
             <p>Its destination cannot be inspected locally without following the redirect. The visible URL was cleaned, but the hidden destination was not opened or checked.</p>
           </aside>
 
+          <section class="nightly-summary" aria-labelledby="fingerprint-title">
+            <div>
+              <h2 id="fingerprint-title">Tracking fingerprint</h2>
+              <p id="fingerprint-summary"></p>
+            </div>
+            <strong id="fingerprint-count" class="score"></strong>
+          </section>
+
+          <section id="redirect-panel" class="experiment-result" hidden>
+            <h2>Redirect layers</h2>
+            <ol id="redirect-list"></ol>
+          </section>
+          <div id="duplicate-summary" class="notice experiment-notice" hidden></div>
+
           <div class="removed-heading">
             <h2>Removed parameters</h2>
           </div>
           <ul id="removed-list" class="removed-list"></ul>
+
+          <details id="xray-panel" class="xray-panel" open>
+            <summary>URL X-Ray <span>DEV-2 + DEV-7</span></summary>
+            <dl id="url-parts" class="url-parts"></dl>
+            <h3>Parameters</h3>
+            <div id="parameter-breakdown" class="parameter-breakdown"></div>
+            <section id="weirdness-panel" class="weirdness-panel">
+              <h3>Unusual characteristics</h3>
+              <p>These signals are not proof that a URL is malicious.</p>
+              <ul id="weirdness-list"></ul>
+            </section>
+          </details>
         </section>
       </section>
       <p class="privacy-note">Runs entirely in your browser. Nothing is uploaded or stored.</p>

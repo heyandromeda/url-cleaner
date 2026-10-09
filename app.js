@@ -3,8 +3,12 @@ import { cleanUrl, isOpaqueShortener } from "./cleaner.js";
 const form = document.querySelector("#clean-form");
 const input = document.querySelector("#url-input");
 const pasteButton = document.querySelector("#paste-button");
+const inspectButton = document.querySelector("#inspect-button");
 const cleanOnPaste = document.querySelector("#clean-on-paste");
 const autoCopy = document.querySelector("#auto-copy");
+const aggressiveMode = document.querySelector("#aggressive-mode");
+const unwrapRedirects = document.querySelector("#unwrap-redirects");
+const removeDuplicates = document.querySelector("#remove-duplicates");
 const resultPanel = document.querySelector("#result-panel");
 const originalOutput = document.querySelector("#original-url");
 const output = document.querySelector("#cleaned-url");
@@ -12,9 +16,22 @@ const shortenerWarning = document.querySelector("#shortener-warning");
 const copyButton = document.querySelector("#copy-button");
 const message = document.querySelector("#message");
 const removedList = document.querySelector("#removed-list");
+const fingerprintSummary = document.querySelector("#fingerprint-summary");
+const fingerprintCount = document.querySelector("#fingerprint-count");
+const redirectPanel = document.querySelector("#redirect-panel");
+const redirectList = document.querySelector("#redirect-list");
+const duplicateSummary = document.querySelector("#duplicate-summary");
+const urlParts = document.querySelector("#url-parts");
+const parameterBreakdown = document.querySelector("#parameter-breakdown");
+const weirdnessPanel = document.querySelector("#weirdness-panel");
+const weirdnessList = document.querySelector("#weirdness-list");
+const xrayPanel = document.querySelector("#xray-panel");
 
 const CLEAN_ON_PASTE_KEY = "url-cleaner.clean-on-paste";
 const AUTO_COPY_KEY = "url-cleaner.auto-copy";
+const AGGRESSIVE_MODE_KEY = "url-cleaner.aggressive-mode";
+const UNWRAP_REDIRECTS_KEY = "url-cleaner.unwrap-redirects";
+const REMOVE_DUPLICATES_KEY = "url-cleaner.remove-duplicates";
 let cleanedValue = "";
 
 function readSetting(key, fallback) {
@@ -39,8 +56,9 @@ function showMessage(text, kind = "info") {
   message.dataset.kind = kind;
 }
 
-function renderRemoved(parameters) {
+function renderRemoved(parameters, aggressiveParameters = []) {
   removedList.replaceChildren();
+  const aggressiveNames = new Set(aggressiveParameters.map((name) => name.toLowerCase()));
 
   if (parameters.length === 0) {
     const item = document.createElement("li");
@@ -52,8 +70,77 @@ function renderRemoved(parameters) {
 
   for (const parameter of parameters) {
     const item = document.createElement("li");
-    item.textContent = parameter;
+    item.textContent = aggressiveNames.has(parameter.toLowerCase()) ? `${parameter} (aggressive)` : parameter;
+    if (aggressiveNames.has(parameter.toLowerCase())) item.className = "aggressive-removal";
     removedList.append(item);
+  }
+}
+
+function addPart(name, value) {
+  const term = document.createElement("dt");
+  term.textContent = name;
+  const description = document.createElement("dd");
+  description.textContent = value;
+  urlParts.append(term, description);
+}
+
+function renderInspection(inspection) {
+  urlParts.replaceChildren();
+  addPart("Scheme", inspection.scheme);
+  addPart("Host", inspection.host);
+  addPart("Port", inspection.port);
+  addPart("Path", inspection.path);
+  addPart("Fragment", inspection.fragment);
+
+  parameterBreakdown.replaceChildren();
+  if (inspection.parameters.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "No query parameters.";
+    parameterBreakdown.append(empty);
+  }
+  for (const parameter of inspection.parameters) {
+    const row = document.createElement("div");
+    row.className = "parameter-row";
+    const heading = document.createElement("strong");
+    heading.textContent = parameter.name;
+    const category = document.createElement("span");
+    category.className = `category category-${parameter.category.replace("/", "-")}`;
+    category.textContent = parameter.category;
+    const value = document.createElement("code");
+    value.textContent = parameter.value || "(empty)";
+    row.append(heading, category, value);
+    for (const decoded of parameter.decodedValues) {
+      const decodedValue = document.createElement("small");
+      decodedValue.textContent = `Decoded: ${decoded}`;
+      row.append(decodedValue);
+    }
+    parameterBreakdown.append(row);
+  }
+
+  weirdnessList.replaceChildren();
+  const flags = inspection.weirdness.length > 0
+    ? inspection.weirdness
+    : ["No unusual URL characteristics detected."];
+  weirdnessPanel.dataset.clear = String(inspection.weirdness.length === 0);
+  for (const flag of flags) {
+    const item = document.createElement("li");
+    item.textContent = flag;
+    weirdnessList.append(item);
+  }
+}
+
+function renderRedirectLayers(layers) {
+  redirectList.replaceChildren();
+  redirectPanel.hidden = layers.length === 0;
+  for (const layer of layers) {
+    const item = document.createElement("li");
+    const host = document.createElement("strong");
+    host.textContent = layer.host;
+    const destination = document.createElement("code");
+    destination.textContent = layer.to;
+    item.append(host, document.createTextNode(` via ${layer.parameter} → `), destination);
+    redirectList.append(item);
   }
 }
 
@@ -90,12 +177,19 @@ async function copyText(value) {
   }
 }
 
-function showCleanResult(result, { allowAutoCopy = true, originalValue = "" } = {}) {
+function showCleanResult(result, { allowAutoCopy = true, originalValue = "", revealInspection = false } = {}) {
   cleanedValue = result.url;
   renderOriginalUrl(originalValue, result.removedParameters);
   output.textContent = result.url;
-  renderRemoved(result.removedParameters);
+  renderRemoved(result.removedParameters, result.aggressiveRemovedParameters);
   shortenerWarning.hidden = !isOpaqueShortener(originalValue);
+  fingerprintCount.textContent = String(result.fingerprint.count);
+  fingerprintSummary.textContent = `${result.fingerprint.label} — ${result.fingerprint.categories.tracking} tracking, ${result.fingerprint.categories.affiliate} affiliate/referral, ${result.fingerprint.categories.wrappers} redirect wrapper.`;
+  renderRedirectLayers(result.redirectLayers);
+  duplicateSummary.hidden = result.duplicateParameters.length === 0;
+  duplicateSummary.textContent = result.duplicateParameters.length === 0 ? "" : `${result.duplicateParameters.length} identical duplicate parameter${result.duplicateParameters.length === 1 ? "" : "s"} removed; different values were preserved.`;
+  renderInspection(result.inspection);
+  if (revealInspection) xrayPanel.open = true;
   resultPanel.hidden = false;
   copyButton.disabled = false;
 
@@ -122,7 +216,11 @@ function runClean(options = {}) {
 
   try {
     const originalValue = input.value;
-    showCleanResult(cleanUrl(originalValue), { ...options, originalValue });
+    showCleanResult(cleanUrl(originalValue, {
+      aggressive: aggressiveMode.checked,
+      unwrapRedirects: unwrapRedirects.checked,
+      removeDuplicateParameters: removeDuplicates.checked
+    }), { ...options, originalValue });
   } catch (error) {
     showMessage(error.message, "error");
   }
@@ -149,6 +247,9 @@ async function pasteFromClipboard() {
 
 cleanOnPaste.checked = readSetting(CLEAN_ON_PASTE_KEY, true);
 autoCopy.checked = readSetting(AUTO_COPY_KEY, false);
+aggressiveMode.checked = readSetting(AGGRESSIVE_MODE_KEY, false);
+unwrapRedirects.checked = readSetting(UNWRAP_REDIRECTS_KEY, true);
+removeDuplicates.checked = readSetting(REMOVE_DUPLICATES_KEY, false);
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -156,6 +257,7 @@ form.addEventListener("submit", (event) => {
 });
 
 pasteButton.addEventListener("click", pasteFromClipboard);
+inspectButton.addEventListener("click", () => runClean({ allowAutoCopy: false, revealInspection: true }));
 
 input.addEventListener("paste", () => {
   if (cleanOnPaste.checked) {
@@ -170,6 +272,21 @@ cleanOnPaste.addEventListener("change", () => {
 
 autoCopy.addEventListener("change", () => {
   saveSetting(AUTO_COPY_KEY, autoCopy.checked);
+});
+
+aggressiveMode.addEventListener("change", () => {
+  saveSetting(AGGRESSIVE_MODE_KEY, aggressiveMode.checked);
+  if (input.value) runClean({ allowAutoCopy: false });
+});
+
+unwrapRedirects.addEventListener("change", () => {
+  saveSetting(UNWRAP_REDIRECTS_KEY, unwrapRedirects.checked);
+  if (input.value) runClean({ allowAutoCopy: false });
+});
+
+removeDuplicates.addEventListener("change", () => {
+  saveSetting(REMOVE_DUPLICATES_KEY, removeDuplicates.checked);
+  if (input.value) runClean({ allowAutoCopy: false });
 });
 
 copyButton.addEventListener("click", async () => {
