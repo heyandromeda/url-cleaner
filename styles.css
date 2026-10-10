@@ -31,6 +31,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .message[data-kind="error"] { color: #a12626; }
 .result-panel { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ddd; }
 .result-heading, .removed-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.result-actions { display: flex; gap: 0.5rem; }
 .result-panel > h2 { margin: 0 0 1rem; }
 .result-heading h3, .removed-heading h2, .url-block h3 { margin: 0 0 0.5rem; }
 .url-block { margin-bottom: 1rem; }

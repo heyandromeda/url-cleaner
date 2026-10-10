@@ -9,6 +9,7 @@ const resultPanel = document.querySelector("#result-panel");
 const originalOutput = document.querySelector("#original-url");
 const output = document.querySelector("#cleaned-url");
 const shortenerWarning = document.querySelector("#shortener-warning");
+const shareButton = document.querySelector("#share-button");
 const copyButton = document.querySelector("#copy-button");
 const message = document.querySelector("#message");
 const removedList = document.querySelector("#removed-list");
@@ -149,6 +150,7 @@ async function pasteFromClipboard() {
 
 cleanOnPaste.checked = readSetting(CLEAN_ON_PASTE_KEY, true);
 autoCopy.checked = readSetting(AUTO_COPY_KEY, false);
+shareButton.hidden = typeof navigator.share !== "function";
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -179,6 +181,19 @@ copyButton.addEventListener("click", async () => {
     showMessage("Cleaned URL copied.", "success");
   } else {
     showMessage("Copy failed. Select the URL and copy it manually.", "error");
+  }
+});
+
+shareButton.addEventListener("click", async () => {
+  if (!cleanedValue || typeof navigator.share !== "function") return;
+
+  try {
+    await navigator.share({ url: cleanedValue });
+    showMessage("Cleaned URL shared.", "success");
+  } catch (error) {
+    if (error?.name !== "AbortError") {
+      showMessage("Sharing was unavailable. Copy the URL instead.", "error");
+    }
   }
 });
 
