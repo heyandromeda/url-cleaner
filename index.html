@@ -47,6 +47,11 @@
           </div>
           <output id="cleaned-url" class="url-output" aria-label="Cleaned URL"></output>
 
+          <aside id="unwrap-warning" class="notice" hidden>
+            <strong>Redirect unwrapped</strong>
+            <p>This link used a known redirect wrapper. The destination was cleaned locally without opening it.</p>
+          </aside>
+
           <aside id="shortener-warning" class="notice" hidden>
             <strong>Shortened link</strong>
             <p>Its destination cannot be inspected locally without following the redirect. The visible URL was cleaned, but the hidden destination was not opened or checked.</p>

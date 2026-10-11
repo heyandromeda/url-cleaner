@@ -8,6 +8,8 @@ const autoCopy = document.querySelector("#auto-copy");
 const resultPanel = document.querySelector("#result-panel");
 const originalOutput = document.querySelector("#original-url");
 const output = document.querySelector("#cleaned-url");
+const unwrapWarning = document.querySelector("#unwrap-warning");
+const unwrapWarningText = unwrapWarning.querySelector("p");
 const shortenerWarning = document.querySelector("#shortener-warning");
 const shareButton = document.querySelector("#share-button");
 const copyButton = document.querySelector("#copy-button");
@@ -38,6 +40,16 @@ function saveSetting(key, value) {
 function showMessage(text, kind = "info") {
   message.textContent = text;
   message.dataset.kind = kind;
+}
+
+function renderUnwrapNotice(unwrappedFrom = []) {
+  const hosts = unwrappedFrom.filter(Boolean);
+  unwrapWarning.hidden = hosts.length === 0;
+  if (hosts.length === 0) return;
+
+  unwrapWarningText.textContent = hosts.length === 1
+    ? `This link used a redirect wrapper on ${hosts[0]}. The destination was cleaned locally without opening it.`
+    : `This link used redirect wrappers on ${hosts.join(", ")}. The destination was cleaned locally without opening it.`;
 }
 
 function renderRemoved(parameters) {
@@ -96,13 +108,19 @@ function showCleanResult(result, { allowAutoCopy = true, originalValue = "" } = 
   renderOriginalUrl(originalValue, result.removedParameters);
   output.textContent = result.url;
   renderRemoved(result.removedParameters);
-  shortenerWarning.hidden = !isOpaqueShortener(originalValue);
+  renderUnwrapNotice(result.unwrappedFrom);
+  shortenerWarning.hidden = !isOpaqueShortener(originalValue) && !isOpaqueShortener(result.url);
   resultPanel.hidden = false;
   copyButton.disabled = false;
 
-  const baseMessage = result.changed
-    ? "Tracking parameters removed."
-    : "Already clean — no tracking parameters found.";
+  const unwrapped = result.unwrappedFrom.length > 0;
+  const baseMessage = unwrapped
+    ? result.removedParameters.length > 0
+      ? "Redirect unwrapped. Tracking parameters removed."
+      : "Redirect unwrapped. Destination had no tracking parameters."
+    : result.changed
+      ? "Tracking parameters removed."
+      : "Already clean — no tracking parameters found.";
 
   showMessage(baseMessage, "success");
 
