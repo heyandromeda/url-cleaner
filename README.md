@@ -14,9 +14,7 @@ Remove common tracking parameters from URLs without stripping parameters that a 
 
 ### Try the nightly lab
 
-The separate **[public nightly build](https://url-cleaner-nightly.heyandromeda.chatgpt.site)** currently includes seven experiments that are not part of stable `main`:
-
-- DEV-1 — Redirect unwrapping
+The separate **[public nightly build](https://url-cleaner-nightly.heyandromeda.chatgpt.site)** currently includes six experiments that are not part of stable `main`:
 - DEV-2 — URL X-Ray
 - DEV-3 — Tracking fingerprint
 - DEV-7 — Encoded value decoder
@@ -37,9 +35,14 @@ That means search terms, product IDs, page numbers, language settings, invite co
 ## Features
 
 - Removes common UTM, Google Ads, Microsoft/Bing, social, email, analytics, affiliate, HubSpot, Matomo, and Adobe tracking parameters
-- Removes tracker families such as `utm_*`, `hsa_*`, `mtm_*`, `pk_*`, `piwik_*`, and `_ga_*`
+- Removes tracker families such as `utm_*`, `hsa_*`, `mtm_*`, `piwik_*`, and `_ga_*`
+- Removes explicit Matomo parameters such as `pk_campaign` and `pk_kwd` while preserving unrelated names such as `pk_live`
 - Preserves unknown and functional parameters by default
+- Applies site-specific rules conservatively, including removing `si` only from YouTube links
 - Keeps YouTube parameters such as `v`, `t`, and `list`
+- Unwraps known Google, Facebook, Outlook Safe Links, YouTube, and `href.li` redirect wrappers locally, then cleans the destination
+- Limits nested wrapper unwrapping to three levels and falls back safely when a destination is invalid
+- Accepts only HTTP and HTTPS URLs
 - Preserves URL paths, hashes, search queries, page numbers, product IDs, and language settings
 - Paste directly from the clipboard with the **Paste** button
 - Optionally cleans automatically whenever you paste
@@ -66,7 +69,9 @@ Choose URL Cleaner when you want a link-cleaning tool that stays simple, transpa
 - **Honest about limits:** shortened links get an informational notice instead of a false safety claim.
 - **Small and understandable:** plain HTML, CSS, and JavaScript with no framework or backend.
 
-## Example
+## Feature examples
+
+### Remove trackers and keep functional values
 
 Before:
 
@@ -80,7 +85,43 @@ After:
 https://www.youtube.com/watch?v=abc123#comments
 ```
 
-The YouTube video ID and page fragment stay intact. The before/after view highlights the removed parameters so the change is easy to verify.
+The YouTube video ID and page fragment stay intact while the tracking parameters are removed.
+
+### Unwrap a known redirect locally
+
+Before:
+
+```
+https://www.google.com/url?q=https%3A%2F%2Fexample.com%2Fpage%3Futm_source%3Dnews%26id%3D9&sa=D
+```
+
+After:
+
+```
+https://example.com/page?id=9
+```
+
+URL Cleaner extracts the destination from the Google wrapper without opening it or making a network request, removes `utm_source`, keeps `id=9`, and displays a **Redirect unwrapped** notice naming the wrapper host.
+
+The same local behavior supports Facebook `/l.php`, Outlook Safe Links, YouTube `/redirect`, and `href.li`. Nested known wrappers are handled up to three levels deep.
+
+### Apply tracker rules only where they belong
+
+```
+https://www.youtube.com/watch?v=abc123&si=SHAREID&t=30s
+→ https://www.youtube.com/watch?v=abc123&t=30s
+```
+
+```
+https://intranet.example/report?si=42&year=2024
+→ https://intranet.example/report?si=42&year=2024
+```
+
+The `si` parameter is removed from YouTube sharing links but preserved on unrelated sites. Matomo names such as `pk_campaign` and `pk_kwd` are removed, while unrelated names such as `pk_live` remain.
+
+### Reject unsupported URL schemes
+
+Inputs using `javascript:`, `data:`, `file:`, or `ftp:` are rejected with a clear HTTP/HTTPS validation message.
 
 ## Shortened links
 
@@ -167,9 +208,12 @@ The test suite covers:
 - YouTube links
 - URLs without query strings
 - Hash fragments
-- Invalid input
+- Invalid and non-HTTP(S) input
 - Case-insensitive tracker names
-- Known opaque URL shorteners
+- Known redirect wrappers, including nested wrappers
+- Site-scoped parameters such as YouTube `si`
+- Explicit Matomo parameters while preserving unrelated `pk_*` names
+- Known opaque URL shorteners that are warned about without being followed
 
 ## Project structure
 
