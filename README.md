@@ -4,13 +4,13 @@ Remove common tracking parameters from URLs without stripping parameters that a 
 
 > 🧪 **Want the experimental version? [Open URL Cleaner Nightly](https://url-cleaner-nightly.heyandromeda.chatgpt.site).** It is deployed separately from the stable `main` build.
 
-> **Built entirely with [ChatGPT Codex](https://openai.com/codex/).**
+> **Built entirely with [Cursor](https://cursor.com/), [Claude Code](https://www.anthropic.com/claude-code) and [ChatGPT Codex](https://openai.com/codex/).**
 
-[![Open live tool](https://img.shields.io/badge/TRY%20IT-Live%20URL%20Cleaner-2563eb?style=for-the-badge)](https://url-cleaner.heyandromeda.chatgpt.site)
+[![Open live tool](https://img.shields.io/badge/TRY%20IT-Live%20URL%20Cleaner-2563eb?style=for-the-badge)](https://andromeda-url-cleaner.vercel.app)
 [![Nightly build](https://img.shields.io/badge/TRY%20NIGHTLY-Experimental-f59e0b?style=for-the-badge)](https://url-cleaner-nightly.heyandromeda.chatgpt.site)
 [![Browser only](https://img.shields.io/badge/RUNS%20LOCALLY-No%20backend-16a34a?style=flat-square)](https://github.com/heyandromeda/url-cleaner)
 
-**[Open the stable tool](https://url-cleaner.heyandromeda.chatgpt.site)** · **[Use the nightly build](https://url-cleaner-nightly.heyandromeda.chatgpt.site)** · **[Browse the source](https://github.com/heyandromeda/url-cleaner)** · **[View the tests](https://github.com/heyandromeda/url-cleaner/blob/main/tests/url-cleaner.test.js)**
+**[Open the stable tool](https://andromeda-url-cleaner.vercel.app)** · **[Use the nightly build](https://url-cleaner-nightly.heyandromeda.chatgpt.site)** · **[Browse the source](https://github.com/heyandromeda/url-cleaner)** · **[View the tests](https://github.com/heyandromeda/url-cleaner/blob/main/tests/url-cleaner.test.js)**
 
 ### Try the nightly lab
 
@@ -129,7 +129,7 @@ Known shortened links receive an informational notice. URL Cleaner cleans the vi
 
 ## Use the live tool
 
-Open **[url-cleaner.heyandromeda.chatgpt.site](https://url-cleaner.heyandromeda.chatgpt.site)**, paste a URL, and select **Clean URL**.
+Open **[url-cleaner.heyandromeda.chatgpt.site](https://andromeda-url-cleaner.vercel.app)**, paste a URL, and select **Clean URL**.
 
 The app does not upload the URL anywhere. Copying and pasting use your browser's clipboard permission.
 
@@ -150,7 +150,7 @@ You can get the same practical flow with an Apple Shortcut:
 5. Add **URL Encode** or **Encode URL**, using the URL from the previous action.
 6. Add a **Text** action containing this URL, replacing the bracketed part with the encoded value:
    ```
-   https://url-cleaner.heyandromeda.chatgpt.site/?url=[Encoded URL]
+   https://andromeda-url-cleaner.vercel.app?url=[Encoded URL]
    ```
 7. Add **Open URLs** using that Text action.
 8. Save it as **Clean URL with URL Cleaner**.
