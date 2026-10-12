@@ -2,19 +2,19 @@
 
 Remove common tracking parameters from URLs without stripping parameters that a page actually needs.
 
-> 🧪 **Want the experimental version? [Open URL Cleaner Nightly](https://url-cleaner-nightly.heyandromeda.chatgpt.site).** It is deployed separately from the stable `main` build.
+> 🧪 **Want the experimental version? [Open URL Cleaner Nightly](https://andromeda-url-cleaner-nightly.vercel.app).** It is deployed separately from the stable `main` build.
 
 > **Built entirely with [Cursor](https://cursor.com/), [Claude Code](https://www.anthropic.com/claude-code) and [ChatGPT Codex](https://openai.com/codex/).**
 
 [![Open live tool](https://img.shields.io/badge/TRY%20IT-Live%20URL%20Cleaner-2563eb?style=for-the-badge)](https://andromeda-url-cleaner.vercel.app)
-[![Nightly build](https://img.shields.io/badge/TRY%20NIGHTLY-Experimental-f59e0b?style=for-the-badge)](https://url-cleaner-nightly.heyandromeda.chatgpt.site)
+[![Nightly build](https://img.shields.io/badge/TRY%20NIGHTLY-Experimental-f59e0b?style=for-the-badge)](https://andromeda-url-cleaner-nightly.vercel.app)
 [![Browser only](https://img.shields.io/badge/RUNS%20LOCALLY-No%20backend-16a34a?style=flat-square)](https://github.com/heyandromeda/url-cleaner)
 
-**[Open the stable tool](https://andromeda-url-cleaner.vercel.app)** · **[Use the nightly build](https://url-cleaner-nightly.heyandromeda.chatgpt.site)** · **[Browse the source](https://github.com/heyandromeda/url-cleaner)** · **[View the tests](https://github.com/heyandromeda/url-cleaner/blob/main/tests/url-cleaner.test.js)**
+**[Open the stable tool](https://andromeda-url-cleaner.vercel.app)** · **[Use the nightly build](https://andromeda-url-cleaner-nightly.vercel.app)** · **[Browse the source](https://github.com/heyandromeda/url-cleaner)** · **[View the tests](https://github.com/heyandromeda/url-cleaner/blob/main/tests/url-cleaner.test.js)**
 
 ### Try the nightly lab
 
-The separate **[public nightly build](https://url-cleaner-nightly.heyandromeda.chatgpt.site)** currently includes six experiments that are not part of stable `main`:
+The separate **[public nightly build](https://andromeda-url-cleaner-nightly.vercel.app)** currently includes six experiments that are not part of stable `main`:
 - DEV-2 — URL X-Ray
 - DEV-3 — Tracking fingerprint
 - DEV-7 — Encoded value decoder
