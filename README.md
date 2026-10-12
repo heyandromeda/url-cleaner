@@ -129,7 +129,7 @@ Known shortened links receive an informational notice. URL Cleaner cleans the vi
 
 ## Use the live tool
 
-Open **[url-cleaner.heyandromeda.chatgpt.site](https://andromeda-url-cleaner.vercel.app)**, paste a URL, and select **Clean URL**.
+Open **[andromeda-url-cleaner.vercel.app](https://andromeda-url-cleaner.vercel.app)**, paste a URL, and select **Clean URL**.
 
 The app does not upload the URL anywhere. Copying and pasting use your browser's clipboard permission.
 
