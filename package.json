@@ -1,5 +1,6 @@
 {
   "name": "url-cleaner",
+  "homepage": "https://andromeda-url-cleaner.vercel.app",
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js"
