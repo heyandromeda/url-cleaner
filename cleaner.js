@@ -153,3 +153,35 @@ function cleanUrlAtDepth(input, depth) {
 export function cleanUrl(input) {
   return cleanUrlAtDepth(input, 0);
 }
+
+export function cleanBatch(text) {
+  const lines = String(text ?? "").split(/\r?\n/);
+  const results = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const input = lines[index].trim();
+    if (!input) continue;
+
+    try {
+      results.push({
+        line: index + 1,
+        input,
+        ok: true,
+        result: cleanUrl(input)
+      });
+    } catch (error) {
+      results.push({
+        line: index + 1,
+        input,
+        ok: false,
+        error: error.message
+      });
+    }
+  }
+
+  return results;
+}
+
+export function cleanedUrlsFromBatch(results) {
+  return results.filter((entry) => entry.ok).map((entry) => entry.result.url);
+}

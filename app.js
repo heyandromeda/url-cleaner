@@ -1,4 +1,6 @@
-import { cleanUrl, isOpaqueShortener } from "./cleaner.js";
+import { cleanBatch, cleanedUrlsFromBatch, isOpaqueShortener } from "./cleaner.js";
+import { explainParameter, trackerOfTheDay } from "./explanations.js";
+import { bookmarkletCode, canReadClipboard, parseHandoffParams } from "./handoff.js";
 
 const form = document.querySelector("#clean-form");
 const input = document.querySelector("#url-input");
@@ -6,6 +8,9 @@ const pasteButton = document.querySelector("#paste-button");
 const cleanOnPaste = document.querySelector("#clean-on-paste");
 const autoCopy = document.querySelector("#auto-copy");
 const resultPanel = document.querySelector("#result-panel");
+const batchPanel = document.querySelector("#batch-panel");
+const batchList = document.querySelector("#batch-list");
+const copyAllButton = document.querySelector("#copy-all-button");
 const originalOutput = document.querySelector("#original-url");
 const output = document.querySelector("#cleaned-url");
 const unwrapWarning = document.querySelector("#unwrap-warning");
@@ -15,10 +20,21 @@ const shareButton = document.querySelector("#share-button");
 const copyButton = document.querySelector("#copy-button");
 const message = document.querySelector("#message");
 const removedList = document.querySelector("#removed-list");
+const clipboardOffer = document.querySelector("#clipboard-offer");
+const clipboardOfferText = document.querySelector("#clipboard-offer-text");
+const clipboardOfferClean = document.querySelector("#clipboard-offer-clean");
+const clipboardOfferDismiss = document.querySelector("#clipboard-offer-dismiss");
+const totd = document.querySelector("#tracker-of-the-day");
+const totdBody = document.querySelector("#totd-body");
+const totdDismiss = document.querySelector("#totd-dismiss");
+const bookmarklet = document.querySelector("#bookmarklet");
 
 const CLEAN_ON_PASTE_KEY = "url-cleaner.clean-on-paste";
 const AUTO_COPY_KEY = "url-cleaner.auto-copy";
+const TOTD_DISMISSED_KEY = "url-cleaner.totd-dismissed";
 let cleanedValue = "";
+let batchCopyValue = "";
+let clipboardOfferValue = "";
 
 function readSetting(key, fallback) {
   try {
@@ -52,21 +68,39 @@ function renderUnwrapNotice(unwrappedFrom = []) {
     : `This link used redirect wrappers on ${hosts.join(", ")}. The destination was cleaned locally without opening it.`;
 }
 
-function renderRemoved(parameters) {
-  removedList.replaceChildren();
+function appendRemovedItem(list, parameter) {
+  const item = document.createElement("li");
+  const explanation = explainParameter(parameter);
+  if (!explanation) {
+    item.textContent = parameter;
+    list.append(item);
+    return;
+  }
+
+  const details = document.createElement("details");
+  const summary = document.createElement("summary");
+  summary.textContent = parameter;
+  const body = document.createElement("p");
+  body.className = "param-explanation";
+  body.textContent = explanation;
+  details.append(summary, body);
+  item.append(details);
+  list.append(item);
+}
+
+function renderRemoved(parameters, list = removedList) {
+  list.replaceChildren();
 
   if (parameters.length === 0) {
     const item = document.createElement("li");
     item.textContent = "None";
     item.className = "muted";
-    removedList.append(item);
+    list.append(item);
     return;
   }
 
   for (const parameter of parameters) {
-    const item = document.createElement("li");
-    item.textContent = parameter;
-    removedList.append(item);
+    appendRemovedItem(list, parameter);
   }
 }
 
@@ -103,6 +137,15 @@ async function copyText(value) {
   }
 }
 
+function hideResults() {
+  resultPanel.hidden = true;
+  batchPanel.hidden = true;
+  copyButton.disabled = true;
+  copyAllButton.disabled = true;
+  cleanedValue = "";
+  batchCopyValue = "";
+}
+
 function showCleanResult(result, { allowAutoCopy = true, originalValue = "" } = {}) {
   cleanedValue = result.url;
   renderOriginalUrl(originalValue, result.removedParameters);
@@ -111,6 +154,7 @@ function showCleanResult(result, { allowAutoCopy = true, originalValue = "" } = 
   renderUnwrapNotice(result.unwrappedFrom);
   shortenerWarning.hidden = !isOpaqueShortener(originalValue) && !isOpaqueShortener(result.url);
   resultPanel.hidden = false;
+  batchPanel.hidden = true;
   copyButton.disabled = false;
 
   const unwrapped = result.unwrappedFrom.length > 0;
@@ -134,17 +178,88 @@ function showCleanResult(result, { allowAutoCopy = true, originalValue = "" } = 
   }
 }
 
-function runClean(options = {}) {
+function showBatchResults(entries, { allowAutoCopy = true } = {}) {
   resultPanel.hidden = true;
+  batchPanel.hidden = false;
+  batchList.replaceChildren();
   copyButton.disabled = true;
   cleanedValue = "";
+  const cleaned = cleanedUrlsFromBatch(entries);
+  batchCopyValue = cleaned.join("\n");
+  copyAllButton.disabled = cleaned.length === 0;
 
-  try {
-    const originalValue = input.value;
-    showCleanResult(cleanUrl(originalValue), { ...options, originalValue });
-  } catch (error) {
-    showMessage(error.message, "error");
+  for (const entry of entries) {
+    const item = document.createElement("li");
+    item.className = entry.ok ? "ok" : "fail";
+
+    const status = document.createElement("p");
+    status.className = "batch-status";
+    status.textContent = entry.ok ? `Line ${entry.line}: cleaned` : `Line ${entry.line}: failed`;
+
+    const original = document.createElement("div");
+    original.className = "batch-url";
+    original.textContent = entry.input;
+
+    item.append(status, original);
+
+    if (entry.ok) {
+      const cleanedLine = document.createElement("div");
+      cleanedLine.className = "batch-url";
+      cleanedLine.textContent = entry.result.url;
+      item.append(cleanedLine);
+
+      if (entry.result.removedParameters.length > 0) {
+        const removed = document.createElement("ul");
+        removed.className = "removed-list";
+        renderRemoved(entry.result.removedParameters, removed);
+        item.append(removed);
+      }
+    } else {
+      const error = document.createElement("p");
+      error.className = "batch-error";
+      error.textContent = entry.error;
+      item.append(error);
+    }
+
+    batchList.append(item);
   }
+
+  const failed = entries.length - cleaned.length;
+  const baseMessage = failed === 0
+    ? `${cleaned.length} URL${cleaned.length === 1 ? "" : "s"} cleaned.`
+    : `${cleaned.length} cleaned, ${failed} failed.`;
+  showMessage(baseMessage, cleaned.length > 0 ? "success" : "error");
+
+  if (allowAutoCopy && autoCopy.checked && batchCopyValue) {
+    copyText(batchCopyValue).then((copied) => {
+      showMessage(
+        copied ? `${baseMessage} Copied cleaned URLs.` : `${baseMessage} Clipboard copy was unavailable.`,
+        copied ? "success" : "info"
+      );
+    });
+  }
+}
+
+function runClean(options = {}) {
+  hideResults();
+
+  const entries = cleanBatch(input.value);
+  if (entries.length === 0) {
+    showMessage("Enter a URL to clean.", "error");
+    return;
+  }
+
+  if (entries.length === 1) {
+    const [entry] = entries;
+    if (!entry.ok) {
+      showMessage(entry.error, "error");
+      return;
+    }
+    showCleanResult(entry.result, { ...options, originalValue: entry.input });
+    return;
+  }
+
+  showBatchResults(entries, options);
 }
 
 async function pasteFromClipboard() {
@@ -166,9 +281,68 @@ async function pasteFromClipboard() {
   }
 }
 
+function renderTrackerOfTheDay() {
+  const fact = trackerOfTheDay();
+  try {
+    if (localStorage.getItem(TOTD_DISMISSED_KEY) === fact.date) {
+      totd.hidden = true;
+      return;
+    }
+  } catch {
+    // Ignore storage failures and still show the fact.
+  }
+
+  totdBody.textContent = `${fact.name}: ${fact.explanation}`;
+  totd.hidden = false;
+}
+
+async function offerClipboardIfPermitted() {
+  if (!navigator.clipboard || typeof navigator.clipboard.readText !== "function") {
+    return;
+  }
+
+  let permissionState = "unavailable";
+  if (navigator.permissions && typeof navigator.permissions.query === "function") {
+    try {
+      const status = await navigator.permissions.query({ name: "clipboard-read" });
+      permissionState = status.state;
+    } catch {
+      return;
+    }
+  } else {
+    return;
+  }
+
+  if (!canReadClipboard(permissionState)) {
+    return;
+  }
+
+  try {
+    const text = await navigator.clipboard.readText();
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    clipboardOfferValue = text;
+    const lines = trimmed.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    clipboardOfferText.textContent = lines.length > 1
+      ? `Your clipboard has ${lines.length} lines. Clean them locally?`
+      : "Your clipboard looks like it contains a URL. Clean it locally?";
+    clipboardOffer.hidden = false;
+  } catch {
+    // Permission may have been revoked between the query and the read.
+  }
+}
+
+function clearHandoffFromAddressBar() {
+  const url = new URL(window.location.href);
+  if (![...url.searchParams.keys()].length) return;
+  window.history.replaceState(null, "", url.pathname);
+}
+
 cleanOnPaste.checked = readSetting(CLEAN_ON_PASTE_KEY, true);
 autoCopy.checked = readSetting(AUTO_COPY_KEY, false);
 shareButton.hidden = typeof navigator.share !== "function";
+bookmarklet.href = bookmarkletCode(window.location.origin);
+renderTrackerOfTheDay();
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -179,7 +353,6 @@ pasteButton.addEventListener("click", pasteFromClipboard);
 
 input.addEventListener("paste", () => {
   if (cleanOnPaste.checked) {
-    // Wait for the browser to insert the pasted text before cleaning once.
     window.setTimeout(() => runClean(), 0);
   }
 });
@@ -202,6 +375,16 @@ copyButton.addEventListener("click", async () => {
   }
 });
 
+copyAllButton.addEventListener("click", async () => {
+  if (!batchCopyValue) return;
+
+  if (await copyText(batchCopyValue)) {
+    showMessage("Cleaned URLs copied.", "success");
+  } else {
+    showMessage("Copy failed. Select the URLs and copy them manually.", "error");
+  }
+});
+
 shareButton.addEventListener("click", async () => {
   if (!cleanedValue || typeof navigator.share !== "function") return;
 
@@ -215,9 +398,33 @@ shareButton.addEventListener("click", async () => {
   }
 });
 
-const sharedUrl = new URL(window.location.href).searchParams.get("url");
-if (sharedUrl) {
-  input.value = sharedUrl;
+totdDismiss.addEventListener("click", () => {
+  saveSetting(TOTD_DISMISSED_KEY, trackerOfTheDay().date);
+  totd.hidden = true;
+});
+
+clipboardOfferClean.addEventListener("click", () => {
+  input.value = clipboardOfferValue;
+  clipboardOffer.hidden = true;
+  runClean();
+});
+
+clipboardOfferDismiss.addEventListener("click", () => {
+  clipboardOffer.hidden = true;
+  clipboardOfferValue = "";
+});
+
+const handedOff = parseHandoffParams(new URL(window.location.href).searchParams);
+if (handedOff) {
+  input.value = handedOff;
   runClean({ allowAutoCopy: false });
-  window.history.replaceState(null, "", window.location.pathname);
+  clearHandoffFromAddressBar();
+} else {
+  offerClipboardIfPermitted();
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch(() => {
+    // Installability is optional; cleaning still works without a worker.
+  });
 }

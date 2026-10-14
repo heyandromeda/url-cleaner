@@ -6,7 +6,7 @@
 
 * { box-sizing: border-box; }
 body { min-width: 320px; margin: 0; }
-button, input { font: inherit; }
+button, input, textarea { font: inherit; }
 .app-shell { width: min(100% - 2rem, 700px); margin: 0 auto; padding: 3rem 0; }
 .cleaner-card { padding: 0; }
 .eyebrow { margin-bottom: 0.5rem; color: #666; font-size: 0.75rem; letter-spacing: 0.08em; }
@@ -14,9 +14,11 @@ h1 { margin: 0 0 0.5rem; font-size: 2rem; }
 .intro { margin: 0 0 1.5rem; color: #555; line-height: 1.5; }
 .clean-form label, h2, h3 { font-size: 0.95rem; font-weight: 700; }
 .clean-form label { display: block; margin-bottom: 0.4rem; }
-.input-row { display: flex; gap: 0.5rem; }
-input { min-width: 0; flex: 1; border: 1px solid #999; border-radius: 4px; padding: 0.7rem; color: #222; background: #fff; }
-input:focus { border-color: #222; outline: 2px solid #ddd; outline-offset: 1px; }
+.field-hint { margin: 0 0 0.5rem; color: #666; font-size: 0.8rem; line-height: 1.4; }
+.input-row { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+input, textarea { min-width: 0; width: 100%; border: 1px solid #999; border-radius: 4px; padding: 0.7rem; color: #222; background: #fff; }
+textarea { flex: none; resize: vertical; min-height: 4.5rem; line-height: 1.4; }
+input:focus, textarea:focus { border-color: #222; outline: 2px solid #ddd; outline-offset: 1px; }
 button { cursor: pointer; border: 1px solid #222; border-radius: 4px; padding: 0.7rem 1rem; font-weight: 700; }
 button:focus-visible { outline: 2px solid #555; outline-offset: 2px; }
 button:disabled { cursor: not-allowed; opacity: 0.5; }
@@ -41,12 +43,32 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .notice p { margin: 0.3rem 0 0; line-height: 1.45; }
 .removed-heading { margin-top: 1.25rem; }
 .removed-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
-.removed-list li { padding: 0.25rem 0.4rem; border: 1px solid #ddd; border-radius: 3px; color: #444; background: #f7f7f7; font: 0.8rem monospace; }
-.removed-list li.muted { border: 0; padding-left: 0; color: #777; background: transparent; }
+.removed-list li { padding: 0.25rem 0.4rem; border: 1px solid #ddd; border-radius: 3px; color: #444; background: #f7f7f7; font: 0.8rem/1.4 monospace; }
+.removed-list li.muted { border: 0; padding-left: 0; color: #777; background: transparent; font-family: inherit; }
+.removed-list details { margin: 0; }
+.removed-list summary { cursor: pointer; }
+.removed-list summary:focus-visible { outline: 2px solid #555; outline-offset: 2px; }
+.removed-list .param-explanation { margin: 0.35rem 0 0; max-width: 40rem; color: #555; font-family: Arial, Helvetica, sans-serif; font-size: 0.8rem; }
+.totd { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin: 0 0 1.25rem; padding: 0.8rem; border: 1px solid #ddd; border-radius: 4px; background: #fafafa; }
+.totd[hidden] { display: none; }
+.totd-label { margin: 0 0 0.25rem; color: #666; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.totd p { margin: 0; color: #444; font-size: 0.9rem; line-height: 1.45; }
+.inline-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.7rem; }
+.batch-list { margin: 0.75rem 0 0; padding: 0; list-style: none; }
+.batch-list li { margin: 0 0 0.6rem; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; }
+.batch-list .batch-status { margin: 0 0 0.35rem; font-size: 0.8rem; font-weight: 700; }
+.batch-list .ok .batch-status { color: #176b36; }
+.batch-list .fail .batch-status { color: #a12626; }
+.batch-list .batch-url { overflow-wrap: anywhere; font-size: 0.9rem; line-height: 1.4; }
+.batch-list .batch-error { margin: 0.35rem 0 0; color: #a12626; font-size: 0.85rem; }
+.extras { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #ddd; }
+.extras h2 { margin: 0 0 0.4rem; }
+.bookmarklet-link { display: inline-block; margin-top: 0.35rem; border: 1px dashed #222; border-radius: 4px; padding: 0.55rem 0.8rem; color: #222; background: #fff; font-weight: 700; text-decoration: none; }
+.bookmarklet-link:focus-visible { outline: 2px solid #555; outline-offset: 2px; }
 .privacy-note { margin: 1.5rem 0 0; color: #777; font-size: 0.8rem; }
 @media (max-width: 580px) {
   .input-row { flex-wrap: wrap; }
-  .input-row input { flex-basis: 100%; }
   .input-row button { flex: 1; }
   .settings { flex-direction: column; gap: 0.65rem; }
+  .totd { flex-direction: column; }
 }
