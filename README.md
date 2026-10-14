@@ -46,6 +46,12 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Preserves URL paths, hashes, search queries, page numbers, product IDs, and language settings
 - Paste directly from the clipboard with the **Paste** button
 - Optionally cleans automatically whenever you paste
+- If clipboard read is already permitted, offers to clean whatever is on the clipboard when the page opens
+- Cleans a batch of URLs pasted one per line, with per-line success or failure and one-click copy of cleaned results
+- Explains recognized removed tracking parameters from the results view; unknown names are not described
+- Shows a dismissible tracker-of-the-day fact chosen locally from the explanation list
+- Includes a bookmarklet that only opens URL Cleaner with the current page URL
+- Installable as a PWA with a share target so a phone can hand a link to the local cleaner
 - Optionally copies every successfully cleaned URL automatically
 - Remembers the two settings locally without storing URLs or clipboard contents
 - Shows a mobile-friendly before/after view and highlights exactly which parameters were removed
@@ -214,6 +220,10 @@ The test suite covers:
 - Site-scoped parameters such as YouTube `si`
 - Explicit Matomo parameters while preserving unrelated `pk_*` names
 - Known opaque URL shorteners that are warned about without being followed
+- Batch cleaning that continues after invalid lines
+- Local tracker explanations and deterministic tracker-of-the-day selection
+- Share-target / `?url=` handoff parsing and bookmarklet redirect-only behavior
+- Manifest, service worker, and CSP constraints for the installable app
 
 ## Project structure
 
@@ -221,8 +231,12 @@ The test suite covers:
 | --- | --- |
 | [index.html](./index.html) | Runnable app page |
 | [styles.css](./styles.css) | Minimal styling |
-| [cleaner.js](./cleaner.js) | URL-cleaning logic and tracker lists |
+| [cleaner.js](./cleaner.js) | URL-cleaning logic, tracker lists, and batch processing |
+| [explanations.js](./explanations.js) | Local tracker explanations and tracker-of-the-day selection |
+| [handoff.js](./handoff.js) | Share-target, bookmarklet, and clipboard-permission helpers |
 | [app.js](./app.js) | Form, clipboard, settings, and copy interactions |
+| [manifest.webmanifest](./manifest.webmanifest) | Web app manifest and share target |
+| [sw.js](./sw.js) | Minimal service worker for installability (no caching) |
 | [tests/url-cleaner.test.js](./tests/url-cleaner.test.js) | Automated tests |
 | [LICENSE](./LICENSE) | MIT License |
 | [dist/](./dist) | Static-site copy used by the hosted deployment |

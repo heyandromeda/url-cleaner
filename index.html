@@ -9,9 +9,11 @@
     <meta property="og:title" content="URL Cleaner" />
     <meta property="og:description" content="Remove common tracking parameters from URLs locally in your browser." />
     <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#063a1a" />
     <link rel="icon" href="./favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="icon" type="image/png" href="./favicon.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180" />
+    <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles.css" />
     <title>URL Cleaner</title>
   </head>
@@ -22,10 +24,28 @@
         <h1 id="page-title">URL Cleaner</h1>
         <p class="intro">Remove common tracking parameters while keeping the query values your link needs.</p>
 
+        <aside id="tracker-of-the-day" class="totd" hidden>
+          <div>
+            <p class="totd-label">Tracker of the day</p>
+            <p id="totd-body"></p>
+          </div>
+          <button id="totd-dismiss" type="button" class="secondary-button">Dismiss</button>
+        </aside>
+
+        <aside id="clipboard-offer" class="notice" hidden>
+          <strong>Clipboard</strong>
+          <p id="clipboard-offer-text">Your clipboard looks like it contains a URL. Clean it locally?</p>
+          <div class="inline-actions">
+            <button id="clipboard-offer-clean" type="button" class="primary-button">Clean clipboard</button>
+            <button id="clipboard-offer-dismiss" type="button" class="secondary-button">Not now</button>
+          </div>
+        </aside>
+
         <form id="clean-form" class="clean-form">
-          <label for="url-input">URL to clean</label>
+          <label for="url-input">URLs to clean</label>
+          <p class="field-hint" id="url-input-hint">One URL per line. Paste a list to clean a batch.</p>
+          <textarea id="url-input" name="url" rows="3" inputmode="url" autocomplete="off" spellcheck="false" aria-describedby="url-input-hint" placeholder="https://example.com/page?utm_source=newsletter" required></textarea>
           <div class="input-row">
-            <input id="url-input" name="url" type="url" inputmode="url" autocomplete="off" placeholder="https://example.com/page?utm_source=newsletter" required />
             <button id="paste-button" type="button" class="secondary-button">Paste</button>
             <button type="submit" class="primary-button">Clean URL</button>
           </div>
@@ -69,8 +89,22 @@
           </div>
           <ul id="removed-list" class="removed-list"></ul>
         </section>
+
+        <section id="batch-panel" class="result-panel" aria-labelledby="batch-title" hidden>
+          <div class="result-heading">
+            <h2 id="batch-title">Batch results</h2>
+            <button id="copy-all-button" type="button" class="secondary-button" disabled>Copy cleaned URLs</button>
+          </div>
+          <ol id="batch-list" class="batch-list"></ol>
+        </section>
+
+        <section class="extras" aria-labelledby="bookmarklet-title">
+          <h2 id="bookmarklet-title">Bookmarklet</h2>
+          <p class="field-hint">Drag this onto your bookmarks bar. It opens URL Cleaner with the current page’s URL. It does not inject a script into the other site.</p>
+          <a id="bookmarklet" class="bookmarklet-link" href="javascript:void(location.href='https://andromeda-url-cleaner.vercel.app/?url='+encodeURIComponent(location.href))">Clean with URL Cleaner</a>
+        </section>
       </section>
-      <p class="privacy-note">Runs entirely in your browser. Nothing is uploaded or stored.</p>
+      <p class="privacy-note">Runs entirely in your browser. Nothing is uploaded or stored. Installable as a local web app; sharing a link to this app is cleaned here, not sent to a server.</p>
     </main>
     <script type="module" src="./app.js"></script>
   </body>
