@@ -49,7 +49,7 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - If clipboard read is already permitted, offers to clean whatever is on the clipboard when the page opens
 - Cleans a batch of URLs pasted one per line, with per-line success or failure and one-click copy of cleaned results
 - Explains recognized removed tracking parameters from the results view; unknown names are not described
-- Shows a collapsible Tracker of the Day card with a richer local explanation, example URL, privacy notes, and fun facts; expand/collapse preference is remembered in localStorage
+- Shows a collapsible Tracker of the Day card with a richer local explanation, example URL, privacy notes, fun facts, and cited sources; expand/collapse preference is remembered in localStorage
 - Includes a bookmarklet that only opens URL Cleaner with the current page URL
 - Installable as a PWA with a share target so a phone can hand a link to the local cleaner
 - Optionally copies every successfully cleaned URL automatically
