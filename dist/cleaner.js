@@ -32,6 +32,19 @@ export const OPAQUE_SHORTENER_HOSTS = new Set([
   "rebrand.ly", "shorturl.at", "t.co", "tiny.cc", "tinyurl.com"
 ]);
 
+const FUNCTIONAL_PARAMETERS = new Set([
+  "id", "lang", "language", "list", "page", "q", "query", "search", "t", "tab", "v"
+]);
+
+const AFFILIATE_PARAMETERS = new Set([
+  "affiliate", "affiliate_id", "affid", "aff_id", "cjevent", "irclickid",
+  "mkcid", "mkevt", "partner", "partner_id", "ref", "referral"
+]);
+
+const REDIRECT_RELATED_PARAMETERS = new Set([
+  "url", "u", "to", "target", "destination", "redirect", "redirect_uri"
+]);
+
 const MAX_UNWRAP_DEPTH = 3;
 
 function normalizeHostname(hostname) {
@@ -64,31 +77,193 @@ function getHrefLiDestination(url) {
   }
 }
 
-function getWrapperDestination(url) {
+function getWrapperInfo(url) {
   const host = normalizeHostname(url.hostname);
   const path = url.pathname;
 
   if ((host === "google.com" || host === "googleadservices.com") && path === "/url") {
-    return url.searchParams.get("q");
+    return { parameter: "q", destination: url.searchParams.get("q") };
   }
 
   if ((host === "facebook.com" || host === "l.facebook.com" || host === "lm.facebook.com") && path === "/l.php") {
-    return url.searchParams.get("u");
+    return { parameter: "u", destination: url.searchParams.get("u") };
   }
 
   if (host === "safelinks.protection.outlook.com" || host.endsWith(".safelinks.protection.outlook.com")) {
-    return url.searchParams.get("url");
+    return { parameter: "url", destination: url.searchParams.get("url") };
   }
 
   if ((host === "youtube.com" || host === "m.youtube.com") && path === "/redirect") {
-    return url.searchParams.get("q");
+    return { parameter: "q", destination: url.searchParams.get("q") };
   }
 
   if (host === "href.li") {
-    return getHrefLiDestination(url);
+    return { parameter: "query", destination: getHrefLiDestination(url) };
   }
 
   return null;
+}
+
+function getWrapperDestination(url) {
+  return getWrapperInfo(url)?.destination ?? null;
+}
+
+function parseHttpUrl(input) {
+  const value = String(input ?? "").trim();
+  if (!value) throw new TypeError("Enter a URL to clean.");
+
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new TypeError("Enter a valid URL, including https:// or http://.");
+  }
+
+  if (!isHttpUrl(url)) {
+    throw new TypeError("Enter a valid URL, including https:// or http://.");
+  }
+
+  return url;
+}
+
+function decodeForInspection(value, maximumPasses = 2) {
+  const versions = [];
+  let current = value;
+  for (let pass = 0; pass < maximumPasses; pass += 1) {
+    try {
+      const decoded = decodeURIComponent(current);
+      if (decoded === current) break;
+      versions.push(decoded);
+      current = decoded;
+    } catch {
+      break;
+    }
+  }
+  return versions;
+}
+
+function validHttpDestination(value) {
+  for (const candidate of [value, ...decodeForInspection(value)]) {
+    try {
+      const url = new URL(candidate);
+      if (isHttpUrl(url)) return url;
+    } catch {
+      // Encoded or malformed destinations are ignored.
+    }
+  }
+  return null;
+}
+
+function unwrapRedirectLayers(input, maximumDepth = MAX_UNWRAP_DEPTH) {
+  let current = parseHttpUrl(input);
+  const layers = [];
+  const visited = new Set([current.href]);
+
+  for (let depth = 0; depth < maximumDepth; depth += 1) {
+    const info = getWrapperInfo(current);
+    if (!info?.destination) break;
+    const destination = validHttpDestination(info.destination);
+    if (!destination || visited.has(destination.href)) break;
+    layers.push({
+      from: current.href,
+      host: current.hostname,
+      parameter: info.parameter,
+      to: destination.href
+    });
+    current = destination;
+    visited.add(current.href);
+  }
+
+  return { url: current, layers };
+}
+
+export function categorizeParameter(name, hostname = "") {
+  const normalized = String(name).toLowerCase();
+  if (isTrackingParameter(normalized, hostname)) return "tracking";
+  if (AFFILIATE_PARAMETERS.has(normalized)) return "affiliate/referral";
+  if (REDIRECT_RELATED_PARAMETERS.has(normalized)) return "redirect-related";
+  if (FUNCTIONAL_PARAMETERS.has(normalized)) return "functional";
+  return "unknown";
+}
+
+export function detectWeirdness(input) {
+  const url = parseHttpUrl(input);
+  const flags = [];
+  const names = [...url.searchParams.keys()].map((name) => name.toLowerCase());
+
+  if (url.search.length > 500) flags.push("The query string is unusually long.");
+  if (new Set(names).size < names.length) flags.push("One or more parameter names are repeated.");
+  if (url.username || url.password) flags.push("The URL includes a username or password in its authority.");
+  if (url.hostname.split(".").some((part) => part.startsWith("xn--"))) {
+    flags.push("The hostname uses punycode for an internationalized domain.");
+  }
+  if (url.port && !["80", "443"].includes(url.port)) {
+    flags.push(`The URL uses the unusual port ${url.port}.`);
+  }
+  if (/%25(?:[0-9a-f]{2})/i.test(url.href)) {
+    flags.push("The URL appears to contain repeated percent encoding.");
+  }
+  if (/%[0-9a-f]{2}/i.test(url.href) && /[\u0080-\uffff]/u.test(decodeForInspection(url.href, 1)[0] || "")) {
+    flags.push("The URL mixes encoded and unencoded text.");
+  }
+  if ([...url.searchParams.values()].some((value) => value.includes("#") || /%23/i.test(value))) {
+    flags.push("A query parameter contains a nested fragment marker.");
+  }
+
+  const redirect = unwrapRedirectLayers(url.href);
+  if (redirect.layers.length > 1) {
+    flags.push(`The URL contains ${redirect.layers.length} redirect wrapper layers.`);
+  }
+
+  return flags;
+}
+
+export function trackingFingerprint(input) {
+  const original = parseHttpUrl(input);
+  const redirect = unwrapRedirectLayers(original.href);
+  const wrappers = redirect.layers.length;
+  let tracking = 0;
+  let affiliate = 0;
+  const inspectedUrls = new Map([[original.href, original], [redirect.url.href, redirect.url]]);
+
+  for (const url of inspectedUrls.values()) {
+    for (const [name] of url.searchParams) {
+      const category = categorizeParameter(name, url.hostname);
+      if (category === "tracking") tracking += 1;
+      if (category === "affiliate/referral") affiliate += 1;
+    }
+  }
+
+  const count = tracking + affiliate + wrappers;
+  const label = count === 0
+    ? "Clean slate"
+    : count <= 2
+      ? "Lightly tracked"
+      : count <= 5
+        ? "Tracker confetti"
+        : "Tracking parade";
+
+  return { count, label, categories: { tracking, affiliate, wrappers } };
+}
+
+export function inspectUrl(input) {
+  const url = parseHttpUrl(input);
+  const redirect = unwrapRedirectLayers(url.href);
+
+  return {
+    scheme: url.protocol.slice(0, -1),
+    host: url.hostname,
+    port: url.port || "default",
+    path: url.pathname,
+    fragment: url.hash ? url.hash.slice(1) : "none",
+    parameters: [...url.searchParams].map(([name, value]) => ({
+      name,
+      value,
+      category: categorizeParameter(name, url.hostname)
+    })),
+    redirectLayers: redirect.layers,
+    weirdness: detectWeirdness(url.href)
+  };
 }
 
 export function isOpaqueShortener(input) {
@@ -151,7 +326,12 @@ function cleanUrlAtDepth(input, depth) {
 }
 
 export function cleanUrl(input) {
-  return cleanUrlAtDepth(input, 0);
+  const result = cleanUrlAtDepth(input, 0);
+  return {
+    ...result,
+    fingerprint: trackingFingerprint(input),
+    inspection: inspectUrl(input)
+  };
 }
 
 export function cleanBatch(text) {

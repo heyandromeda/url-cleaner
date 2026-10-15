@@ -14,13 +14,12 @@ Remove common tracking parameters from URLs without stripping parameters that a 
 
 ### Try the nightly lab
 
-The separate **[public nightly build](https://andromeda-url-cleaner-nightly.vercel.app)** currently includes six experiments that are not part of stable `main`:
-- DEV-2 — URL X-Ray
-- DEV-3 — Tracking fingerprint
+The separate **[public nightly build](https://andromeda-url-cleaner-nightly.vercel.app)** currently includes three experiments that are not part of stable `main`:
 - DEV-7 — Encoded value decoder
 - DEV-9 — Opt-in aggressive cleaning
-- DEV-11 — URL weirdness detector
 - DEV-12 — Opt-in identical-duplicate cleanup
+
+Stable `main` now includes the former nightly experiments for URL X-Ray (DEV-2), tracking fingerprint (DEV-3), and the URL weirdness detector (DEV-11).
 
 ## Why this exists
 
@@ -55,6 +54,9 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Optionally copies every successfully cleaned URL automatically
 - Remembers the two settings locally without storing URLs or clipboard contents
 - Shows a mobile-friendly before/after view and highlights exactly which parameters were removed
+- Shows a local tracking fingerprint with a plain count and category breakdown
+- Includes a URL X-Ray view that breaks the link into scheme, host, path, fragment, and categorized parameters
+- Flags unusual URL structure (without claiming malice) via the weirdness detector
 - Opens the native system Share Sheet for a cleaned URL on supported browsers
 - Warns when a shortened link hides a destination that cannot be inspected locally
 - Copies the cleaned URL with one click
@@ -222,6 +224,7 @@ The test suite covers:
 - Known opaque URL shorteners that are warned about without being followed
 - Batch cleaning that continues after invalid lines
 - Local tracker explanations and deterministic tracker-of-the-day selection
+- Tracking fingerprint scoring, URL X-Ray categorization, and weirdness flags
 - Share-target / `?url=` handoff parsing and bookmarklet redirect-only behavior
 - Manifest, service worker, and CSP constraints for the installable app
 
@@ -231,7 +234,7 @@ The test suite covers:
 | --- | --- |
 | [index.html](./index.html) | Runnable app page |
 | [styles.css](./styles.css) | Minimal styling |
-| [cleaner.js](./cleaner.js) | URL-cleaning logic, tracker lists, and batch processing |
+| [cleaner.js](./cleaner.js) | URL-cleaning logic, tracker lists, inspection helpers, and batch processing |
 | [explanations.js](./explanations.js) | Local tracker explanations and tracker-of-the-day selection |
 | [handoff.js](./handoff.js) | Share-target, bookmarklet, and clipboard-permission helpers |
 | [app.js](./app.js) | Form, clipboard, settings, and copy interactions |

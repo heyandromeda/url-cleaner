@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanUrl, isOpaqueShortener } from "../dist/cleaner.js";
+import {
+  cleanUrl,
+  detectWeirdness,
+  inspectUrl,
+  isOpaqueShortener,
+  trackingFingerprint
+} from "../dist/cleaner.js";
 
 test("removes a URL containing only UTM parameters", () => {
   const result = cleanUrl("https://example.com/article?utm_source=news&utm_campaign=spring");
@@ -228,4 +234,51 @@ test("still drops utm_source from a long query string", () => {
   assert.equal(params.has("utm_source"), false);
   assert.equal(params.get("p0"), "value");
   assert.equal(params.get("p79"), "value");
+});
+
+test("X-Ray categorizes parameters without inventing decoder output in the UI model", () => {
+  const nested = encodeURIComponent("https://example.com/path?q=yes");
+  const inspection = inspectUrl(`https://example.org/view?url=${nested}&utm_source=mail&id=7#part`);
+
+  assert.equal(inspection.scheme, "https");
+  assert.equal(inspection.fragment, "part");
+  assert.deepEqual(
+    inspection.parameters.map(({ category }) => category),
+    ["redirect-related", "tracking", "functional"]
+  );
+  assert.equal("decodedValues" in inspection.parameters[0], false);
+});
+
+test("tracking fingerprint has a transparent count and severity", () => {
+  const score = trackingFingerprint("https://example.com/?utm_source=a&fbclid=b&ref=partner");
+
+  assert.equal(score.count, 3);
+  assert.equal(score.label, "Tracker confetti");
+  assert.deepEqual(score.categories, { tracking: 2, affiliate: 1, wrappers: 0 });
+});
+
+test("tracking fingerprint counts trackers inside a known redirect destination", () => {
+  const destination = "https://example.com/?utm_source=a&fbclid=b";
+  const score = trackingFingerprint(`https://www.google.com/url?q=${encodeURIComponent(destination)}`);
+
+  assert.equal(score.count, 3);
+  assert.deepEqual(score.categories, { tracking: 2, affiliate: 0, wrappers: 1 });
+});
+
+test("weirdness detector reports unusual structure without a threat verdict", () => {
+  const flags = detectWeirdness("https://user:pass@xn--bcher-kva.example:8443/?tag=a&tag=b&next=page%23section");
+
+  assert.ok(flags.some((flag) => flag.includes("repeated")));
+  assert.ok(flags.some((flag) => flag.includes("username or password")));
+  assert.ok(flags.some((flag) => flag.includes("punycode")));
+  assert.ok(flags.some((flag) => flag.includes("8443")));
+  assert.ok(flags.some((flag) => flag.includes("fragment")));
+});
+
+test("cleanUrl attaches fingerprint and inspection for the single-result UI", () => {
+  const result = cleanUrl("https://example.com/?utm_source=a&id=1");
+
+  assert.equal(result.fingerprint.count, 1);
+  assert.equal(result.inspection.parameters[0].category, "tracking");
+  assert.deepEqual(result.unwrappedFrom, []);
 });
