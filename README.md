@@ -39,7 +39,7 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Preserves unknown and functional parameters by default
 - Applies site-specific rules conservatively, including removing `si` only from YouTube links
 - Keeps YouTube parameters such as `v`, `t`, and `list`
-- Unwraps known Google, Facebook, Outlook Safe Links, YouTube, and `href.li` redirect wrappers locally, then cleans the destination
+- Unwraps known Google, Facebook, Outlook Safe Links, YouTube, LinkedIn `/safety/go`, and `href.li` redirect wrappers locally, then cleans the destination
 - Limits nested wrapper unwrapping to three levels and falls back safely when a destination is invalid
 - Accepts only HTTP and HTTPS URLs
 - Preserves URL paths, hashes, search queries, page numbers, product IDs, and language settings

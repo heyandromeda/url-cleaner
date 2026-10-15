@@ -172,6 +172,25 @@ test("unwraps an href.li query-as-URL wrapper and cleans the destination", () =>
   assert.deepEqual(result.unwrappedFrom, ["href.li"]);
 });
 
+test("removes Instagram igsh and igshid share trackers", () => {
+  const igsh = cleanUrl("https://www.instagram.com/p/AbCdEf/?igsh=SHARETOKEN");
+  const both = cleanUrl("https://example.com/recipe?igshid=YmMyMTA2M2Y=&igsh=xyz&id=9");
+
+  assert.equal(igsh.url, "https://www.instagram.com/p/AbCdEf/");
+  assert.deepEqual(igsh.removedParameters, ["igsh"]);
+  assert.equal(both.url, "https://example.com/recipe?id=9");
+  assert.deepEqual(both.removedParameters, ["igshid", "igsh"]);
+});
+
+test("unwraps a LinkedIn /safety/go wrapper and cleans the destination", () => {
+  const destination = encodeURIComponent("https://example.com/page?utm_source=li&id=3");
+  const result = cleanUrl(`https://www.linkedin.com/safety/go?url=${destination}`);
+
+  assert.equal(result.url, "https://example.com/page?id=3");
+  assert.deepEqual(result.removedParameters, ["utm_source"]);
+  assert.deepEqual(result.unwrappedFrom, ["www.linkedin.com"]);
+});
+
 test("recursively unwraps nested Google then Facebook wrappers", () => {
   const inner = "https://example.com/page?utm_source=x";
   const facebook = `https://l.facebook.com/l.php?u=${encodeURIComponent(inner)}&h=AT`;

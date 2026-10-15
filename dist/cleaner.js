@@ -10,7 +10,7 @@ export const TRACKING_PARAMETERS = new Set([
   "aff_platform", "aff_trace_key", "oly_enc_id", "oly_anon_id",
   "ck_subscriber_id", "dm_i", "mibextid", "_openstat", "rb_clickid", "s_cid",
   "s_fid", "s_ppv", "s_channel", "s_ptc", "s_plt", "s_vnum", "s_invisit",
-  "s_cc", "s_sq", "vero_conv", "vero_id", "igshid",
+  "s_cc", "s_sq", "vero_conv", "vero_id", "igshid", "igsh",
   "pk_campaign", "pk_kwd", "pk_source", "pk_medium", "pk_content", "pk_cid"
 ]);
 
@@ -95,6 +95,10 @@ function getWrapperInfo(url) {
 
   if ((host === "youtube.com" || host === "m.youtube.com") && path === "/redirect") {
     return { parameter: "q", destination: url.searchParams.get("q") };
+  }
+
+  if (host === "linkedin.com" && path === "/safety/go") {
+    return { parameter: "url", destination: url.searchParams.get("url") };
   }
 
   if (host === "href.li") {

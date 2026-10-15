@@ -74,6 +74,7 @@ export const PARAMETER_EXPLANATIONS = {
   vero_conv: "Vero email conversion tracking parameter.",
   vero_id: "Vero email recipient identifier.",
   igshid: "Instagram share identifier added to outbound shared links.",
+  igsh: "Instagram share identifier (newer alias of igshid) added to copied and shared links.",
   pk_campaign: "Matomo (formerly Piwik) campaign name.",
   pk_kwd: "Matomo campaign keyword.",
   pk_source: "Matomo campaign source.",
