@@ -69,6 +69,10 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .totd-facts li { margin: 0 0 0.35rem; padding-left: 0.15rem; }
 .totd-facts li:last-child { margin-bottom: 0; }
 .totd-example-url { display: block; margin: 0 0 0.45rem; padding: 0.55rem 0.6rem; border: 1px solid #e0e0e0; border-radius: 3px; color: #222; background: #fff; font: 0.78rem/1.45 monospace; overflow-x: auto; overflow-wrap: anywhere; word-break: break-word; }
+.totd-sources { margin: 0; padding-left: 1.1rem; color: #555; font-size: 0.82rem; line-height: 1.45; }
+.totd-sources li { margin: 0 0 0.3rem; overflow-wrap: anywhere; }
+.totd-sources a { color: #222; }
+.totd-sources a:focus-visible { outline: 2px solid #555; outline-offset: 2px; }
 .inline-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.7rem; }
 .batch-list { margin: 0.75rem 0 0; padding: 0; list-style: none; }
 .batch-list li { margin: 0 0 0.6rem; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; }

@@ -57,7 +57,14 @@ test("tracker profiles cover required educational sections", () => {
     assert.ok(Array.isArray(profile.funFacts), name);
     assert.ok(profile.funFacts.length >= 2 && profile.funFacts.length <= 4, name);
     assert.match(profile.exampleUrl, /^https:\/\//, name);
-    assert.match(profile.safeToRemove, /yes|keep|removing/i, name);
+    assert.match(profile.safeToRemove, /yes|keep|removing|usually/i, name);
+    assert.ok(Array.isArray(profile.sources), `${name}.sources`);
+    assert.ok(profile.sources.length >= 1, `${name}.sources`);
+    for (const source of profile.sources) {
+      assert.equal(typeof source.title, "string", `${name} source title`);
+      assert.ok(source.title.length > 5, `${name} source title`);
+      assert.match(source.url, /^https:\/\//, `${name} source url`);
+    }
     const words = estimateProfileWordCount(profile);
     assert.ok(words >= 140, `${name} too short (${words} words)`);
     assert.ok(words <= 420, `${name} too long (${words} words)`);

@@ -49,7 +49,7 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - If clipboard read is already permitted, offers to clean whatever is on the clipboard when the page opens
 - Cleans a batch of URLs pasted one per line, with per-line success or failure and one-click copy of cleaned results
 - Explains recognized removed tracking parameters from the results view; unknown names are not described
-- Shows a collapsible Tracker of the Day card with a richer local explanation, example URL, privacy notes, and fun facts; expand/collapse preference is remembered in localStorage
+- Shows a collapsible Tracker of the Day card with a richer local explanation, example URL, privacy notes, fun facts, and cited sources; expand/collapse preference is remembered in localStorage
 - Includes a bookmarklet that only opens URL Cleaner with the current page URL
 - Installable as a PWA with a share target so a phone can hand a link to the local cleaner
 - Optionally copies every successfully cleaned URL automatically
@@ -232,7 +232,8 @@ The test suite covers:
 | [index.html](./index.html) | Runnable app page |
 | [styles.css](./styles.css) | Minimal styling |
 | [cleaner.js](./cleaner.js) | URL-cleaning logic, tracker lists, and batch processing |
-| [explanations.js](./explanations.js) | Local tracker explanations, rich daily profiles, and tracker-of-the-day selection |
+| [explanations.js](./explanations.js) | Local tracker explanations and tracker-of-the-day selection |
+| [tracker-profiles.js](./tracker-profiles.js) | Sourced educational profiles for Tracker of the Day |
 | [handoff.js](./handoff.js) | Share-target, bookmarklet, and clipboard-permission helpers |
 | [app.js](./app.js) | Form, clipboard, settings, and copy interactions |
 | [manifest.webmanifest](./manifest.webmanifest) | Web app manifest and share target |
