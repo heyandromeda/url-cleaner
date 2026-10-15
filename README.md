@@ -48,7 +48,7 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Optionally cleans automatically whenever you paste
 - If clipboard read is already permitted, offers to clean whatever is on the clipboard when the page opens
 - Cleans a batch of URLs pasted one per line, with per-line success or failure and one-click copy of cleaned results
-- Explains recognized removed tracking parameters from the results view; unknown names are not described
+- Explains recognized removed tracking parameters from the results view; tap a name to expand a short local note, and unknown names are not described
 - Shows a dismissible tracker-of-the-day fact chosen locally from the explanation list
 - Includes a bookmarklet that only opens URL Cleaner with the current page URL
 - Installable as a PWA with a share target so a phone can hand a link to the local cleaner

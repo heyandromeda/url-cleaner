@@ -20,6 +20,7 @@ const shareButton = document.querySelector("#share-button");
 const copyButton = document.querySelector("#copy-button");
 const message = document.querySelector("#message");
 const removedList = document.querySelector("#removed-list");
+const removedHint = document.querySelector("#removed-hint");
 const clipboardOffer = document.querySelector("#clipboard-offer");
 const clipboardOfferText = document.querySelector("#clipboard-offer-text");
 const clipboardOfferClean = document.querySelector("#clipboard-offer-clean");
@@ -90,6 +91,10 @@ function appendRemovedItem(list, parameter) {
 
 function renderRemoved(parameters, list = removedList) {
   list.replaceChildren();
+
+  if (list === removedList) {
+    removedHint.hidden = parameters.length === 0;
+  }
 
   if (parameters.length === 0) {
     const item = document.createElement("li");
