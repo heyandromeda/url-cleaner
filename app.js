@@ -25,16 +25,18 @@ const clipboardOfferText = document.querySelector("#clipboard-offer-text");
 const clipboardOfferClean = document.querySelector("#clipboard-offer-clean");
 const clipboardOfferDismiss = document.querySelector("#clipboard-offer-dismiss");
 const totd = document.querySelector("#tracker-of-the-day");
-const totdBody = document.querySelector("#totd-body");
-const totdDismiss = document.querySelector("#totd-dismiss");
+const totdName = document.querySelector("#totd-name");
+const totdDetails = document.querySelector("#totd-details");
+const totdToggle = document.querySelector("#totd-toggle");
 const bookmarklet = document.querySelector("#bookmarklet");
 
 const CLEAN_ON_PASTE_KEY = "url-cleaner.clean-on-paste";
 const AUTO_COPY_KEY = "url-cleaner.auto-copy";
-const TOTD_DISMISSED_KEY = "url-cleaner.totd-dismissed";
+const TOTD_COLLAPSED_KEY = "url-cleaner.totd-collapsed";
 let cleanedValue = "";
 let batchCopyValue = "";
 let clipboardOfferValue = "";
+let totdCollapsed = false;
 
 function readSetting(key, fallback) {
   try {
@@ -281,18 +283,80 @@ async function pasteFromClipboard() {
   }
 }
 
-function renderTrackerOfTheDay() {
-  const fact = trackerOfTheDay();
-  try {
-    if (localStorage.getItem(TOTD_DISMISSED_KEY) === fact.date) {
-      totd.hidden = true;
-      return;
-    }
-  } catch {
-    // Ignore storage failures and still show the fact.
+function appendTotdSection(container, title, paragraphs) {
+  const section = document.createElement("section");
+  section.className = "totd-section";
+
+  const heading = document.createElement("h3");
+  heading.className = "totd-section-title";
+  heading.textContent = title;
+  section.append(heading);
+
+  for (const text of paragraphs) {
+    const paragraph = document.createElement("p");
+    paragraph.textContent = text;
+    section.append(paragraph);
   }
 
-  totdBody.textContent = `${fact.name}: ${fact.explanation}`;
+  container.append(section);
+}
+
+function renderTrackerDetails(fact) {
+  totdDetails.replaceChildren();
+
+  const summary = document.createElement("p");
+  summary.className = "totd-summary";
+  summary.textContent = fact.explanation;
+  totdDetails.append(summary);
+
+  appendTotdSection(totdDetails, "🔎 What it does", [fact.what, `Who uses it? ${fact.who}`, `How it works: ${fact.how}`, `Why it exists: ${fact.why}`]);
+  appendTotdSection(totdDetails, "🛡️ Privacy impact", [fact.privacy, `Can it be safely removed? ${fact.safeToRemove}`]);
+
+  const factsSection = document.createElement("section");
+  factsSection.className = "totd-section";
+  const factsHeading = document.createElement("h3");
+  factsHeading.className = "totd-section-title";
+  factsHeading.textContent = "🧠 Did you know?";
+  factsSection.append(factsHeading);
+  const list = document.createElement("ul");
+  list.className = "totd-facts";
+  for (const item of fact.funFacts) {
+    const li = document.createElement("li");
+    li.textContent = item;
+    list.append(li);
+  }
+  factsSection.append(list);
+  totdDetails.append(factsSection);
+
+  const exampleSection = document.createElement("section");
+  exampleSection.className = "totd-section";
+  const exampleHeading = document.createElement("h3");
+  exampleHeading.className = "totd-section-title";
+  exampleHeading.textContent = "🔗 Example URL";
+  exampleSection.append(exampleHeading);
+  const exampleUrl = document.createElement("code");
+  exampleUrl.className = "totd-example-url";
+  exampleUrl.textContent = fact.exampleUrl;
+  exampleSection.append(exampleUrl);
+  const exampleNote = document.createElement("p");
+  exampleNote.textContent = fact.exampleNote;
+  exampleSection.append(exampleNote);
+  totdDetails.append(exampleSection);
+}
+
+function applyTotdCollapsedState() {
+  totd.classList.toggle("is-collapsed", totdCollapsed);
+  totdDetails.hidden = totdCollapsed;
+  totdToggle.textContent = totdCollapsed ? "Expand" : "Collapse";
+  totdToggle.setAttribute("aria-expanded", totdCollapsed ? "false" : "true");
+}
+
+function renderTrackerOfTheDay() {
+  const fact = trackerOfTheDay();
+  totdName.textContent = fact.name;
+  renderTrackerDetails(fact);
+  totdCollapsed = readSetting(TOTD_COLLAPSED_KEY, false);
+  applyTotdCollapsedState();
   totd.hidden = false;
 }
 
@@ -398,9 +462,10 @@ shareButton.addEventListener("click", async () => {
   }
 });
 
-totdDismiss.addEventListener("click", () => {
-  saveSetting(TOTD_DISMISSED_KEY, trackerOfTheDay().date);
-  totd.hidden = true;
+totdToggle.addEventListener("click", () => {
+  totdCollapsed = !totdCollapsed;
+  saveSetting(TOTD_COLLAPSED_KEY, totdCollapsed);
+  applyTotdCollapsedState();
 });
 
 clipboardOfferClean.addEventListener("click", () => {
