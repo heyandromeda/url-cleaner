@@ -25,11 +25,22 @@
         <p class="intro">Remove common tracking parameters while keeping the query values your link needs.</p>
 
         <aside id="tracker-of-the-day" class="totd" hidden>
-          <div>
-            <p class="totd-label">Tracker of the day</p>
-            <p id="totd-body"></p>
+          <div class="totd-header">
+            <div class="totd-heading">
+              <p class="totd-label" id="totd-label">Tracker of the day</p>
+              <p id="totd-name" class="totd-name"></p>
+            </div>
+            <button
+              id="totd-toggle"
+              type="button"
+              class="secondary-button totd-toggle"
+              aria-expanded="true"
+              aria-controls="totd-details"
+            >
+              Collapse
+            </button>
           </div>
-          <button id="totd-dismiss" type="button" class="secondary-button">Dismiss</button>
+          <div id="totd-details" class="totd-details" role="region" aria-labelledby="totd-label totd-name"></div>
         </aside>
 
         <aside id="clipboard-offer" class="notice" hidden>
