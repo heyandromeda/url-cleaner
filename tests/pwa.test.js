@@ -11,6 +11,7 @@ const MIRRORED = [
   "app.js",
   "cleaner.js",
   "explanations.js",
+  "tracker-profiles.js",
   "handoff.js",
   "styles.css",
   "sw.js",
@@ -65,6 +66,22 @@ test("service worker does not cache or fetch URLs", () => {
 test("hidden tracker-of-the-day is not shown by flex display", () => {
   const css = readFileSync(join(root, "styles.css"), "utf8");
   assert.match(css, /\.totd\[hidden\]\s*\{\s*display:\s*none;/);
+  assert.match(css, /\.totd-details\[hidden\]\s*\{\s*display:\s*none;/);
+  assert.match(css, /\.totd-example-url/);
+});
+
+test("tracker of the day uses an accessible expand and collapse control", () => {
+  const html = readFileSync(join(root, "index.html"), "utf8");
+  const app = readFileSync(join(root, "app.js"), "utf8");
+  assert.match(html, /id="totd-toggle"/);
+  assert.match(html, /aria-controls="totd-details"/);
+  assert.match(html, /aria-expanded="true"/);
+  assert.match(html, /id="totd-details"/);
+  assert.doesNotMatch(html, /id="totd-dismiss"/);
+  assert.match(app, /url-cleaner\.totd-collapsed/);
+  assert.match(app, /aria-expanded/);
+  assert.match(app, /totd-sources/);
+  assert.doesNotMatch(app, /totd-dismissed/);
 });
 
 test("CSP stays strict and still allows the manifest", () => {

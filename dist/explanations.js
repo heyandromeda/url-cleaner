@@ -1,3 +1,7 @@
+import { TRACKER_PROFILES } from "./tracker-profiles.js";
+
+export { TRACKER_PROFILES };
+
 export const PARAMETER_EXPLANATIONS = {
   utm_source: "Google Analytics UTM field naming the site, campaign, or tool that sent the visit.",
   utm_medium: "Google Analytics UTM field naming the marketing medium, such as email or CPC.",
@@ -12,9 +16,9 @@ export const PARAMETER_EXPLANATIONS = {
   fb_source: "Facebook parameter describing where a shared link was shown.",
   fb_ref: "Facebook referrer parameter used for traffic attribution.",
   gclid: "Google Ads click identifier assigned when someone clicks a Google ad.",
-  dclid: "Google Display Ads / Campaign Manager click identifier.",
-  gbraid: "Google Ads click identifier used for iOS web-to-app measurement.",
-  wbraid: "Google Ads click identifier used for iOS web-to-web measurement.",
+  dclid: "Display Click Identifier used by Campaign Manager 360 / Display & Video 360 enhanced attribution.",
+  gbraid: "Google Ads privacy-preserving click parameter used for app conversion measurement.",
+  wbraid: "Google Ads privacy-preserving click parameter used for web conversion measurement.",
   gad_source: "Google Ads parameter describing the ad source that generated the click.",
   gad_campaignid: "Google Ads parameter identifying the campaign of a clicked ad.",
   gclsrc: "Google Ads parameter naming the click-id source, such as Google Ads or Search Ads 360.",
@@ -29,16 +33,16 @@ export const PARAMETER_EXPLANATIONS = {
   yclid: "Yandex Ads click identifier.",
   ymclid: "Yandex Metrica click identifier.",
   ysclid: "Yandex Search click identifier.",
-  srsltid: "Google Shopping organic listing identifier.",
-  epik: "Pinterest click identifier added to outbound advertised or tracked links.",
+  srsltid: "Google Merchant Center result id appended to free product listing clicks.",
+  epik: "Pinterest ad-click matching parameter cached by the Pinterest tag as _epik.",
   scid: "Snapchat click identifier.",
   s_kwcid: "Adobe Advertising / Microsoft Advertising keyword click identifier.",
-  li_fat_id: "LinkedIn first-party ads tracking identifier.",
+  li_fat_id: "LinkedIn first-party ads tracking identifier (li_fat_id).",
   mc_cid: "Mailchimp campaign identifier added to tracked email links.",
   mc_eid: "Mailchimp unique email identifier added to tracked email links.",
-  _ga: "Google Analytics cross-domain linker parameter.",
-  _gl: "Google Analytics 4 cross-domain linker parameter.",
-  _hsenc: "HubSpot email-click tracking parameter.",
+  _ga: "Google Analytics identifier sometimes seen when analytics linker decoration is present.",
+  _gl: "Google Analytics cross-domain linker parameter.",
+  _hsenc: "HubSpot email identity-tracking parameter.",
   _hsmi: "HubSpot marketing email identifier.",
   hsctatracking: "HubSpot call-to-action tracking parameter.",
   mkt_tok: "Adobe Marketo email-click tracking token.",
@@ -76,7 +80,7 @@ export const PARAMETER_EXPLANATIONS = {
   pk_medium: "Matomo campaign medium.",
   pk_content: "Matomo campaign content.",
   pk_cid: "Matomo campaign identifier.",
-  si: "YouTube share identifier used to attribute a shared video link."
+  si: "YouTube share identifier commonly added to shared video links."
 };
 
 export const PREFIX_EXPLANATIONS = {
@@ -101,12 +105,25 @@ export function explainParameter(name) {
   return null;
 }
 
+export function getTrackerProfile(name) {
+  if (name == null || name === "") return null;
+  const normalized = String(name).toLowerCase();
+  const profile = TRACKER_PROFILES[normalized];
+  if (!profile) return null;
+  return {
+    name: normalized,
+    explanation: PARAMETER_EXPLANATIONS[normalized],
+    ...profile
+  };
+}
+
 export function trackerOfTheDay(date = new Date()) {
-  const names = Object.keys(PARAMETER_EXPLANATIONS).sort();
+  const names = Object.keys(TRACKER_PROFILES).sort();
   const stamp = utcDateStamp(date);
   const days = Math.floor(Date.parse(`${stamp}T00:00:00Z`) / 86400000);
   const name = names[((days % names.length) + names.length) % names.length];
-  return { date: stamp, name, explanation: PARAMETER_EXPLANATIONS[name] };
+  const profile = getTrackerProfile(name);
+  return { date: stamp, ...profile };
 }
 
 export function utcDateStamp(date = new Date()) {
@@ -114,4 +131,18 @@ export function utcDateStamp(date = new Date()) {
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const day = String(date.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+export function estimateProfileWordCount(profile) {
+  const chunks = [
+    profile.what,
+    profile.who,
+    profile.how,
+    profile.why,
+    profile.privacy,
+    ...(profile.funFacts || []),
+    profile.exampleNote,
+    profile.safeToRemove
+  ];
+  return chunks.join(" ").trim().split(/\s+/).filter(Boolean).length;
 }
