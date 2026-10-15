@@ -5,6 +5,7 @@ import { bookmarkletCode, canReadClipboard, parseHandoffParams } from "./handoff
 const form = document.querySelector("#clean-form");
 const input = document.querySelector("#url-input");
 const pasteButton = document.querySelector("#paste-button");
+const inspectButton = document.querySelector("#inspect-button");
 const cleanOnPaste = document.querySelector("#clean-on-paste");
 const autoCopy = document.querySelector("#auto-copy");
 const resultPanel = document.querySelector("#result-panel");
@@ -20,6 +21,15 @@ const shareButton = document.querySelector("#share-button");
 const copyButton = document.querySelector("#copy-button");
 const message = document.querySelector("#message");
 const removedList = document.querySelector("#removed-list");
+const fingerprintDetail = document.querySelector("#fingerprint-detail");
+const fingerprintCount = document.querySelector("#fingerprint-count");
+const redirectLayersPanel = document.querySelector("#redirect-layers-panel");
+const redirectLayersList = document.querySelector("#redirect-layers-list");
+const xrayPanel = document.querySelector("#xray-panel");
+const urlParts = document.querySelector("#url-parts");
+const parameterBreakdown = document.querySelector("#parameter-breakdown");
+const weirdnessPanel = document.querySelector("#weirdness-panel");
+const weirdnessList = document.querySelector("#weirdness-list");
 const clipboardOffer = document.querySelector("#clipboard-offer");
 const clipboardOfferText = document.querySelector("#clipboard-offer-text");
 const clipboardOfferClean = document.querySelector("#clipboard-offer-clean");
@@ -106,6 +116,75 @@ function renderRemoved(parameters, list = removedList) {
   }
 }
 
+function addUrlPart(name, value) {
+  const term = document.createElement("dt");
+  term.textContent = name;
+  const description = document.createElement("dd");
+  description.textContent = value;
+  urlParts.append(term, description);
+}
+
+function renderFingerprint(fingerprint) {
+  fingerprintCount.textContent = String(fingerprint.count);
+  fingerprintDetail.textContent = `${fingerprint.label} — ${fingerprint.categories.tracking} tracking, ${fingerprint.categories.affiliate} affiliate/referral, ${fingerprint.categories.wrappers} redirect wrapper.`;
+}
+
+function renderRedirectLayers(layers) {
+  redirectLayersList.replaceChildren();
+  redirectLayersPanel.hidden = layers.length === 0;
+  for (const layer of layers) {
+    const item = document.createElement("li");
+    const host = document.createElement("strong");
+    host.textContent = layer.host;
+    const destination = document.createElement("code");
+    destination.textContent = layer.to;
+    item.append(host, document.createTextNode(` via ${layer.parameter} → `), destination);
+    redirectLayersList.append(item);
+  }
+}
+
+function renderInspection(inspection) {
+  urlParts.replaceChildren();
+  addUrlPart("Scheme", inspection.scheme);
+  addUrlPart("Host", inspection.host);
+  addUrlPart("Port", inspection.port);
+  addUrlPart("Path", inspection.path);
+  addUrlPart("Fragment", inspection.fragment);
+
+  parameterBreakdown.replaceChildren();
+  if (inspection.parameters.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "No query parameters.";
+    parameterBreakdown.append(empty);
+  }
+
+  for (const parameter of inspection.parameters) {
+    const row = document.createElement("div");
+    row.className = "parameter-row";
+    const heading = document.createElement("strong");
+    heading.textContent = parameter.name;
+    const category = document.createElement("span");
+    category.className = `category category-${parameter.category.replace("/", "-")}`;
+    category.textContent = parameter.category;
+    const value = document.createElement("code");
+    value.textContent = parameter.value || "(empty)";
+    row.append(heading, category, value);
+    parameterBreakdown.append(row);
+  }
+
+  weirdnessList.replaceChildren();
+  const flags = inspection.weirdness.length > 0
+    ? inspection.weirdness
+    : ["No unusual URL characteristics detected."];
+  weirdnessPanel.dataset.clear = String(inspection.weirdness.length === 0);
+  for (const flag of flags) {
+    const item = document.createElement("li");
+    item.textContent = flag;
+    weirdnessList.append(item);
+  }
+}
+
 function renderOriginalUrl(value, removedParameters) {
   const url = new URL(value.trim());
   const removedNames = new Set(removedParameters.map((name) => name.toLowerCase()));
@@ -148,13 +227,17 @@ function hideResults() {
   batchCopyValue = "";
 }
 
-function showCleanResult(result, { allowAutoCopy = true, originalValue = "" } = {}) {
+function showCleanResult(result, { allowAutoCopy = true, originalValue = "", revealInspection = false } = {}) {
   cleanedValue = result.url;
   renderOriginalUrl(originalValue, result.removedParameters);
   output.textContent = result.url;
   renderRemoved(result.removedParameters);
   renderUnwrapNotice(result.unwrappedFrom);
   shortenerWarning.hidden = !isOpaqueShortener(originalValue) && !isOpaqueShortener(result.url);
+  renderFingerprint(result.fingerprint);
+  renderRedirectLayers(result.inspection.redirectLayers);
+  renderInspection(result.inspection);
+  xrayPanel.open = Boolean(revealInspection);
   resultPanel.hidden = false;
   batchPanel.hidden = true;
   copyButton.disabled = false;
@@ -437,6 +520,10 @@ form.addEventListener("submit", (event) => {
 });
 
 pasteButton.addEventListener("click", pasteFromClipboard);
+
+inspectButton.addEventListener("click", () => {
+  runClean({ allowAutoCopy: false, revealInspection: true });
+});
 
 input.addEventListener("paste", () => {
   if (cleanOnPaste.checked) {

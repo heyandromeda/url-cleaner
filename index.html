@@ -59,6 +59,7 @@
           <div class="input-row">
             <button id="paste-button" type="button" class="secondary-button">Paste</button>
             <button type="submit" class="primary-button">Clean URL</button>
+            <button id="inspect-button" type="button" class="secondary-button">Inspect URL</button>
           </div>
 
           <fieldset class="settings">
@@ -95,10 +96,35 @@
             <p>Its destination cannot be inspected locally without following the redirect. The visible URL was cleaned, but the hidden destination was not opened or checked.</p>
           </aside>
 
+          <section class="fingerprint-summary" aria-labelledby="fingerprint-title">
+            <div>
+              <h2 id="fingerprint-title">Tracking fingerprint</h2>
+              <p id="fingerprint-detail"></p>
+            </div>
+            <strong id="fingerprint-count" class="fingerprint-score" aria-hidden="true"></strong>
+          </section>
+
+          <section id="redirect-layers-panel" class="redirect-layers-panel" hidden>
+            <h2>Redirect layers</h2>
+            <ol id="redirect-layers-list"></ol>
+          </section>
+
           <div class="removed-heading">
             <h2>Removed parameters</h2>
           </div>
           <ul id="removed-list" class="removed-list"></ul>
+
+          <details id="xray-panel" class="xray-panel">
+            <summary>URL X-Ray</summary>
+            <dl id="url-parts" class="url-parts"></dl>
+            <h3>Parameters</h3>
+            <div id="parameter-breakdown" class="parameter-breakdown"></div>
+            <section id="weirdness-panel" class="weirdness-panel">
+              <h3>Unusual characteristics</h3>
+              <p>These signals are not proof that a URL is malicious.</p>
+              <ul id="weirdness-list"></ul>
+            </section>
+          </details>
         </section>
 
         <section id="batch-panel" class="result-panel" aria-labelledby="batch-title" hidden>
