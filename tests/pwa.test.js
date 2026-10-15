@@ -11,6 +11,7 @@ const MIRRORED = [
   "app.js",
   "cleaner.js",
   "explanations.js",
+  "tracker-profiles.js",
   "handoff.js",
   "styles.css",
   "sw.js",
@@ -79,6 +80,7 @@ test("tracker of the day uses an accessible expand and collapse control", () => 
   assert.doesNotMatch(html, /id="totd-dismiss"/);
   assert.match(app, /url-cleaner\.totd-collapsed/);
   assert.match(app, /aria-expanded/);
+  assert.match(app, /totd-sources/);
   assert.doesNotMatch(app, /totd-dismissed/);
 });
 

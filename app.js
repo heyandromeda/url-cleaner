@@ -342,6 +342,29 @@ function renderTrackerDetails(fact) {
   exampleNote.textContent = fact.exampleNote;
   exampleSection.append(exampleNote);
   totdDetails.append(exampleSection);
+
+  if (Array.isArray(fact.sources) && fact.sources.length > 0) {
+    const sourcesSection = document.createElement("section");
+    sourcesSection.className = "totd-section";
+    const sourcesHeading = document.createElement("h3");
+    sourcesHeading.className = "totd-section-title";
+    sourcesHeading.textContent = "📚 Sources";
+    sourcesSection.append(sourcesHeading);
+    const sourcesList = document.createElement("ul");
+    sourcesList.className = "totd-sources";
+    for (const source of fact.sources) {
+      const item = document.createElement("li");
+      const link = document.createElement("a");
+      link.href = source.url;
+      link.rel = "noopener noreferrer";
+      link.target = "_blank";
+      link.textContent = source.title;
+      item.append(link);
+      sourcesList.append(item);
+    }
+    sourcesSection.append(sourcesList);
+    totdDetails.append(sourcesSection);
+  }
 }
 
 function applyTotdCollapsedState() {
