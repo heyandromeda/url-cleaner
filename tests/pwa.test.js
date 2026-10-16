@@ -77,7 +77,8 @@ test("tracker of the day uses an accessible expand and collapse control", () => 
   const app = readFileSync(join(root, "app.js"), "utf8");
   assert.match(html, /id="totd-toggle"/);
   assert.match(html, /aria-controls="totd-details"/);
-  assert.match(html, /aria-expanded="true"/);
+  assert.match(html, /aria-expanded="false"/);
+  assert.match(html, />\s*Expand\s*<\/button>/);
   assert.match(html, /id="totd-details"/);
   assert.doesNotMatch(html, /id="totd-dismiss"/);
   assert.match(app, /url-cleaner\.totd-collapsed/);

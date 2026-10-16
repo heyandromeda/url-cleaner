@@ -136,9 +136,37 @@ function addUrlPart(name, value) {
   urlParts.append(term, description);
 }
 
-function renderFingerprint(fingerprint) {
+function renderFingerprint(fingerprint, { removedParameters = [], aggressive = false, inspection } = {}) {
   fingerprintCount.textContent = String(fingerprint.count);
-  fingerprintDetail.textContent = `${fingerprint.label} — ${fingerprint.categories.tracking} tracking, ${fingerprint.categories.affiliate} affiliate/referral, ${fingerprint.categories.wrappers} redirect wrapper.`;
+
+  const categoryParts = [
+    `${fingerprint.categories.tracking} tracking`,
+    `${fingerprint.categories.affiliate} affiliate/referral`,
+    `${fingerprint.categories.wrappers} redirect wrapper`
+  ];
+  let detail = `${fingerprint.label} — ${categoryParts.join(", ")}.`;
+
+  if (inspection?.parameters?.length) {
+    const fingerprintParams = inspection.parameters.filter(
+      (parameter) => parameter.category === "tracking" || parameter.category === "affiliate/referral"
+    );
+    const removedNames = new Set(removedParameters.map((name) => name.toLowerCase()));
+    const removedCount = fingerprintParams.filter((parameter) => removedNames.has(parameter.name.toLowerCase())).length;
+    const keptCount = fingerprintParams.length - removedCount;
+
+    if (keptCount > 0) {
+      const keptAffiliate = fingerprintParams.some(
+        (parameter) => !removedNames.has(parameter.name.toLowerCase()) && parameter.category === "affiliate/referral"
+      );
+      if (keptAffiliate && !aggressive) {
+        detail = `${fingerprint.label} — ${removedCount} removed · ${keptCount} kept (affiliate/referral, kept because aggressive cleaning is off)`;
+      } else {
+        detail = `${fingerprint.label} — ${removedCount} removed · ${keptCount} kept`;
+      }
+    }
+  }
+
+  fingerprintDetail.textContent = detail;
 }
 
 function renderRedirectLayers(layers) {
@@ -265,7 +293,11 @@ function showCleanResult(result, { allowAutoCopy = true, originalValue = "", rev
   renderDuplicateNotice(result.duplicateParameters);
   renderUnwrapNotice(result.unwrappedFrom, result.unwrapLimitReached);
   shortenerWarning.hidden = !isOpaqueShortener(originalValue) && !isOpaqueShortener(result.url);
-  renderFingerprint(result.fingerprint);
+  renderFingerprint(result.fingerprint, {
+    removedParameters: result.removedParameters,
+    aggressive: aggressiveMode.checked,
+    inspection: result.inspection
+  });
   renderRedirectLayers(result.inspection.redirectLayers);
   renderInspection(result.inspection);
   xrayPanel.open = Boolean(revealInspection);
@@ -368,7 +400,7 @@ function runClean(options = {}) {
     removeDuplicateParameters: removeDuplicates.checked
   });
   if (entries.length === 0) {
-    showMessage("Enter a URL to clean.", "error");
+    showMessage("Paste or type a URL to clean.", "error");
     return;
   }
 
@@ -400,7 +432,8 @@ async function pasteFromClipboard() {
       showMessage("URL pasted.");
     }
   } catch {
-    showMessage("Clipboard permission was denied. Paste the URL manually.", "error");
+    showMessage("Clipboard access is blocked. Press Ctrl/⌘+V in the box instead.", "info");
+    input.focus();
   }
 }
 
@@ -499,7 +532,7 @@ function renderTrackerOfTheDay() {
   const fact = trackerOfTheDay();
   totdName.textContent = fact.name;
   renderTrackerDetails(fact);
-  totdCollapsed = readSetting(TOTD_COLLAPSED_KEY, false);
+  totdCollapsed = readSetting(TOTD_COLLAPSED_KEY, true);
   applyTotdCollapsedState();
   totd.hidden = false;
 }
@@ -565,7 +598,19 @@ renderTrackerOfTheDay();
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
+  if (!input.value.trim()) {
+    showMessage("Paste or type a URL to clean.", "error");
+    return;
+  }
   runClean();
+});
+
+input.addEventListener("input", () => {
+  if (!input.value.trim()) {
+    message.textContent = "";
+    delete message.dataset.kind;
+    hideResults();
+  }
 });
 
 pasteButton.addEventListener("click", pasteFromClipboard);
