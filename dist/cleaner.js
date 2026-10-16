@@ -321,7 +321,9 @@ export function fingerprintRemovedKeptDetail(input, removedParameters, { aggress
 
   const removedNames = new Set(removedParameters.map((name) => name.toLowerCase()));
   const kept = fingerprintParams.filter((parameter) => !removedNames.has(parameter.name.toLowerCase()));
-  const removedCount = fingerprintParams.length - kept.length;
+  const removedCount = fingerprintParams.filter((parameter) => removedNames.has(parameter.name.toLowerCase())).length;
+  const keptCount = kept.length;
+  if (keptCount === 0) return null;
 
   const keptDescriptions = kept.map((parameter) => {
     if (parameter.category === "affiliate/referral" && !aggressive) {
@@ -330,14 +332,16 @@ export function fingerprintRemovedKeptDetail(input, removedParameters, { aggress
     return `\`${parameter.name}\` (${parameter.category})`;
   });
 
-  let keptText = "";
-  if (kept.length > 0) {
-    keptText = kept.length === 1
-      ? `1 kept: ${keptDescriptions[0]}`
-      : `${kept.length} kept: ${keptDescriptions.join("; ")}`;
-  }
+  const keptText = keptCount === 1
+    ? `1 kept: ${keptDescriptions[0]}`
+    : `${keptCount} kept: ${keptDescriptions.join("; ")}`;
 
-  return { removedCount, kept, keptText };
+  const keptAffiliate = kept.some((parameter) => parameter.category === "affiliate/referral");
+  const detail = keptAffiliate && !aggressive
+    ? `${removedCount} removed · ${keptCount} kept (affiliate/referral, kept because aggressive cleaning is off)`
+    : `${removedCount} removed · ${keptCount} kept`;
+
+  return { removedCount, keptCount, kept, keptText, detail };
 }
 
 export function inspectUrl(input) {

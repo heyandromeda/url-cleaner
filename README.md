@@ -248,7 +248,7 @@ No tracker list can identify every parameter used by every website. This project
 
 ## Privacy
 
-URL cleaning happens locally in your browser. URLs and clipboard contents are not uploaded or stored. Only five preferences are saved locally: whether to clean on paste, whether to auto-copy, whether aggressive cleaning and duplicate cleanup are on, and whether the Tracker of the Day card is collapsed. The app has no backend, accounts, analytics, database, or telemetry.
+URL cleaning happens locally in your browser. URLs and clipboard contents are not uploaded or stored. Only six preferences are saved locally: whether to clean on paste, whether to auto-copy, whether aggressive cleaning and duplicate cleanup are on, whether the Tracker of the Day card is collapsed, and whether light or dark theme is selected. The app has no backend, accounts, analytics, database, or telemetry.
 
 How a link reaches the app matters:
 

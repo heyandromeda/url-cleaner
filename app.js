@@ -10,11 +10,11 @@ import { canReadClipboard, parseHandoffUrl } from "./handoff.js";
 import { createIcon, wrapIconButton } from "./icons.js";
 import { breakableUrlMarkup } from "./url-break.js";
 import {
-  nextThemeAfterToggle,
+  openThemeStorage,
   readStoredThemePreference,
-  resolveTheme,
-  saveThemePreference,
-  themeColorFor
+  resolveActiveTheme,
+  themeColorFor,
+  toggleAppliedTheme
 } from "./theme.js";
 
 const form = document.querySelector("#clean-form");
@@ -93,7 +93,13 @@ function systemPrefersDark() {
 }
 
 function activeTheme() {
-  return resolveTheme(readStoredThemePreference(localStorage), systemPrefersDark());
+  return resolveActiveTheme(globalThis, systemPrefersDark());
+}
+
+function appliedTheme() {
+  const theme = document.documentElement.dataset.theme;
+  if (theme === "light" || theme === "dark") return theme;
+  return activeTheme();
 }
 
 function applyTheme(theme) {
@@ -160,7 +166,8 @@ function setTotdToggleLabel(expanded) {
 function initTheme() {
   applyTheme(activeTheme());
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-    if (readStoredThemePreference(localStorage) === null) {
+    const storage = openThemeStorage(globalThis);
+    if (!storage || readStoredThemePreference(storage) === null) {
       applyTheme(activeTheme());
     }
   });
@@ -763,8 +770,8 @@ shareButton.addEventListener("click", async () => {
 });
 
 themeToggle.addEventListener("click", () => {
-  const next = nextThemeAfterToggle(activeTheme());
-  saveThemePreference(localStorage, next);
+  const storage = openThemeStorage(globalThis);
+  const next = toggleAppliedTheme(appliedTheme(), storage);
   applyTheme(next);
 });
 
