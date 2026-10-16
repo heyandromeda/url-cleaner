@@ -302,6 +302,46 @@ export function trackingFingerprint(input) {
   return { count, label, categories: { tracking, affiliate, wrappers } };
 }
 
+export function fingerprintRelevantParametersOnDestination(input) {
+  const redirect = unwrapRedirectLayers(input);
+  const hostname = redirect.url.hostname;
+  const parameters = [];
+  for (const [name, value] of redirect.url.searchParams) {
+    const category = categorizeParameter(name, hostname);
+    if (category === "tracking" || category === "affiliate/referral") {
+      parameters.push({ name, value, category });
+    }
+  }
+  return parameters;
+}
+
+export function fingerprintRemovedKeptDetail(input, removedParameters, { aggressive = false } = {}) {
+  const fingerprintParams = fingerprintRelevantParametersOnDestination(input);
+  if (fingerprintParams.length === 0) return null;
+
+  const removedNames = new Set(removedParameters.map((name) => name.toLowerCase()));
+  const removedCount = fingerprintParams.filter((parameter) => removedNames.has(parameter.name.toLowerCase())).length;
+  const keptCount = fingerprintParams.length - removedCount;
+  if (keptCount === 0) return null;
+
+  const keptAffiliate = fingerprintParams.some(
+    (parameter) => !removedNames.has(parameter.name.toLowerCase()) && parameter.category === "affiliate/referral"
+  );
+  if (keptAffiliate && !aggressive) {
+    return {
+      removedCount,
+      keptCount,
+      detail: `${removedCount} removed · ${keptCount} kept (affiliate/referral, kept because aggressive cleaning is off)`
+    };
+  }
+
+  return {
+    removedCount,
+    keptCount,
+    detail: `${removedCount} removed · ${keptCount} kept`
+  };
+}
+
 export function inspectUrl(input) {
   const url = parseHttpUrl(input);
   const redirect = unwrapRedirectLayers(url.href);

@@ -1,12 +1,18 @@
-import { cleanBatch, cleanedUrlsFromBatch, isOpaqueShortener, querySegments } from "./cleaner.js";
+import {
+  cleanBatch,
+  cleanedUrlsFromBatch,
+  fingerprintRemovedKeptDetail,
+  isOpaqueShortener,
+  querySegments
+} from "./cleaner.js";
 import { explainParameter, trackerOfTheDay } from "./explanations.js";
 import { bookmarkletCode, canReadClipboard, parseHandoffUrl } from "./handoff.js";
 import {
-  nextThemeAfterToggle,
+  openThemeStorage,
   readStoredThemePreference,
-  resolveTheme,
-  saveThemePreference,
-  themeColorFor
+  resolveActiveTheme,
+  themeColorFor,
+  toggleAppliedTheme
 } from "./theme.js";
 
 const form = document.querySelector("#clean-form");
@@ -85,7 +91,13 @@ function systemPrefersDark() {
 }
 
 function activeTheme() {
-  return resolveTheme(readStoredThemePreference(localStorage), systemPrefersDark());
+  return resolveActiveTheme(globalThis, systemPrefersDark());
+}
+
+function appliedTheme() {
+  const theme = document.documentElement.dataset.theme;
+  if (theme === "light" || theme === "dark") return theme;
+  return activeTheme();
 }
 
 function applyTheme(theme) {
@@ -105,7 +117,8 @@ function applyTheme(theme) {
 function initTheme() {
   applyTheme(activeTheme());
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-    if (readStoredThemePreference(localStorage) === null) {
+    const storage = openThemeStorage(globalThis);
+    if (!storage || readStoredThemePreference(storage) === null) {
       applyTheme(activeTheme());
     }
   });
@@ -176,7 +189,7 @@ function addUrlPart(name, value) {
   urlParts.append(term, description);
 }
 
-function renderFingerprint(fingerprint, { removedParameters = [], aggressive = false, inspection } = {}) {
+function renderFingerprint(fingerprint, { removedParameters = [], aggressive = false, originalInput = "" } = {}) {
   fingerprintCount.textContent = String(fingerprint.count);
 
   const categoryParts = [
@@ -186,24 +199,11 @@ function renderFingerprint(fingerprint, { removedParameters = [], aggressive = f
   ];
   let detail = `${fingerprint.label} — ${categoryParts.join(", ")}.`;
 
-  if (inspection?.parameters?.length) {
-    const fingerprintParams = inspection.parameters.filter(
-      (parameter) => parameter.category === "tracking" || parameter.category === "affiliate/referral"
-    );
-    const removedNames = new Set(removedParameters.map((name) => name.toLowerCase()));
-    const removedCount = fingerprintParams.filter((parameter) => removedNames.has(parameter.name.toLowerCase())).length;
-    const keptCount = fingerprintParams.length - removedCount;
-
-    if (keptCount > 0) {
-      const keptAffiliate = fingerprintParams.some(
-        (parameter) => !removedNames.has(parameter.name.toLowerCase()) && parameter.category === "affiliate/referral"
-      );
-      if (keptAffiliate && !aggressive) {
-        detail = `${fingerprint.label} — ${removedCount} removed · ${keptCount} kept (affiliate/referral, kept because aggressive cleaning is off)`;
-      } else {
-        detail = `${fingerprint.label} — ${removedCount} removed · ${keptCount} kept`;
-      }
-    }
+  const removedKept = originalInput
+    ? fingerprintRemovedKeptDetail(originalInput, removedParameters, { aggressive })
+    : null;
+  if (removedKept) {
+    detail = `${fingerprint.label} — ${removedKept.detail}`;
   }
 
   fingerprintDetail.textContent = detail;
@@ -336,7 +336,7 @@ function showCleanResult(result, { allowAutoCopy = true, originalValue = "", rev
   renderFingerprint(result.fingerprint, {
     removedParameters: result.removedParameters,
     aggressive: aggressiveMode.checked,
-    inspection: result.inspection
+    originalInput: originalValue
   });
   renderRedirectLayers(result.inspection.redirectLayers);
   renderInspection(result.inspection);
@@ -716,8 +716,8 @@ shareButton.addEventListener("click", async () => {
 });
 
 themeToggle.addEventListener("click", () => {
-  const next = nextThemeAfterToggle(activeTheme());
-  saveThemePreference(localStorage, next);
+  const storage = openThemeStorage(globalThis);
+  const next = toggleAppliedTheme(appliedTheme(), storage);
   applyTheme(next);
 });
 

@@ -22,6 +22,20 @@ export function resolveTheme(preference, systemPrefersDark) {
   return systemPrefersDark ? "dark" : "light";
 }
 
+export function openThemeStorage(globalObject) {
+  try {
+    return globalObject.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+export function resolveActiveTheme(globalObject, systemPrefersDark) {
+  const storage = openThemeStorage(globalObject);
+  const preference = storage ? readStoredThemePreference(storage) : null;
+  return resolveTheme(preference, systemPrefersDark);
+}
+
 /** @param {"light" | "dark"} theme */
 export function themeColorFor(theme) {
   return THEME_COLORS[theme];
@@ -34,9 +48,17 @@ export function nextThemeAfterToggle(currentTheme) {
 
 /** @param {"light" | "dark"} theme */
 export function saveThemePreference(storage, theme) {
+  if (!storage) return;
   try {
     storage.setItem(THEME_STORAGE_KEY, theme);
   } catch {
     // Theme still applies for this session if storage is unavailable.
   }
+}
+
+/** @param {"light" | "dark"} appliedTheme */
+export function toggleAppliedTheme(appliedTheme, storage) {
+  const next = nextThemeAfterToggle(appliedTheme);
+  saveThemePreference(storage, next);
+  return next;
 }
