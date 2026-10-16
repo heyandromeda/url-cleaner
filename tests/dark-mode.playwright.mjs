@@ -59,7 +59,7 @@ const failures = [];
 
 try {
   for (const theme of ["light", "dark"]) {
-    for (const width of [390, 1280]) {
+    for (const width of [320, 390, 1280]) {
       const height = width === 390 ? 844 : 800;
       const page = await browser.newPage({ viewport: { width, height } });
       await page.emulateMedia({ colorScheme: theme === "dark" ? "dark" : "light" });
@@ -83,6 +83,35 @@ try {
       const background = await rgb(page, "html", "backgroundColor");
       if (text && background && contrastRatio(text, background) < 4.5) {
         failures.push(`${width}px ${theme}: body text contrast below AA (${contrastRatio(text, background).toFixed(2)})`);
+      }
+
+      if (theme === "dark") {
+        const primaryText = await rgb(page, 'button.primary-button[type="submit"]', "color");
+        const primaryBg = await rgb(page, 'button.primary-button[type="submit"]', "backgroundColor");
+        if (primaryText && primaryBg && contrastRatio(primaryText, primaryBg) < 4.5) {
+          failures.push(`${width}px dark: primary button contrast below AA (${contrastRatio(primaryText, primaryBg).toFixed(2)})`);
+        }
+      }
+
+      const toolbar = await page.evaluate(() => {
+        const eyebrow = document.querySelector(".page-toolbar .eyebrow");
+        const toggle = document.querySelector("#theme-toggle");
+        if (!eyebrow || !toggle) return null;
+        const eyebrowBox = eyebrow.getBoundingClientRect();
+        const toggleBox = toggle.getBoundingClientRect();
+        const toolbarTop = document.querySelector(".page-toolbar").getBoundingClientRect().top;
+        const paddingTop = Number.parseFloat(getComputedStyle(document.querySelector(".app-shell")).paddingTop);
+        return {
+          toolbarTop,
+          paddingTop,
+          overlap: !(toggleBox.left >= eyebrowBox.right + 4 || toggleBox.right <= eyebrowBox.left - 4),
+          toggleClipped: toggleBox.right > document.documentElement.clientWidth + 0.5 || toggleBox.left < 0
+        };
+      });
+      if (toolbar?.overlap) failures.push(`${width}px ${theme}: theme toggle overlaps eyebrow`);
+      if (toolbar?.toggleClipped) failures.push(`${width}px ${theme}: theme toggle clipped horizontally`);
+      if (toolbar && toolbar.toolbarTop < 11) {
+        failures.push(`${width}px ${theme}: toolbar top inset below --space-3 (${toolbar.toolbarTop}px)`);
       }
 
       await page.keyboard.press("Tab");
@@ -117,7 +146,7 @@ try {
   await togglePage.close();
 
   assert.equal(failures.length, 0, failures.join("\n"));
-  console.log("dark-mode playwright checks passed (390/1280, light/dark)");
+  console.log("dark-mode playwright checks passed (320/390/1280, light/dark)");
 } finally {
   await browser.close();
   server.close();

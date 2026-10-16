@@ -56,6 +56,8 @@
   --color-line-faint: #ececec;
   --color-line-input: #e0e0e0;
   --color-placeholder: #6b6b6b;
+  --color-primary-bg: var(--color-text);
+  --color-primary-fg: var(--color-bg);
   --color-primary-hover: #000;
   --color-secondary-hover: #f2f2f2;
   --color-notice-border: #b57900;
@@ -105,6 +107,8 @@ html[data-theme="dark"] {
   --color-line-faint: #2e2e2e;
   --color-line-input: #454545;
   --color-placeholder: #a3a3a3;
+  --color-primary-bg: #e8e8e8;
+  --color-primary-fg: #141414;
   --color-primary-hover: #fff;
   --color-secondary-hover: #2a2a2a;
   --color-notice-border: #d4a017;
@@ -150,7 +154,7 @@ button, input, textarea { font: inherit; }
   width: 100%;
   max-width: 700px;
   margin: 0 auto;
-  padding: var(--space-7) var(--space-4);
+  padding: max(var(--space-7), calc(var(--space-3) + env(safe-area-inset-top, 0px))) var(--space-4) var(--space-7);
 }
 
 .cleaner-card { padding: 0; }
@@ -169,10 +173,34 @@ button, input, textarea { font: inherit; }
 
 .theme-toggle {
   flex: none;
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--font-size-control);
-  font-weight: var(--font-weight-control);
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: transparent;
+}
+
+.theme-toggle:hover:not(:disabled),
+.theme-toggle:focus-visible {
+  background: var(--color-hover);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+.theme-toggle .icon {
+  width: 18px;
+  height: 18px;
 }
 
 .icon-button {
@@ -318,6 +346,11 @@ button {
   font-weight: var(--font-weight-control);
 }
 
+button.theme-toggle {
+  border: 0;
+  padding: 0;
+}
+
 button:focus-visible {
   outline: 2px solid var(--color-text);
   outline-offset: 2px;
@@ -329,8 +362,8 @@ button:disabled {
 }
 
 .primary-button {
-  color: var(--color-bg);
-  background: var(--color-text);
+  color: var(--color-primary-fg);
+  background: var(--color-primary-bg);
 }
 
 .secondary-button {
@@ -363,38 +396,61 @@ button:disabled {
 .settings {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-4);
-  margin: var(--space-4) 0 0;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
   padding: 0;
   border: 0;
 }
 
 .settings legend {
+  flex: 0 0 100%;
+  width: 100%;
+  margin: 0 0 var(--space-2);
   padding: 0;
-  color: var(--color-text-2);
-  font-size: var(--font-size-secondary);
-  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  font-size: var(--font-size-h2);
+  line-height: var(--font-lh-h2);
+  font-weight: var(--font-weight-h2);
 }
 
 .setting {
   display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-height: var(--space-5);
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding-top: calc((44px - 1lh) / 2);
   color: var(--color-text-2);
   font-size: var(--text-sm);
+  line-height: var(--font-lh-secondary);
 }
 
 .settings-hint {
   flex-basis: 100%;
-  margin: 0;
+  margin: var(--space-2) 0 0;
 }
 
 .setting input[type="checkbox"] {
   flex: none;
+  appearance: none;
   width: 18px;
   height: 18px;
-  accent-color: var(--color-text);
+  margin: calc((1lh - 18px) / 2) 0 0;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.setting input[type="checkbox"]:checked {
+  border-color: var(--color-text);
+  background-color: var(--color-text);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 8.5 6.5 11.5 12.5 4.5' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 14px;
+}
+
+html[data-theme="dark"] .setting input[type="checkbox"]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 8.5 6.5 11.5 12.5 4.5' stroke='%23141414' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .setting input[type="checkbox"]:focus-visible {
@@ -932,12 +988,13 @@ button:disabled {
   .settings {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    column-gap: var(--space-4);
-    row-gap: var(--space-2);
+    column-gap: var(--space-3);
+    row-gap: 0;
   }
 
   .settings legend {
     grid-column: 1 / -1;
+    margin-bottom: var(--space-2);
   }
 
   .settings-hint {
@@ -967,10 +1024,6 @@ button:disabled {
   .settings {
     flex-direction: column;
     gap: 0;
-  }
-
-  .setting {
-    min-height: 44px;
   }
 
   .parameter-row {

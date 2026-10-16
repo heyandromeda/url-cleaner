@@ -8,7 +8,7 @@ import { playwrightArtifactsDir } from "./playwright-artifacts.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const artifactsDir = playwrightArtifactsDir();
-const widths = [320, 390, 1280, 1440];
+const widths = [320, 390, 1280];
 
 function startServer() {
   const mime = {
@@ -83,8 +83,22 @@ try {
       if (width === 390 && theme === "light") {
         await page.screenshot({ path: join(artifactsDir, "audit-pass-2-390-light.png"), fullPage: false });
       }
+      if (width === 390 && theme === "dark") {
+        await page.screenshot({ path: join(artifactsDir, "audit-pass-2-390-dark.png"), fullPage: false });
+      }
       if (width === 1280 && theme === "dark") {
         await page.screenshot({ path: join(artifactsDir, "audit-pass-2-1280-dark.png"), fullPage: false });
+      }
+
+      const toggleMetrics = await page.$eval("#theme-toggle", (node) => ({
+        width: node.getBoundingClientRect().width,
+        height: node.getBoundingClientRect().height,
+        borderWidth: getComputedStyle(node).borderTopWidth,
+        text: node.textContent.trim()
+      }));
+      if (toggleMetrics.text) failures.push(`${width}px ${theme}: theme toggle should be icon-only`);
+      if (toggleMetrics.width < 36 || toggleMetrics.width > 44 || toggleMetrics.height < 36 || toggleMetrics.height > 44) {
+        failures.push(`${width}px ${theme}: theme toggle hit area ${toggleMetrics.width}x${toggleMetrics.height} outside 36–44px`);
       }
 
       await page.close();

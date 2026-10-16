@@ -112,14 +112,7 @@ function applyTheme(theme) {
     const isDark = theme === "dark";
     themeToggle.setAttribute("aria-pressed", isDark ? "true" : "false");
     themeToggle.setAttribute("aria-label", isDark ? "Light mode" : "Dark mode");
-    themeToggle.replaceChildren();
-    const wrap = document.createElement("span");
-    wrap.className = "icon-button";
-    wrap.append(
-      createIcon(isDark ? "sun" : "moon", { size: 18 }),
-      document.createTextNode(isDark ? "Light mode" : "Dark mode")
-    );
-    themeToggle.append(wrap);
+    themeToggle.replaceChildren(createIcon(isDark ? "sun" : "moon", { size: 18 }));
   }
 }
 

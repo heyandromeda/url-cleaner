@@ -38,6 +38,23 @@ test("manifest theme colors match light page background", () => {
   assert.equal(manifest.background_color, "#ffffff");
 });
 
+test("Theo pass 2 corrections: theme toggle, primary, settings, placeholder", () => {
+  const html = readFileSync(join(root, "index.html"), "utf8");
+  const css = readFileSync(join(root, "styles.css"), "utf8");
+  const app = readFileSync(join(root, "app.js"), "utf8");
+
+  assert.match(html, /class="theme-toggle"/);
+  assert.doesNotMatch(html, /class="[^"]*theme-toggle[^"]*secondary-button/);
+  assert.match(html, /placeholder="https:\/\/example\.com\/\?utm_source=ad"/);
+  assert.doesNotMatch(app, /createTextNode\(isDark \? "Light mode"/);
+
+  assert.match(css, /--color-primary-bg: #e8e8e8/);
+  assert.match(css, /\.theme-toggle[\s\S]*border:\s*0/);
+  assert.match(css, /\.settings legend[\s\S]*--font-size-h2/);
+  assert.match(css, /\.setting input\[type="checkbox"\][\s\S]*appearance:\s*none/);
+  assert.match(css, /border:\s*1\.5px solid var\(--color-border\)/);
+});
+
 test("tracker of the day defaults collapsed in markup and app", () => {
   const html = readFileSync(join(root, "index.html"), "utf8");
   const app = readFileSync(join(root, "app.js"), "utf8");
