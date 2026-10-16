@@ -49,10 +49,10 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Cleans a batch of URLs pasted one per line, with per-line success or failure and one-click copy of cleaned results
 - Explains recognized removed tracking parameters from the results view; unknown names are not described
 - Shows a collapsible Tracker of the Day card with a richer local explanation, example URL, privacy notes, fun facts, and cited sources; expand/collapse preference is remembered in localStorage
-- Includes a bookmarklet that only opens URL Cleaner with the current page URL
+- Includes a bookmarklet that only opens URL Cleaner with the current page URL, passed after the `#` so it never reaches the server
 - Installable as a PWA with a share target so a phone can hand a link to the local cleaner
 - Optionally copies every successfully cleaned URL automatically
-- Remembers the two settings locally without storing URLs or clipboard contents
+- Remembers your settings locally without storing URLs or clipboard contents
 - Shows a mobile-friendly before/after view and highlights exactly which parameters were removed
 - Shows a local tracking fingerprint with a plain count and category breakdown
 - Includes a URL X-Ray view that breaks the link into scheme, host, path, fragment, and categorized parameters
@@ -139,7 +139,7 @@ Known shortened links receive an informational notice. URL Cleaner cleans the vi
 
 Open **[andromeda-url-cleaner.vercel.app](https://andromeda-url-cleaner.vercel.app)**, paste a URL, and select **Clean URL**.
 
-The app does not upload the URL anywhere. Copying and pasting use your browser's clipboard permission.
+The app does not upload the URL anywhere. Copying and pasting use your browser's clipboard permission. See [Privacy](#privacy) for how handoffs from the bookmarklet, Shortcut, and share target work.
 
 ## Share Sheet shortcut for iPhone, iPad, and Mac
 
@@ -158,7 +158,7 @@ You can get the same practical flow with an Apple Shortcut:
 5. Add **URL Encode** or **Encode URL**, using the URL from the previous action.
 6. Add a **Text** action containing this URL, replacing the bracketed part with the encoded value:
    ```
-   https://andromeda-url-cleaner.vercel.app?url=[Encoded URL]
+   https://andromeda-url-cleaner.vercel.app/#url=[Encoded URL]
    ```
 7. Add **Open URLs** using that Text action.
 8. Save it as **Clean URL with URL Cleaner**.
@@ -181,10 +181,10 @@ Keeping the public link in this README makes the Shortcut installable while leav
 
 ### Share Sheet limitations
 
-- The Shortcut handoff is local to the browser after the page opens; no URL is sent to a backend.
+- The Shortcut passes the link after the `#`, which browsers never send to a server, so the link stays on your device. Older Shortcuts that use `?url=` still work, but that form sends the link to the web host in the page request; switch them to `/#url=`.
 - The **Share** button uses the browser's Web Share support. It appears only where that API is available; **Copy** remains the fallback.
 - iOS and macOS may block silent clipboard writes when a page opens without a direct user gesture. The app therefore always displays the cleaned URL, and the **Share** and **Copy** buttons remain reliable final steps.
-- The app removes the `url` handoff value from the address bar after loading it.
+- The app removes the handoff value from the address bar after loading it.
 
 ## Run locally
 
@@ -225,7 +225,7 @@ The test suite covers:
 - Batch cleaning that continues after invalid lines
 - Local tracker explanations, rich tracker-of-the-day profiles, and deterministic daily selection
 - Tracking fingerprint scoring, URL X-Ray categorization, and weirdness flags
-- Share-target / `?url=` handoff parsing and bookmarklet redirect-only behavior
+- Share-target, `#url=` and `?url=` handoff parsing, and bookmarklet redirect-only behavior
 - Manifest, service worker, and CSP constraints for the installable app
 
 ## Project structure
@@ -262,7 +262,13 @@ No tracker list can identify every parameter used by every website. This project
 
 ## Privacy
 
-URL cleaning happens locally in your browser. URLs and clipboard contents are not uploaded or stored. Only the two setting preferences are saved locally: whether to clean on paste and whether to auto-copy. The app has no backend, accounts, analytics, database, or telemetry.
+URL cleaning happens locally in your browser. URLs and clipboard contents are not uploaded or stored. Only three preferences are saved locally: whether to clean on paste, whether to auto-copy, and whether the Tracker of the Day card is collapsed. The app has no backend, accounts, analytics, database, or telemetry.
+
+How a link reaches the app matters:
+
+- **Paste, Paste button, clipboard offer:** the link never leaves the page.
+- **Bookmarklet and Shortcut (`/#url=`):** the link is passed after the `#`. Browsers do not send that part to the server, so the host only sees a plain request for the page.
+- **Android share target and old `?url=` links:** the Web Share Target API can only pass the link as a query string, so the shared link is included in the page request to the static host (Vercel) before the app cleans it and removes it from the address bar. Use the bookmarklet, Shortcut, or paste if you want to avoid that.
 
 ## License
 

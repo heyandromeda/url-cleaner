@@ -1,6 +1,6 @@
 import { cleanBatch, cleanedUrlsFromBatch, isOpaqueShortener, querySegments } from "./cleaner.js";
 import { explainParameter, trackerOfTheDay } from "./explanations.js";
-import { bookmarkletCode, canReadClipboard, parseHandoffParams } from "./handoff.js";
+import { bookmarkletCode, canReadClipboard, parseHandoffUrl } from "./handoff.js";
 
 const form = document.querySelector("#clean-form");
 const input = document.querySelector("#url-input");
@@ -503,8 +503,17 @@ async function offerClipboardIfPermitted() {
 
 function clearHandoffFromAddressBar() {
   const url = new URL(window.location.href);
-  if (![...url.searchParams.keys()].length) return;
+  if (!url.search && !url.hash) return;
   window.history.replaceState(null, "", url.pathname);
+}
+
+function loadHandoff() {
+  const handedOff = parseHandoffUrl(window.location.href);
+  if (!handedOff) return false;
+  input.value = handedOff;
+  runClean({ allowAutoCopy: false });
+  clearHandoffFromAddressBar();
+  return true;
 }
 
 cleanOnPaste.checked = readSetting(CLEAN_ON_PASTE_KEY, true);
@@ -588,14 +597,12 @@ clipboardOfferDismiss.addEventListener("click", () => {
   clipboardOfferValue = "";
 });
 
-const handedOff = parseHandoffParams(new URL(window.location.href).searchParams);
-if (handedOff) {
-  input.value = handedOff;
-  runClean({ allowAutoCopy: false });
-  clearHandoffFromAddressBar();
-} else {
+if (!loadHandoff()) {
   offerClipboardIfPermitted();
 }
+
+// A #url= handoff to an already-open tab changes only the fragment, so no reload happens.
+window.addEventListener("hashchange", loadHandoff);
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(() => {

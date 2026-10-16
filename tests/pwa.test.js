@@ -49,6 +49,8 @@ test("index.html links the manifest and existing icons", () => {
   assert.match(html, /<link rel="manifest" href="\.\/manifest\.webmanifest"/);
   assert.match(html, /<link rel="apple-touch-icon" href="\.\/apple-touch-icon\.png"/);
   assert.match(html, /id="bookmarklet"/);
+  assert.match(html, /vercel\.app\/#url='\+encodeURIComponent\(location\.href\)/);
+  assert.doesNotMatch(html, /\?url='\+encodeURIComponent/);
   assert.match(html, /id="tracker-of-the-day"/);
   assert.match(html, /id="batch-panel"/);
   const app = readFileSync(join(root, "app.js"), "utf8");
