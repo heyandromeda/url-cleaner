@@ -302,6 +302,44 @@ export function trackingFingerprint(input) {
   return { count, label, categories: { tracking, affiliate, wrappers } };
 }
 
+export function fingerprintRelevantParametersOnDestination(input) {
+  const redirect = unwrapRedirectLayers(input);
+  const hostname = redirect.url.hostname;
+  const parameters = [];
+  for (const [name, value] of redirect.url.searchParams) {
+    const category = categorizeParameter(name, hostname);
+    if (category === "tracking" || category === "affiliate/referral") {
+      parameters.push({ name, value, category });
+    }
+  }
+  return parameters;
+}
+
+export function fingerprintRemovedKeptDetail(input, removedParameters, { aggressive = false } = {}) {
+  const fingerprintParams = fingerprintRelevantParametersOnDestination(input);
+  if (fingerprintParams.length === 0) return null;
+
+  const removedNames = new Set(removedParameters.map((name) => name.toLowerCase()));
+  const kept = fingerprintParams.filter((parameter) => !removedNames.has(parameter.name.toLowerCase()));
+  const removedCount = fingerprintParams.length - kept.length;
+
+  const keptDescriptions = kept.map((parameter) => {
+    if (parameter.category === "affiliate/referral" && !aggressive) {
+      return `\`${parameter.name}\` (affiliate/referral, kept because aggressive cleaning is off)`;
+    }
+    return `\`${parameter.name}\` (${parameter.category})`;
+  });
+
+  let keptText = "";
+  if (kept.length > 0) {
+    keptText = kept.length === 1
+      ? `1 kept: ${keptDescriptions[0]}`
+      : `${kept.length} kept: ${keptDescriptions.join("; ")}`;
+  }
+
+  return { removedCount, kept, keptText };
+}
+
 export function inspectUrl(input) {
   const url = parseHttpUrl(input);
   const redirect = unwrapRedirectLayers(url.href);

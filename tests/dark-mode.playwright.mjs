@@ -4,9 +4,10 @@ import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { playwrightArtifactsDir } from "./playwright-artifacts.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const artifacts = "/opt/cursor/artifacts";
+const artifactsDir = playwrightArtifactsDir();
 
 function startServer() {
   const mime = {
@@ -92,7 +93,7 @@ try {
       if (!focus) failures.push(`${width}px ${theme}: missing focus ring on first tab stop`);
 
       await page.screenshot({
-        path: join(artifacts, `dark-mode-${width}-${theme}.png`),
+        path: join(artifactsDir, `dark-mode-${width}-${theme}.png`),
         fullPage: false
       });
       await page.close();
