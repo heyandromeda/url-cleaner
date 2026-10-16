@@ -72,16 +72,10 @@ export function parseHandoffParams(searchParams) {
 }
 
 // Links handed over after the "#" (#url=) are never sent to the server, so
-// they win. The ?url= form stays for the share target and older bookmarklets.
+// they win. The ?url= form stays for the share target and legacy handoff links.
 export function parseHandoffUrl(href) {
   const url = new URL(href);
   return parseHandoffParams(url.hash.slice(1)) || parseHandoffParams(url.searchParams);
-}
-
-export function bookmarkletCode(origin) {
-  const base = String(origin).replace(/\/+$/, "");
-  const target = `${base}/#url=`;
-  return `javascript:void(location.href=${JSON.stringify(target)}+encodeURIComponent(location.href))`;
 }
 
 export function canReadClipboard(permissionState) {

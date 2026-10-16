@@ -6,7 +6,9 @@ import {
   querySegments
 } from "./cleaner.js";
 import { explainParameter, trackerOfTheDay } from "./explanations.js";
-import { bookmarkletCode, canReadClipboard, parseHandoffUrl } from "./handoff.js";
+import { canReadClipboard, parseHandoffUrl } from "./handoff.js";
+import { createIcon, wrapIconButton } from "./icons.js";
+import { breakableUrlMarkup } from "./url-break.js";
 import {
   openThemeStorage,
   readStoredThemePreference,
@@ -40,6 +42,7 @@ const message = document.querySelector("#message");
 const removedList = document.querySelector("#removed-list");
 const fingerprintDetail = document.querySelector("#fingerprint-detail");
 const fingerprintCount = document.querySelector("#fingerprint-count");
+const fingerprintCountValue = document.querySelector("#fingerprint-count-value");
 const redirectLayersPanel = document.querySelector("#redirect-layers-panel");
 const redirectLayersList = document.querySelector("#redirect-layers-list");
 const xrayPanel = document.querySelector("#xray-panel");
@@ -55,7 +58,6 @@ const totd = document.querySelector("#tracker-of-the-day");
 const totdName = document.querySelector("#totd-name");
 const totdDetails = document.querySelector("#totd-details");
 const totdToggle = document.querySelector("#totd-toggle");
-const bookmarklet = document.querySelector("#bookmarklet");
 const themeToggle = document.querySelector("#theme-toggle");
 const themeColorMeta = document.querySelector('meta[name="theme-color"]');
 
@@ -110,8 +112,48 @@ function applyTheme(theme) {
     const isDark = theme === "dark";
     themeToggle.setAttribute("aria-pressed", isDark ? "true" : "false");
     themeToggle.setAttribute("aria-label", isDark ? "Light mode" : "Dark mode");
-    themeToggle.textContent = isDark ? "Light mode" : "Dark mode";
+    themeToggle.replaceChildren(createIcon(isDark ? "sun" : "moon", { size: 18 }));
   }
+}
+
+function decorateDisclosureSummary(summary) {
+  if (summary.querySelector(".disclosure-chevron")) return;
+  const label = summary.textContent.trim();
+  summary.textContent = "";
+  const wrap = document.createElement("span");
+  wrap.className = "disclosure-summary";
+  wrap.append(createIcon("chevronRight", { size: 16 }), document.createTextNode(label));
+  summary.append(wrap);
+}
+
+function decorateActionButtons() {
+  wrapIconButton(pasteButton, "clipboard", "Paste");
+  wrapIconButton(document.querySelector('button.primary-button[type="submit"]'), "sparkles", "Clean URL");
+  wrapIconButton(inspectButton, "search", "Inspect URL");
+  wrapIconButton(copyButton, "copy", "Copy");
+  wrapIconButton(shareButton, "share", "Share");
+  wrapIconButton(copyAllButton, "copy", "Copy cleaned URLs");
+  decorateDisclosureSummary(xrayPanel.querySelector("summary"));
+  decorateTotdToggleLabel();
+}
+
+function decorateTotdToggleLabel() {
+  const label = totdToggle.textContent.trim();
+  totdToggle.replaceChildren();
+  const wrap = document.createElement("span");
+  wrap.className = "icon-button";
+  wrap.append(createIcon("chevronRight", { size: 16, className: "icon disclosure-chevron" }), document.createTextNode(label));
+  totdToggle.append(wrap);
+}
+
+function setTotdToggleLabel(expanded) {
+  const label = expanded ? "Collapse" : "Expand";
+  totdToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+  totdToggle.replaceChildren();
+  const wrap = document.createElement("span");
+  wrap.className = "icon-button";
+  wrap.append(createIcon("chevronRight", { size: 16, className: "icon disclosure-chevron" }), document.createTextNode(label));
+  totdToggle.append(wrap);
 }
 
 function initTheme() {
@@ -155,7 +197,10 @@ function appendRemovedItem(list, parameter, aggressive = false) {
 
   const details = document.createElement("details");
   const summary = document.createElement("summary");
-  summary.textContent = label;
+  const summaryWrap = document.createElement("span");
+  summaryWrap.className = "disclosure-summary";
+  summaryWrap.append(createIcon("chevronRight", { size: 16, className: "icon disclosure-chevron" }), document.createTextNode(label));
+  summary.append(summaryWrap);
   const body = document.createElement("p");
   body.className = "param-explanation";
   body.textContent = explanation;
@@ -190,7 +235,8 @@ function addUrlPart(name, value) {
 }
 
 function renderFingerprint(fingerprint, { removedParameters = [], aggressive = false, originalInput = "" } = {}) {
-  fingerprintCount.textContent = String(fingerprint.count);
+  const removedCount = removedParameters.length;
+  fingerprintCountValue.textContent = String(removedCount);
 
   const categoryParts = [
     `${fingerprint.categories.tracking} tracking`,
@@ -202,8 +248,8 @@ function renderFingerprint(fingerprint, { removedParameters = [], aggressive = f
   const removedKept = originalInput
     ? fingerprintRemovedKeptDetail(originalInput, removedParameters, { aggressive })
     : null;
-  if (removedKept) {
-    detail = `${fingerprint.label} — ${removedKept.detail}`;
+  if (removedKept?.keptText) {
+    detail = `${fingerprint.label} — ${removedKept.keptText}`;
   }
 
   fingerprintDetail.textContent = detail;
@@ -477,13 +523,13 @@ async function pasteFromClipboard() {
   }
 }
 
-function appendTotdSection(container, title, paragraphs) {
+function appendTotdSection(container, iconName, title, paragraphs) {
   const section = document.createElement("section");
   section.className = "totd-section";
 
   const heading = document.createElement("h3");
   heading.className = "totd-section-title";
-  heading.textContent = title;
+  heading.append(createIcon(iconName, { size: 16 }), document.createTextNode(title));
   section.append(heading);
 
   for (const text of paragraphs) {
@@ -503,14 +549,14 @@ function renderTrackerDetails(fact) {
   summary.textContent = fact.explanation;
   totdDetails.append(summary);
 
-  appendTotdSection(totdDetails, "🔎 What it does", [fact.what, `Who uses it? ${fact.who}`, `How it works: ${fact.how}`, `Why it exists: ${fact.why}`]);
-  appendTotdSection(totdDetails, "🛡️ Privacy impact", [fact.privacy, `Can it be safely removed? ${fact.safeToRemove}`]);
+  appendTotdSection(totdDetails, "search", "What it does", [fact.what, `Who uses it? ${fact.who}`, `How it works: ${fact.how}`, `Why it exists: ${fact.why}`]);
+  appendTotdSection(totdDetails, "shield", "Privacy impact", [fact.privacy, `Can it be safely removed? ${fact.safeToRemove}`]);
 
   const factsSection = document.createElement("section");
   factsSection.className = "totd-section";
   const factsHeading = document.createElement("h3");
   factsHeading.className = "totd-section-title";
-  factsHeading.textContent = "🧠 Did you know?";
+  factsHeading.append(createIcon("brain", { size: 16 }), document.createTextNode("Did you know?"));
   factsSection.append(factsHeading);
   const list = document.createElement("ul");
   list.className = "totd-facts";
@@ -526,11 +572,11 @@ function renderTrackerDetails(fact) {
   exampleSection.className = "totd-section";
   const exampleHeading = document.createElement("h3");
   exampleHeading.className = "totd-section-title";
-  exampleHeading.textContent = "🔗 Example URL";
+  exampleHeading.append(createIcon("link", { size: 16 }), document.createTextNode("Example URL"));
   exampleSection.append(exampleHeading);
   const exampleUrl = document.createElement("code");
   exampleUrl.className = "totd-example-url";
-  exampleUrl.textContent = fact.exampleUrl;
+  exampleUrl.innerHTML = breakableUrlMarkup(fact.exampleUrl);
   exampleSection.append(exampleUrl);
   const exampleNote = document.createElement("p");
   exampleNote.textContent = fact.exampleNote;
@@ -542,7 +588,7 @@ function renderTrackerDetails(fact) {
     sourcesSection.className = "totd-section";
     const sourcesHeading = document.createElement("h3");
     sourcesHeading.className = "totd-section-title";
-    sourcesHeading.textContent = "📚 Sources";
+    sourcesHeading.append(createIcon("bookOpen", { size: 16 }), document.createTextNode("Sources"));
     sourcesSection.append(sourcesHeading);
     const sourcesList = document.createElement("ul");
     sourcesList.className = "totd-sources";
@@ -564,8 +610,7 @@ function renderTrackerDetails(fact) {
 function applyTotdCollapsedState() {
   totd.classList.toggle("is-collapsed", totdCollapsed);
   totdDetails.hidden = totdCollapsed;
-  totdToggle.textContent = totdCollapsed ? "Expand" : "Collapse";
-  totdToggle.setAttribute("aria-expanded", totdCollapsed ? "false" : "true");
+  setTotdToggleLabel(!totdCollapsed);
 }
 
 function renderTrackerOfTheDay() {
@@ -629,13 +674,13 @@ function loadHandoff() {
 }
 
 initTheme();
+decorateActionButtons();
 
 cleanOnPaste.checked = readSetting(CLEAN_ON_PASTE_KEY, true);
 autoCopy.checked = readSetting(AUTO_COPY_KEY, false);
 aggressiveMode.checked = readSetting(AGGRESSIVE_MODE_KEY, false);
 removeDuplicates.checked = readSetting(REMOVE_DUPLICATES_KEY, false);
 shareButton.hidden = typeof navigator.share !== "function";
-bookmarklet.href = bookmarkletCode(window.location.origin);
 renderTrackerOfTheDay();
 
 form.addEventListener("submit", (event) => {
@@ -687,6 +732,8 @@ copyButton.addEventListener("click", async () => {
 
   if (await copyText(cleanedValue)) {
     showMessage("Cleaned URL copied.", "success");
+    wrapIconButton(copyButton, "check", "Copy");
+    window.setTimeout(() => wrapIconButton(copyButton, "copy", "Copy"), 1500);
   } else {
     showMessage("Copy failed. Select the URL and copy it manually.", "error");
   }

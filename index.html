@@ -26,12 +26,10 @@
           <button
             id="theme-toggle"
             type="button"
-            class="secondary-button theme-toggle"
+            class="theme-toggle"
             aria-pressed="false"
             aria-label="Dark mode"
-          >
-            Dark mode
-          </button>
+          ></button>
         </div>
         <h1 id="page-title">URL Cleaner</h1>
         <p class="intro">Remove common tracking parameters while keeping the query values your link needs.</p>
@@ -48,7 +46,7 @@
         <form id="clean-form" class="clean-form" novalidate>
           <label for="url-input">URLs to clean</label>
           <p class="field-hint" id="url-input-hint">One URL per line. Paste a list to clean a batch.</p>
-          <textarea id="url-input" name="url" rows="3" inputmode="url" autocomplete="off" spellcheck="false" aria-describedby="url-input-hint" placeholder="https://example.com/page?utm_source=newsletter" required></textarea>
+          <textarea id="url-input" name="url" rows="3" inputmode="url" autocomplete="off" spellcheck="false" aria-describedby="url-input-hint" placeholder="https://example.com/?utm_source=ad" required></textarea>
           <div class="input-row">
             <button id="paste-button" type="button" class="secondary-button">Paste</button>
             <button type="submit" class="primary-button">Clean URL</button>
@@ -102,7 +100,10 @@
               <h2 id="fingerprint-title">Tracking fingerprint</h2>
               <p id="fingerprint-detail"></p>
             </div>
-            <strong id="fingerprint-count" class="fingerprint-score" aria-hidden="true"></strong>
+            <div id="fingerprint-count" class="fingerprint-score" role="group" aria-labelledby="fingerprint-count-value fingerprint-removed-caption">
+              <span id="fingerprint-count-value" class="fingerprint-count-value"></span>
+              <span id="fingerprint-removed-caption" class="fingerprint-removed-caption">removed</span>
+            </div>
           </section>
 
           <section id="redirect-layers-panel" class="redirect-layers-panel" hidden>
@@ -155,13 +156,8 @@
           <div id="totd-details" class="totd-details" hidden></div>
         </aside>
 
-        <section class="extras" aria-labelledby="bookmarklet-title">
-          <h2 id="bookmarklet-title">Bookmarklet</h2>
-          <p class="field-hint">Drag this onto your bookmarks bar. It opens URL Cleaner with the current page’s URL. It does not inject a script into the other site.</p>
-          <a id="bookmarklet" class="bookmarklet-link" href="javascript:void(location.href='https://andromeda-url-cleaner.vercel.app/#url='+encodeURIComponent(location.href))">Clean with URL Cleaner</a>
-        </section>
       </section>
-      <p class="privacy-note">Runs entirely in your browser. URLs are never uploaded or stored; only your settings are saved on this device. The bookmarklet and Shortcut pass links after the “#”, so they never reach the server. Installable as a web app; on Android, sharing a link to it sends that link in the page request.</p>
+      <p class="privacy-note">Runs entirely in your browser. URLs are never uploaded or stored; only your settings are saved on this device.</p>
     </main>
     <script type="module" src="./app.js"></script>
   </body>

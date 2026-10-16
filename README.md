@@ -38,7 +38,6 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Cleans a batch of URLs pasted one per line, with per-line success or failure and one-click copy of cleaned results
 - Explains recognized removed tracking parameters from the results view; unknown names are not described
 - Shows a collapsible Tracker of the Day card with a richer local explanation, example URL, privacy notes, fun facts, and cited sources; expand/collapse preference is remembered in localStorage
-- Includes a bookmarklet that only opens URL Cleaner with the current page URL, passed after the `#` so it never reaches the server
 - Installable as a PWA with a share target so a phone can hand a link to the local cleaner
 - Optionally copies every successfully cleaned URL automatically
 - Remembers your settings locally without storing URLs or clipboard contents
@@ -134,7 +133,7 @@ Known shortened links receive an informational notice. URL Cleaner cleans the vi
 
 Open **[andromeda-url-cleaner.vercel.app](https://andromeda-url-cleaner.vercel.app)**, paste a URL, and select **Clean URL**.
 
-The app does not upload the URL anywhere. Copying and pasting use your browser's clipboard permission. See [Privacy](#privacy) for how handoffs from the bookmarklet, Shortcut, and share target work.
+The app does not upload the URL anywhere. Copying and pasting use your browser's clipboard permission. See [Privacy](#privacy) for how handoffs from the Shortcut and share target work.
 
 ## Share Sheet shortcut for iPhone, iPad, and Mac
 
@@ -207,7 +206,7 @@ The test suite covers:
 - Local tracker explanations, rich tracker-of-the-day profiles, and deterministic daily selection
 - Tracking fingerprint scoring, URL X-Ray categorization, encoded value decoding, and weirdness flags
 - Opt-in aggressive cleaning and identical-duplicate cleanup, including batch mode
-- Share-target, `#url=` and `?url=` handoff parsing, and bookmarklet redirect-only behavior
+- Share-target, `#url=` and `?url=` handoff parsing
 - Manifest, service worker, and CSP constraints for the installable app
 - Every root web file matching its `dist/` copy byte-for-byte, since Vercel serves `dist/`
 
@@ -222,7 +221,7 @@ GitHub Actions runs `npm test` on every push to `main` and on pull requests.
 | [cleaner.js](./cleaner.js) | URL-cleaning logic, tracker lists, inspection helpers, and batch processing |
 | [explanations.js](./explanations.js) | Local tracker explanations and tracker-of-the-day selection |
 | [tracker-profiles.js](./tracker-profiles.js) | Sourced educational profiles for Tracker of the Day |
-| [handoff.js](./handoff.js) | Share-target, bookmarklet, and clipboard-permission helpers |
+| [handoff.js](./handoff.js) | Share-target, hash handoff, and clipboard-permission helpers |
 | [app.js](./app.js) | Form, clipboard, settings, and copy interactions |
 | [manifest.webmanifest](./manifest.webmanifest) | Web app manifest and share target |
 | [sw.js](./sw.js) | Minimal service worker for installability (no caching) |
@@ -254,8 +253,8 @@ URL cleaning happens locally in your browser. URLs and clipboard contents are no
 How a link reaches the app matters:
 
 - **Paste, Paste button, clipboard offer:** the link never leaves the page.
-- **Bookmarklet and Shortcut (`/#url=`):** the link is passed after the `#`. Browsers do not send that part to the server, so the host only sees a plain request for the page.
-- **Android share target and old `?url=` links:** the Web Share Target API can only pass the link as a query string, so the shared link is included in the page request to the static host (Vercel) before the app cleans it and removes it from the address bar. Use the bookmarklet, Shortcut, or paste if you want to avoid that.
+- **Shortcut (`/#url=`):** the link is passed after the `#`. Browsers do not send that part to the server, so the host only sees a plain request for the page.
+- **Android share target and old `?url=` links:** the Web Share Target API can only pass the link as a query string, so the shared link is included in the page request to the static host (Vercel) before the app cleans it and removes it from the address bar. Use the Shortcut or paste if you want to avoid that.
 
 The hosted site enforces this with security headers set in [vercel.json](./vercel.json). The Content Security Policy uses `connect-src 'none'`, so the page cannot make network requests even if it tried, and only loads its own scripts and styles. It also sends `Referrer-Policy: no-referrer`, refuses to be framed, and disables camera, microphone, geolocation, payment, and USB access. The service worker exists only for installability and caches nothing.
 
