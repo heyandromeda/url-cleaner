@@ -2,19 +2,12 @@
 
 Remove common tracking parameters from URLs without stripping parameters that a page actually needs.
 
-> 🧪 **Want the experimental version? [Open URL Cleaner Nightly](https://andromeda-url-cleaner-nightly.vercel.app).** It is deployed separately from the stable `main` build.
-
 > **Built entirely with [Cursor](https://cursor.com/), [Claude Code](https://www.anthropic.com/claude-code) and [ChatGPT Codex](https://openai.com/codex/).**
 
 [![Open live tool](https://img.shields.io/badge/TRY%20IT-Live%20URL%20Cleaner-2563eb?style=for-the-badge)](https://andromeda-url-cleaner.vercel.app)
-[![Nightly build](https://img.shields.io/badge/TRY%20NIGHTLY-Experimental-f59e0b?style=for-the-badge)](https://andromeda-url-cleaner-nightly.vercel.app)
 [![Browser only](https://img.shields.io/badge/RUNS%20LOCALLY-No%20backend-16a34a?style=flat-square)](https://github.com/heyandromeda/url-cleaner)
 
-**[Open the stable tool](https://andromeda-url-cleaner.vercel.app)** · **[Use the nightly build](https://andromeda-url-cleaner-nightly.vercel.app)** · **[Browse the source](https://github.com/heyandromeda/url-cleaner)** · **[View the tests](https://github.com/heyandromeda/url-cleaner/blob/main/tests/url-cleaner.test.js)**
-
-### Try the nightly lab
-
-The separate **[public nightly build](https://andromeda-url-cleaner-nightly.vercel.app)** is where experiments land before stable. Every current nightly experiment has been promoted to stable `main`: URL X-Ray (DEV-2), tracking fingerprint (DEV-3), the encoded value decoder (DEV-7), opt-in aggressive cleaning (DEV-9), the URL weirdness detector (DEV-11), and opt-in identical-duplicate cleanup (DEV-12).
+**[Open the live tool](https://andromeda-url-cleaner.vercel.app)** · **[Browse the source](https://github.com/heyandromeda/url-cleaner)** · **[View the tests](https://github.com/heyandromeda/url-cleaner/blob/main/tests/url-cleaner.test.js)**
 
 ## Why this exists
 
