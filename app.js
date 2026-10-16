@@ -8,6 +8,8 @@ const pasteButton = document.querySelector("#paste-button");
 const inspectButton = document.querySelector("#inspect-button");
 const cleanOnPaste = document.querySelector("#clean-on-paste");
 const autoCopy = document.querySelector("#auto-copy");
+const aggressiveMode = document.querySelector("#aggressive-mode");
+const removeDuplicates = document.querySelector("#remove-duplicates");
 const resultPanel = document.querySelector("#result-panel");
 const batchPanel = document.querySelector("#batch-panel");
 const batchList = document.querySelector("#batch-list");
@@ -17,6 +19,8 @@ const output = document.querySelector("#cleaned-url");
 const unwrapWarning = document.querySelector("#unwrap-warning");
 const unwrapWarningText = unwrapWarning.querySelector("p");
 const shortenerWarning = document.querySelector("#shortener-warning");
+const duplicateNotice = document.querySelector("#duplicate-notice");
+const duplicateNoticeText = duplicateNotice.querySelector("p");
 const shareButton = document.querySelector("#share-button");
 const copyButton = document.querySelector("#copy-button");
 const message = document.querySelector("#message");
@@ -43,6 +47,8 @@ const bookmarklet = document.querySelector("#bookmarklet");
 const CLEAN_ON_PASTE_KEY = "url-cleaner.clean-on-paste";
 const AUTO_COPY_KEY = "url-cleaner.auto-copy";
 const TOTD_COLLAPSED_KEY = "url-cleaner.totd-collapsed";
+const AGGRESSIVE_MODE_KEY = "url-cleaner.aggressive-mode";
+const REMOVE_DUPLICATES_KEY = "url-cleaner.remove-duplicates";
 let cleanedValue = "";
 let batchCopyValue = "";
 let clipboardOfferValue = "";
@@ -83,18 +89,20 @@ function renderUnwrapNotice(unwrappedFrom = [], limitReached = false) {
     : `${wrappers} The destination was cleaned locally without opening it.`;
 }
 
-function appendRemovedItem(list, parameter) {
+function appendRemovedItem(list, parameter, aggressive = false) {
   const item = document.createElement("li");
+  const label = aggressive ? `${parameter} (aggressive)` : parameter;
+  if (aggressive) item.className = "aggressive-removal";
   const explanation = explainParameter(parameter);
   if (!explanation) {
-    item.textContent = parameter;
+    item.textContent = label;
     list.append(item);
     return;
   }
 
   const details = document.createElement("details");
   const summary = document.createElement("summary");
-  summary.textContent = parameter;
+  summary.textContent = label;
   const body = document.createElement("p");
   body.className = "param-explanation";
   body.textContent = explanation;
@@ -103,8 +111,9 @@ function appendRemovedItem(list, parameter) {
   list.append(item);
 }
 
-function renderRemoved(parameters, list = removedList) {
+function renderRemoved(parameters, list = removedList, aggressiveParameters = []) {
   list.replaceChildren();
+  const aggressiveNames = new Set(aggressiveParameters);
 
   if (parameters.length === 0) {
     const item = document.createElement("li");
@@ -115,7 +124,7 @@ function renderRemoved(parameters, list = removedList) {
   }
 
   for (const parameter of parameters) {
-    appendRemovedItem(list, parameter);
+    appendRemovedItem(list, parameter, aggressiveNames.has(parameter));
   }
 }
 
@@ -173,6 +182,11 @@ function renderInspection(inspection) {
     const value = document.createElement("code");
     value.textContent = parameter.value || "(empty)";
     row.append(heading, category, value);
+    for (const decoded of parameter.decodedValues) {
+      const decodedValue = document.createElement("small");
+      decodedValue.textContent = `Decoded: ${decoded}`;
+      row.append(decodedValue);
+    }
     parameterBreakdown.append(row);
   }
 
@@ -188,16 +202,25 @@ function renderInspection(inspection) {
   }
 }
 
-function renderOriginalUrl(value, removedParameters) {
+function renderOriginalUrl(value, removedParameters, duplicateParameters = []) {
   const url = new URL(value.trim());
   const removedNames = new Set(removedParameters.map((name) => name.toLowerCase()));
+  const duplicateNames = new Set(duplicateParameters);
+  const seenPairs = new Set();
   const base = url.href.slice(0, url.href.length - url.search.length - url.hash.length);
 
   originalOutput.replaceChildren(document.createTextNode(base));
 
-  querySegments(url.search).forEach(({ raw, name }, index) => {
+  querySegments(url.search).forEach(({ raw, name, value: segmentValue }, index) => {
     originalOutput.append(document.createTextNode(index === 0 ? "?" : "&"));
-    const segment = document.createElement(removedNames.has(name.toLowerCase()) ? "mark" : "span");
+    // Mirror the cleaner: the first copy of an identical pair is kept, later copies are removed.
+    let removed = removedNames.has(name.toLowerCase());
+    if (!removed && duplicateNames.has(name)) {
+      const pair = JSON.stringify([name, segmentValue]);
+      removed = seenPairs.has(pair);
+      seenPairs.add(pair);
+    }
+    const segment = document.createElement(removed ? "mark" : "span");
     segment.textContent = raw;
     originalOutput.append(segment);
   });
@@ -220,6 +243,11 @@ async function copyText(value) {
   }
 }
 
+function renderDuplicateNotice(duplicates) {
+  duplicateNotice.hidden = duplicates.length === 0;
+  duplicateNoticeText.textContent = `${duplicates.length} identical duplicate parameter${duplicates.length === 1 ? " was" : "s were"} removed. Repeated names with different values were kept.`;
+}
+
 function hideResults() {
   resultPanel.hidden = true;
   batchPanel.hidden = true;
@@ -231,9 +259,10 @@ function hideResults() {
 
 function showCleanResult(result, { allowAutoCopy = true, originalValue = "", revealInspection = false } = {}) {
   cleanedValue = result.url;
-  renderOriginalUrl(originalValue, result.removedParameters);
+  renderOriginalUrl(originalValue, result.removedParameters, result.duplicateParameters);
   output.textContent = result.url;
-  renderRemoved(result.removedParameters);
+  renderRemoved(result.removedParameters, removedList, result.aggressiveRemovedParameters);
+  renderDuplicateNotice(result.duplicateParameters);
   renderUnwrapNotice(result.unwrappedFrom, result.unwrapLimitReached);
   shortenerWarning.hidden = !isOpaqueShortener(originalValue) && !isOpaqueShortener(result.url);
   renderFingerprint(result.fingerprint);
@@ -251,8 +280,10 @@ function showCleanResult(result, { allowAutoCopy = true, originalValue = "", rev
       ? result.removedParameters.length > 0
         ? "Redirect unwrapped. Tracking parameters removed."
         : "Redirect unwrapped. Destination had no tracking parameters."
-      : result.changed
+      : result.removedParameters.length > 0
         ? "Tracking parameters removed."
+        : result.changed
+          ? "Identical duplicate parameters removed."
         : "Already clean — no tracking parameters found.";
 
   showMessage(baseMessage, result.unwrapLimitReached ? "info" : "success");
@@ -300,7 +331,7 @@ function showBatchResults(entries, { allowAutoCopy = true } = {}) {
       if (entry.result.removedParameters.length > 0) {
         const removed = document.createElement("ul");
         removed.className = "removed-list";
-        renderRemoved(entry.result.removedParameters, removed);
+        renderRemoved(entry.result.removedParameters, removed, entry.result.aggressiveRemovedParameters);
         item.append(removed);
       }
     } else {
@@ -332,7 +363,10 @@ function showBatchResults(entries, { allowAutoCopy = true } = {}) {
 function runClean(options = {}) {
   hideResults();
 
-  const entries = cleanBatch(input.value);
+  const entries = cleanBatch(input.value, {
+    aggressive: aggressiveMode.checked,
+    removeDuplicateParameters: removeDuplicates.checked
+  });
   if (entries.length === 0) {
     showMessage("Enter a URL to clean.", "error");
     return;
@@ -523,6 +557,8 @@ function loadHandoff() {
 
 cleanOnPaste.checked = readSetting(CLEAN_ON_PASTE_KEY, true);
 autoCopy.checked = readSetting(AUTO_COPY_KEY, false);
+aggressiveMode.checked = readSetting(AGGRESSIVE_MODE_KEY, false);
+removeDuplicates.checked = readSetting(REMOVE_DUPLICATES_KEY, false);
 shareButton.hidden = typeof navigator.share !== "function";
 bookmarklet.href = bookmarkletCode(window.location.origin);
 renderTrackerOfTheDay();
@@ -551,6 +587,13 @@ cleanOnPaste.addEventListener("change", () => {
 autoCopy.addEventListener("change", () => {
   saveSetting(AUTO_COPY_KEY, autoCopy.checked);
 });
+
+for (const [toggle, key] of [[aggressiveMode, AGGRESSIVE_MODE_KEY], [removeDuplicates, REMOVE_DUPLICATES_KEY]]) {
+  toggle.addEventListener("change", () => {
+    saveSetting(key, toggle.checked);
+    if (input.value.trim()) runClean({ allowAutoCopy: false });
+  });
+}
 
 copyButton.addEventListener("click", async () => {
   if (!cleanedValue) return;

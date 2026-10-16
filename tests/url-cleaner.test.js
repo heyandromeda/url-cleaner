@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  cleanBatch,
   cleanUrl,
   detectWeirdness,
   inspectUrl,
@@ -398,8 +399,8 @@ test("still drops utm_source from a long query string", () => {
   assert.equal(params.get("p79"), "value");
 });
 
-test("X-Ray categorizes parameters without inventing decoder output in the UI model", () => {
-  const nested = encodeURIComponent("https://example.com/path?q=yes");
+test("X-Ray categorizes parameters and decodes double-encoded values", () => {
+  const nested = encodeURIComponent(encodeURIComponent("https://example.com/path?q=yes"));
   const inspection = inspectUrl(`https://example.org/view?url=${nested}&utm_source=mail&id=7#part`);
 
   assert.equal(inspection.scheme, "https");
@@ -408,7 +409,63 @@ test("X-Ray categorizes parameters without inventing decoder output in the UI mo
     inspection.parameters.map(({ category }) => category),
     ["redirect-related", "tracking", "functional"]
   );
-  assert.equal("decodedValues" in inspection.parameters[0], false);
+  assert.deepEqual(inspection.parameters[0].decodedValues, ["https://example.com/path?q=yes"]);
+  assert.deepEqual(inspection.parameters[2].decodedValues, []);
+});
+
+test("X-Ray decoder stops on malformed encoding instead of throwing", () => {
+  const inspection = inspectUrl("https://example.org/?v=%2525E0");
+
+  assert.deepEqual(inspection.parameters[0].decodedValues, ["%E0"]);
+});
+
+test("aggressive mode is opt-in and reports its broader removals", () => {
+  const input = "https://example.com/?ref=friend&Source=partner&id=42";
+  assert.equal(cleanUrl(input).url, input);
+  assert.deepEqual(cleanUrl(input).aggressiveRemovedParameters, []);
+
+  const aggressive = cleanUrl(input, { aggressive: true });
+  assert.equal(aggressive.url, "https://example.com/?id=42");
+  assert.deepEqual(aggressive.removedParameters, ["ref", "Source"]);
+  assert.deepEqual(aggressive.aggressiveRemovedParameters, ["ref", "Source"]);
+});
+
+test("aggressive mode still keeps kept parameters byte-for-byte", () => {
+  const result = cleanUrl("https://example.com/?q=a%20b+c&src=feed&utm_source=x", { aggressive: true });
+
+  assert.equal(result.url, "https://example.com/?q=a%20b+c");
+  assert.deepEqual(result.aggressiveRemovedParameters, ["src"]);
+});
+
+test("removes only identical duplicate parameter pairs when opted in", () => {
+  const result = cleanUrl("https://example.com/?tag=a&tag=a&tag=b&item=1&item=2&Tag=a", { removeDuplicateParameters: true });
+
+  assert.equal(result.url, "https://example.com/?tag=a&tag=b&item=1&item=2&Tag=a");
+  assert.deepEqual(result.duplicateParameters, ["tag"]);
+  assert.equal(result.changed, true);
+});
+
+test("duplicate cleanup treats differently encoded equal values as identical", () => {
+  const result = cleanUrl("https://example.com/?q=a%20b&q=a+b", { removeDuplicateParameters: true });
+
+  assert.equal(result.url, "https://example.com/?q=a%20b");
+});
+
+test("duplicate cleanup is opt-in so signed URLs remain untouched by default", () => {
+  const input = "https://example.com/?x=1&x=1&signature=abc";
+
+  assert.equal(cleanUrl(input).url, input);
+  assert.deepEqual(cleanUrl(input).duplicateParameters, []);
+  assert.equal(cleanUrl(input, { removeDuplicateParameters: true }).url, "https://example.com/?x=1&signature=abc");
+});
+
+test("batch cleaning passes cleaning options to every line", () => {
+  const results = cleanBatch("https://a.example/?ref=x&id=1\nhttps://b.example/?k=1&k=1", {
+    aggressive: true,
+    removeDuplicateParameters: true
+  });
+
+  assert.deepEqual(results.map((entry) => entry.result.url), ["https://a.example/?id=1", "https://b.example/?k=1"]);
 });
 
 test("tracking fingerprint has a transparent count and severity", () => {

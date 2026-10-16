@@ -16,6 +16,14 @@ export const TRACKING_PARAMETERS = new Set([
 
 export const TRACKING_PARAMETER_PREFIXES = ["utm_", "hsa_", "mtm_", "piwik_", "_ga_"];
 
+// Removed only when aggressive cleaning is switched on: these names are often
+// referral or campaign tags, but some sites need them for the page to work.
+export const AGGRESSIVE_PARAMETERS = new Set([
+  "affiliate", "affiliate_id", "affid", "aff_id", "campaign", "campaignid",
+  "clickid", "click_id", "partner", "partner_id", "ref", "referrer",
+  "referral", "source", "src", "tracking", "tracking_id"
+]);
+
 export const YOUTUBE_HOSTS = new Set([
   "youtube.com",
   "m.youtube.com",
@@ -159,7 +167,8 @@ export function querySegments(search) {
   return query.split("&").filter(Boolean).map((raw) => {
     const separator = raw.indexOf("=");
     const rawName = separator === -1 ? raw : raw.slice(0, separator);
-    return { raw, name: decodeQueryComponent(rawName) };
+    const rawValue = separator === -1 ? "" : raw.slice(separator + 1);
+    return { raw, name: decodeQueryComponent(rawName), value: decodeQueryComponent(rawValue) };
   });
 }
 
@@ -306,7 +315,8 @@ export function inspectUrl(input) {
     parameters: [...url.searchParams].map(([name, value]) => ({
       name,
       value,
-      category: categorizeParameter(name, url.hostname)
+      category: categorizeParameter(name, url.hostname),
+      decodedValues: decodeForInspection(value)
     })),
     redirectLayers: redirect.layers,
     weirdness: detectWeirdness(url.href)
@@ -322,30 +332,43 @@ export function isOpaqueShortener(input) {
   }
 }
 
-function removeTrackingParameters(url) {
+function removeTrackingParameters(url, { aggressive = false, removeDuplicateParameters = false } = {}) {
   const keptSegments = [];
   const removedParameters = [];
+  const aggressiveRemovedParameters = [];
+  const duplicateParameters = [];
+  const seenPairs = new Set();
   for (const segment of querySegments(url.search)) {
+    // Identical means same name and same decoded value; a=1&a=2 is never touched.
+    const pair = JSON.stringify([segment.name, segment.value]);
     if (isTrackingParameter(segment.name, url.hostname)) {
       removedParameters.push(segment.name);
+    } else if (aggressive && AGGRESSIVE_PARAMETERS.has(segment.name.toLowerCase())) {
+      removedParameters.push(segment.name);
+      aggressiveRemovedParameters.push(segment.name);
+    } else if (removeDuplicateParameters && seenPairs.has(pair)) {
+      duplicateParameters.push(segment.name);
     } else {
       keptSegments.push(segment.raw);
+      seenPairs.add(pair);
     }
   }
   url.search = keptSegments.join("&");
-  return removedParameters;
+  return { removedParameters, aggressiveRemovedParameters, duplicateParameters };
 }
 
-export function cleanUrl(input) {
+export function cleanUrl(input, options = {}) {
   const redirect = unwrapRedirectLayers(input);
   // A missing, malformed, or non-http(s) destination stops unwrapping, so the
   // wrapper itself is cleaned instead.
   const url = new URL(redirect.url.href);
-  const removedParameters = removeTrackingParameters(url);
+  const { removedParameters, aggressiveRemovedParameters, duplicateParameters } = removeTrackingParameters(url, options);
   return {
     url: url.toString(),
     removedParameters,
-    changed: removedParameters.length > 0 || redirect.layers.length > 0,
+    aggressiveRemovedParameters,
+    duplicateParameters,
+    changed: removedParameters.length > 0 || duplicateParameters.length > 0 || redirect.layers.length > 0,
     unwrappedFrom: redirect.layers.map((layer) => layer.host),
     unwrapLimitReached: redirect.limitReached,
     fingerprint: trackingFingerprint(input),
@@ -353,7 +376,7 @@ export function cleanUrl(input) {
   };
 }
 
-export function cleanBatch(text) {
+export function cleanBatch(text, options = {}) {
   const lines = String(text ?? "").split(/\r?\n/);
   const results = [];
 
@@ -366,7 +389,7 @@ export function cleanBatch(text) {
         line: index + 1,
         input,
         ok: true,
-        result: cleanUrl(input)
+        result: cleanUrl(input, options)
       });
     } catch (error) {
       results.push({

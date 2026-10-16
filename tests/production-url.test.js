@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PRODUCTION_URL = "https://andromeda-url-cleaner.vercel.app";
-const NIGHTLY_URL = "https://andromeda-url-cleaner-nightly.vercel.app";
 const SKIP_DIRS = new Set([".git", "node_modules"]);
 const TEXT_EXTENSIONS = new Set([
   ".html",
@@ -64,10 +63,10 @@ test("package.json homepage is the production URL", () => {
   assert.equal(pkg.homepage, PRODUCTION_URL);
 });
 
-test("README uses the production URL and keeps the nightly Vercel preview", () => {
+test("README uses the production URL and no longer mentions the retired nightly build", () => {
   const readme = readFileSync(join(root, "README.md"), "utf8");
   assert.match(readme, new RegExp(PRODUCTION_URL.replaceAll(".", "\\.")));
-  assert.match(readme, new RegExp(NIGHTLY_URL.replaceAll(".", "\\.")));
+  assert.doesNotMatch(readme, /nightly/i);
   assert.doesNotMatch(readme, /chatgpt\.site/);
   assert.doesNotMatch(readme, /url-cleaner-chi\.vercel\.app/);
   assert.doesNotMatch(readme, /andromeda-url\.vercel\.app/);

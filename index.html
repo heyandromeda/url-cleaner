@@ -66,6 +66,9 @@
             <legend>Settings</legend>
             <label class="setting"><input id="clean-on-paste" type="checkbox" checked /> Clean on paste</label>
             <label class="setting"><input id="auto-copy" type="checkbox" /> Auto-copy cleaned URL</label>
+            <label class="setting"><input id="aggressive-mode" type="checkbox" aria-describedby="cleaning-options-hint" /> Aggressive cleaning</label>
+            <label class="setting"><input id="remove-duplicates" type="checkbox" aria-describedby="cleaning-options-hint" /> Remove identical duplicates</label>
+            <p class="field-hint settings-hint" id="cleaning-options-hint">Aggressive cleaning also removes broader names such as <code>ref</code> and <code>source</code>, which some sites need. Leave duplicate cleanup off for signed links.</p>
           </fieldset>
         </form>
 
@@ -94,6 +97,11 @@
           <aside id="shortener-warning" class="notice" hidden>
             <strong>Shortened link</strong>
             <p>Its destination cannot be inspected locally without following the redirect. The visible URL was cleaned, but the hidden destination was not opened or checked.</p>
+          </aside>
+
+          <aside id="duplicate-notice" class="notice" hidden>
+            <strong>Duplicates removed</strong>
+            <p></p>
           </aside>
 
           <section class="fingerprint-summary" aria-labelledby="fingerprint-title">
