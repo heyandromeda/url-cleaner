@@ -67,6 +67,24 @@ test("query handoff still works for the share target and old bookmarklets", () =
   assert.equal(parseHandoffUrl(`${app}#url=javascript%3Aalert(1)`), "");
 });
 
+test("extractHttpUrl keeps parentheses that belong to the link", () => {
+  const wiki = "https://en.wikipedia.org/wiki/Urchin_(software)";
+
+  assert.equal(extractHttpUrl(`Look ${wiki} cool`), wiki);
+  assert.equal(extractHttpUrl(`(see ${wiki})`), wiki);
+  assert.equal(extractHttpUrl(`Read this: ${wiki}).`), wiki);
+  assert.equal(extractHttpUrl("Docs (https://example.com/page)."), "https://example.com/page");
+  assert.equal(extractHttpUrl("Wow https://example.com/a?utm_source=x!"), "https://example.com/a?utm_source=x");
+});
+
+test("extractHttpUrl trims long trailing punctuation quickly", () => {
+  const started = performance.now();
+  const result = extractHttpUrl(`hi https://a.example/${".".repeat(60000)}x`);
+
+  assert.ok(result.startsWith("https://a.example/"));
+  assert.ok(performance.now() - started < 200, "trimming must stay linear");
+});
+
 test("extractHttpUrl ignores non-http schemes", () => {
   assert.equal(extractHttpUrl("javascript:alert(1)"), "");
   assert.equal(extractHttpUrl("See ftp://files.example/a"), "");

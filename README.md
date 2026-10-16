@@ -227,6 +227,9 @@ The test suite covers:
 - Tracking fingerprint scoring, URL X-Ray categorization, and weirdness flags
 - Share-target, `#url=` and `?url=` handoff parsing, and bookmarklet redirect-only behavior
 - Manifest, service worker, and CSP constraints for the installable app
+- Every root web file matching its `dist/` copy byte-for-byte, since Vercel serves `dist/`
+
+GitHub Actions runs `npm test` on every push to `main` and on pull requests.
 
 ## Project structure
 

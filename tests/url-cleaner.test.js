@@ -437,6 +437,32 @@ test("weirdness detector reports unusual structure without a threat verdict", ()
   assert.ok(flags.some((flag) => flag.includes("fragment")));
 });
 
+test("weirdness detector does not flag ordinary non-Latin or encoded-punctuation URLs", () => {
+  for (const input of [
+    "https://ar.wikipedia.org/wiki/%D9%85%D8%AA%D8%B5%D9%81%D8%AD",
+    "https://ar.wikipedia.org/wiki/متصفح",
+    "https://ja.wikipedia.org/wiki/東京?lang=ja",
+    "https://example.com/search?q=hello%20world%2C%20again&next=%2Fhome",
+    "https://example.com/?ref=%2575tm"
+  ]) {
+    assert.deepEqual(
+      detectWeirdness(input).filter((flag) => flag.includes("letters or digits")),
+      [],
+      input
+    );
+  }
+});
+
+test("weirdness detector flags percent-encoded plain letters or digits", () => {
+  for (const input of [
+    "https://example.com/%6C%6F%67%69%6E",
+    "https://example.com/account?next=%41dmin",
+    "https://example.com/v%31/page"
+  ]) {
+    assert.ok(detectWeirdness(input).some((flag) => flag.includes("letters or digits")), input);
+  }
+});
+
 test("cleanUrl attaches fingerprint and inspection for the single-result UI", () => {
   const result = cleanUrl("https://example.com/?utm_source=a&id=1");
 

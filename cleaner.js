@@ -52,6 +52,9 @@ const REDIRECT_RELATED_PARAMETERS = new Set([
 
 export const MAX_UNWRAP_DEPTH = 5;
 
+// %30-%39 (0-9), %41-%5A (A-Z) and %61-%7A (a-z).
+const ENCODED_ALPHANUMERIC_PATTERN = /%(?:3[0-9]|4[1-9a-f]|5[0-9a]|6[1-9a-f]|7[0-9a])/i;
+
 function normalizeHostname(hostname) {
   return hostname.toLowerCase().replace(/^www\./, "");
 }
@@ -245,8 +248,10 @@ export function detectWeirdness(input) {
   if (/%25(?:[0-9a-f]{2})/i.test(url.href)) {
     flags.push("The URL appears to contain repeated percent encoding.");
   }
-  if (/%[0-9a-f]{2}/i.test(url.href) && /[\u0080-\uffff]/u.test(decodeForInspection(url.href, 1)[0] || "")) {
-    flags.push("The URL mixes encoded and unencoded text.");
+  // Non-Latin text is always percent-encoded, so that alone is normal. Encoded
+  // plain letters or digits never need escaping and can hide words like "login".
+  if (ENCODED_ALPHANUMERIC_PATTERN.test(url.pathname + url.search)) {
+    flags.push("The URL percent-encodes plain letters or digits, which can hide what it says.");
   }
   if ([...url.searchParams.values()].some((value) => value.includes("#") || /%23/i.test(value))) {
     flags.push("A query parameter contains a nested fragment marker.");
