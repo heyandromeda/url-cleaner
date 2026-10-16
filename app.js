@@ -202,16 +202,25 @@ function renderInspection(inspection) {
   }
 }
 
-function renderOriginalUrl(value, removedParameters) {
+function renderOriginalUrl(value, removedParameters, duplicateParameters = []) {
   const url = new URL(value.trim());
   const removedNames = new Set(removedParameters.map((name) => name.toLowerCase()));
+  const duplicateNames = new Set(duplicateParameters);
+  const seenPairs = new Set();
   const base = url.href.slice(0, url.href.length - url.search.length - url.hash.length);
 
   originalOutput.replaceChildren(document.createTextNode(base));
 
-  querySegments(url.search).forEach(({ raw, name }, index) => {
+  querySegments(url.search).forEach(({ raw, name, value: segmentValue }, index) => {
     originalOutput.append(document.createTextNode(index === 0 ? "?" : "&"));
-    const segment = document.createElement(removedNames.has(name.toLowerCase()) ? "mark" : "span");
+    // Mirror the cleaner: the first copy of an identical pair is kept, later copies are removed.
+    let removed = removedNames.has(name.toLowerCase());
+    if (!removed && duplicateNames.has(name)) {
+      const pair = JSON.stringify([name, segmentValue]);
+      removed = seenPairs.has(pair);
+      seenPairs.add(pair);
+    }
+    const segment = document.createElement(removed ? "mark" : "span");
     segment.textContent = raw;
     originalOutput.append(segment);
   });
@@ -250,7 +259,7 @@ function hideResults() {
 
 function showCleanResult(result, { allowAutoCopy = true, originalValue = "", revealInspection = false } = {}) {
   cleanedValue = result.url;
-  renderOriginalUrl(originalValue, result.removedParameters);
+  renderOriginalUrl(originalValue, result.removedParameters, result.duplicateParameters);
   output.textContent = result.url;
   renderRemoved(result.removedParameters, removedList, result.aggressiveRemovedParameters);
   renderDuplicateNotice(result.duplicateParameters);
