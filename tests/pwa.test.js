@@ -56,14 +56,13 @@ test("index.html links the manifest and existing icons", () => {
   const html = readFileSync(join(root, "index.html"), "utf8");
   assert.match(html, /<link rel="manifest" href="\.\/manifest\.webmanifest"/);
   assert.match(html, /<link rel="apple-touch-icon" href="\.\/apple-touch-icon\.png"/);
-  assert.match(html, /id="bookmarklet"/);
-  assert.match(html, /vercel\.app\/#url='\+encodeURIComponent\(location\.href\)/);
-  assert.doesNotMatch(html, /\?url='\+encodeURIComponent/);
+  assert.doesNotMatch(html, /id="bookmarklet"/);
   assert.match(html, /id="tracker-of-the-day"/);
   assert.match(html, /id="batch-panel"/);
   const app = readFileSync(join(root, "app.js"), "utf8");
   assert.match(app, /serviceWorker\.register\("\.\/sw\.js"\)/);
   assert.match(app, /canReadClipboard/);
+  assert.match(app, /parseHandoffUrl/);
 });
 
 test("service worker does not cache or fetch URLs", () => {

@@ -71,7 +71,9 @@ export function createIcon(name, { size = 16, className = "icon" } = {}) {
   svg.setAttribute("height", String(size));
   svg.setAttribute("aria-hidden", "true");
   svg.setAttribute("focusable", "false");
-  svg.classList.add(className);
+  for (const token of className.split(/\s+/).filter(Boolean)) {
+    svg.classList.add(token);
+  }
   if (size === 18) svg.classList.add("icon-18");
   if (size === 16) svg.classList.add("icon-16");
 

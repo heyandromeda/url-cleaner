@@ -6,7 +6,7 @@ import {
   querySegments
 } from "./cleaner.js";
 import { explainParameter, trackerOfTheDay } from "./explanations.js";
-import { bookmarkletCode, canReadClipboard, parseHandoffUrl } from "./handoff.js";
+import { canReadClipboard, parseHandoffUrl } from "./handoff.js";
 import { createIcon, wrapIconButton } from "./icons.js";
 import { breakableUrlMarkup } from "./url-break.js";
 import {
@@ -58,7 +58,6 @@ const totd = document.querySelector("#tracker-of-the-day");
 const totdName = document.querySelector("#totd-name");
 const totdDetails = document.querySelector("#totd-details");
 const totdToggle = document.querySelector("#totd-toggle");
-const bookmarklet = document.querySelector("#bookmarklet");
 const themeToggle = document.querySelector("#theme-toggle");
 const themeColorMeta = document.querySelector('meta[name="theme-color"]');
 
@@ -682,7 +681,6 @@ autoCopy.checked = readSetting(AUTO_COPY_KEY, false);
 aggressiveMode.checked = readSetting(AGGRESSIVE_MODE_KEY, false);
 removeDuplicates.checked = readSetting(REMOVE_DUPLICATES_KEY, false);
 shareButton.hidden = typeof navigator.share !== "function";
-bookmarklet.href = bookmarkletCode(window.location.origin);
 renderTrackerOfTheDay();
 
 form.addEventListener("submit", (event) => {
