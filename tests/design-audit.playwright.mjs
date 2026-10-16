@@ -4,8 +4,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import { playwrightArtifactsDir } from "./playwright-artifacts.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const artifactsDir = playwrightArtifactsDir();
 const viewports = [
   { width: 320, height: 900 },
   { width: 390, height: 844 },
@@ -138,7 +140,7 @@ try {
 
     if ((width === 390 && height === 844) || (width === 1280 && height === 800)) {
       await page.screenshot({
-        path: join("/opt/cursor/artifacts", `design-audit-${width}x${height}.png`),
+        path: join(artifactsDir, `design-audit-${width}x${height}.png`),
         fullPage: false
       });
     }

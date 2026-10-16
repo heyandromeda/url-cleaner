@@ -6,10 +6,13 @@ import { fileURLToPath } from "node:url";
 import {
   THEME_STORAGE_KEY,
   nextThemeAfterToggle,
+  openThemeStorage,
   readStoredThemePreference,
+  resolveActiveTheme,
   resolveTheme,
   saveThemePreference,
-  themeColorFor
+  themeColorFor,
+  toggleAppliedTheme
 } from "../theme.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -91,4 +94,25 @@ test("dark palette tokens are defined on html[data-theme=\"dark\"]", () => {
 
 test("theme storage key matches app setting namespace", () => {
   assert.equal(THEME_STORAGE_KEY, "url-cleaner.theme");
+});
+
+test("resolveActiveTheme does not throw when localStorage access is blocked", () => {
+  const blocked = {
+    get localStorage() {
+      throw new Error("SecurityError");
+    }
+  };
+  assert.equal(openThemeStorage(blocked), null);
+  assert.equal(resolveActiveTheme(blocked, true), "dark");
+  assert.equal(resolveActiveTheme(blocked, false), "light");
+});
+
+test("toggleAppliedTheme flips from the applied theme even when persistence fails", () => {
+  const storage = {
+    setItem() {
+      throw new Error("QuotaExceededError");
+    }
+  };
+  assert.equal(toggleAppliedTheme("dark", storage), "light");
+  assert.equal(toggleAppliedTheme("light", storage), "dark");
 });
