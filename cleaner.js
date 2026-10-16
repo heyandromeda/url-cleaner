@@ -130,6 +130,25 @@ function parseHttpUrl(input) {
   return url;
 }
 
+function decodeQueryComponent(value) {
+  try {
+    return decodeURIComponent(value.replace(/\+/g, " "));
+  } catch {
+    return value;
+  }
+}
+
+// Splits a serialized query into raw "name=value" segments so kept parameters
+// can be written back byte-for-byte instead of being re-encoded.
+export function querySegments(search) {
+  const query = search.startsWith("?") ? search.slice(1) : search;
+  return query.split("&").filter(Boolean).map((raw) => {
+    const separator = raw.indexOf("=");
+    const rawName = separator === -1 ? raw : raw.slice(0, separator);
+    return { raw, name: decodeQueryComponent(rawName) };
+  });
+}
+
 function decodeForInspection(value, maximumPasses = 2) {
   const versions = [];
   let current = value;
@@ -311,16 +330,16 @@ function cleanUrlAtDepth(input, depth) {
     }
   }
 
-  const keptParameters = new URLSearchParams();
+  const keptSegments = [];
   const removedParameters = [];
-  for (const [name, parameterValue] of url.searchParams) {
-    if (isTrackingParameter(name, url.hostname)) {
-      removedParameters.push(name);
+  for (const segment of querySegments(url.search)) {
+    if (isTrackingParameter(segment.name, url.hostname)) {
+      removedParameters.push(segment.name);
     } else {
-      keptParameters.append(name, parameterValue);
+      keptSegments.push(segment.raw);
     }
   }
-  url.search = keptParameters.toString();
+  url.search = keptSegments.join("&");
   return {
     url: url.toString(),
     removedParameters,

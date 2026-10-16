@@ -1,4 +1,4 @@
-import { cleanBatch, cleanedUrlsFromBatch, isOpaqueShortener } from "./cleaner.js";
+import { cleanBatch, cleanedUrlsFromBatch, isOpaqueShortener, querySegments } from "./cleaner.js";
 import { explainParameter, trackerOfTheDay } from "./explanations.js";
 import { bookmarkletCode, canReadClipboard, parseHandoffParams } from "./handoff.js";
 
@@ -192,11 +192,10 @@ function renderOriginalUrl(value, removedParameters) {
 
   originalOutput.replaceChildren(document.createTextNode(base));
 
-  const entries = [...url.searchParams.entries()];
-  entries.forEach(([name, parameterValue], index) => {
+  querySegments(url.search).forEach(({ raw, name }, index) => {
     originalOutput.append(document.createTextNode(index === 0 ? "?" : "&"));
     const segment = document.createElement(removedNames.has(name.toLowerCase()) ? "mark" : "span");
-    segment.textContent = new URLSearchParams([[name, parameterValue]]).toString();
+    segment.textContent = raw;
     originalOutput.append(segment);
   });
 

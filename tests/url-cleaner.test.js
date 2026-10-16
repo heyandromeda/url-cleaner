@@ -244,6 +244,38 @@ test("normalizes a trailing question mark or ampersand", () => {
   assert.equal(cleanUrl("https://example.com/page?utm_source=x").url, "https://example.com/page");
 });
 
+test("keeps surviving query segments byte-for-byte", () => {
+  const cases = [
+    ["https://example.com/s?q=hello%20world&utm_source=x", "https://example.com/s?q=hello%20world"],
+    ["https://example.com/s?q=a+b&utm_source=x", "https://example.com/s?q=a+b"],
+    ["https://example.com/p?next=/a/b:c,d&gclid=1", "https://example.com/p?next=/a/b:c,d"],
+    ["https://example.com/p?a=~x(1)!*&fbclid=1", "https://example.com/p?a=~x(1)!*"],
+    ["https://example.com/p?name=caf%E9&utm_source=x", "https://example.com/p?name=caf%E9"],
+    ["https://example.com/p?a=1;b=2&utm_source=x", "https://example.com/p?a=1;b=2"],
+    ["https://example.com/p?debug&utm_source=x", "https://example.com/p?debug"],
+    ["https://example.com/?/blog/post&utm_source=x", "https://example.com/?/blog/post"]
+  ];
+
+  for (const [input, expected] of cases) {
+    assert.equal(cleanUrl(input).url, expected, input);
+  }
+});
+
+test("returns an already-clean URL without re-encoding it", () => {
+  const input = "https://example.com/s?q=hello%20world&tag=a&tag=b&flag&name=caf%E9#top";
+  const result = cleanUrl(input);
+
+  assert.equal(result.url, input);
+  assert.equal(result.changed, false);
+});
+
+test("removes percent-encoded tracker names and reports them decoded", () => {
+  const result = cleanUrl("https://example.com/?utm%5Fsource=x&GCLID=y&keep=1");
+
+  assert.equal(result.url, "https://example.com/?keep=1");
+  assert.deepEqual(result.removedParameters, ["utm_source", "GCLID"]);
+});
+
 test("still drops utm_source from a long query string", () => {
   const long = `https://example.com/page?${Array.from({ length: 80 }, (_, index) => `p${index}=value`).join("&")}&utm_source=news`;
   const result = cleanUrl(long);
