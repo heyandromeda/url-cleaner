@@ -24,25 +24,6 @@
         <h1 id="page-title">URL Cleaner</h1>
         <p class="intro">Remove common tracking parameters while keeping the query values your link needs.</p>
 
-        <aside id="tracker-of-the-day" class="totd" hidden>
-          <div class="totd-header">
-            <div class="totd-heading">
-              <p class="totd-label" id="totd-label">Tracker of the day</p>
-              <p id="totd-name" class="totd-name"></p>
-            </div>
-            <button
-              id="totd-toggle"
-              type="button"
-              class="secondary-button totd-toggle"
-              aria-expanded="true"
-              aria-controls="totd-details"
-            >
-              Collapse
-            </button>
-          </div>
-          <div id="totd-details" class="totd-details" role="region" aria-labelledby="totd-label totd-name"></div>
-        </aside>
-
         <aside id="clipboard-offer" class="notice" hidden>
           <strong>Clipboard</strong>
           <p id="clipboard-offer-text">Your clipboard looks like it contains a URL. Clean it locally?</p>
@@ -52,7 +33,7 @@
           </div>
         </aside>
 
-        <form id="clean-form" class="clean-form">
+        <form id="clean-form" class="clean-form" novalidate>
           <label for="url-input">URLs to clean</label>
           <p class="field-hint" id="url-input-hint">One URL per line. Paste a list to clean a batch.</p>
           <textarea id="url-input" name="url" rows="3" inputmode="url" autocomplete="off" spellcheck="false" aria-describedby="url-input-hint" placeholder="https://example.com/page?utm_source=newsletter" required></textarea>
@@ -142,6 +123,25 @@
           </div>
           <ol id="batch-list" class="batch-list"></ol>
         </section>
+
+        <aside id="tracker-of-the-day" class="totd is-collapsed" hidden>
+          <div class="totd-header">
+            <div class="totd-heading">
+              <p class="totd-label" id="totd-label">Tracker of the day</p>
+              <p id="totd-name" class="totd-name"></p>
+            </div>
+            <button
+              id="totd-toggle"
+              type="button"
+              class="secondary-button totd-toggle"
+              aria-expanded="false"
+              aria-controls="totd-details"
+            >
+              Expand
+            </button>
+          </div>
+          <div id="totd-details" class="totd-details" hidden></div>
+        </aside>
 
         <section class="extras" aria-labelledby="bookmarklet-title">
           <h2 id="bookmarklet-title">Bookmarklet</h2>
