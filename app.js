@@ -1,4 +1,4 @@
-import { cleanBatch, cleanedUrlsFromBatch, isOpaqueShortener, querySegments } from "./cleaner.js";
+import { cleanBatch, cleanedUrlsFromBatch, isOpaqueShortener, isOriginalQuerySegmentRemoved, querySegments } from "./cleaner.js";
 import { explainParameter, trackerOfTheDay } from "./explanations.js";
 import { bookmarkletCode, canReadClipboard, parseHandoffUrl } from "./handoff.js";
 
@@ -202,24 +202,15 @@ function renderInspection(inspection) {
   }
 }
 
-function renderOriginalUrl(value, removedParameters, duplicateParameters = []) {
+function renderOriginalUrl(value, removedParameters, removedDuplicateIndices = []) {
   const url = new URL(value.trim());
-  const removedNames = new Set(removedParameters.map((name) => name.toLowerCase()));
-  const duplicateNames = new Set(duplicateParameters);
-  const seenPairs = new Set();
   const base = url.href.slice(0, url.href.length - url.search.length - url.hash.length);
 
   originalOutput.replaceChildren(document.createTextNode(base));
 
-  querySegments(url.search).forEach(({ raw, name, value: segmentValue }, index) => {
+  querySegments(url.search).forEach(({ raw, name }, index) => {
     originalOutput.append(document.createTextNode(index === 0 ? "?" : "&"));
-    // Mirror the cleaner: the first copy of an identical pair is kept, later copies are removed.
-    let removed = removedNames.has(name.toLowerCase());
-    if (!removed && duplicateNames.has(name)) {
-      const pair = JSON.stringify([name, segmentValue]);
-      removed = seenPairs.has(pair);
-      seenPairs.add(pair);
-    }
+    const removed = isOriginalQuerySegmentRemoved(name, index, removedParameters, removedDuplicateIndices);
     const segment = document.createElement(removed ? "mark" : "span");
     segment.textContent = raw;
     originalOutput.append(segment);
@@ -259,7 +250,7 @@ function hideResults() {
 
 function showCleanResult(result, { allowAutoCopy = true, originalValue = "", revealInspection = false } = {}) {
   cleanedValue = result.url;
-  renderOriginalUrl(originalValue, result.removedParameters, result.duplicateParameters);
+  renderOriginalUrl(originalValue, result.removedParameters, result.removedDuplicateIndices);
   output.textContent = result.url;
   renderRemoved(result.removedParameters, removedList, result.aggressiveRemovedParameters);
   renderDuplicateNotice(result.duplicateParameters);

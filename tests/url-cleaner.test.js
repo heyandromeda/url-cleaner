@@ -442,7 +442,24 @@ test("removes only identical duplicate parameter pairs when opted in", () => {
 
   assert.equal(result.url, "https://example.com/?tag=a&tag=b&item=1&item=2&Tag=a");
   assert.deepEqual(result.duplicateParameters, ["tag"]);
+  assert.deepEqual(result.removedDuplicateIndices, [1]);
   assert.equal(result.changed, true);
+});
+
+test("reports duplicate removal indices for each dropped identical occurrence", () => {
+  const result = cleanUrl("https://example.com/?tag=a&tag=a&k=1&k=1&k=1", { removeDuplicateParameters: true });
+
+  assert.equal(result.url, "https://example.com/?tag=a&k=1");
+  assert.deepEqual(result.removedDuplicateIndices, [1, 3, 4]);
+  assert.deepEqual(result.duplicateParameters, ["tag", "k", "k"]);
+});
+
+test("duplicate removal indices skip differing values and leave tracker indices empty", () => {
+  const result = cleanUrl("https://example.com/?tag=a&tag=b&tag=a&utm_source=x", { removeDuplicateParameters: true });
+
+  assert.equal(result.url, "https://example.com/?tag=a&tag=b");
+  assert.deepEqual(result.removedDuplicateIndices, [2]);
+  assert.deepEqual(result.duplicateParameters, ["tag"]);
 });
 
 test("duplicate cleanup treats differently encoded equal values as identical", () => {
