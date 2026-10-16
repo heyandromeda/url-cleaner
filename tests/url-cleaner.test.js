@@ -192,6 +192,56 @@ test("unwraps a LinkedIn /safety/go wrapper and cleans the destination", () => {
   assert.deepEqual(result.unwrappedFrom, ["www.linkedin.com"]);
 });
 
+test("unwraps a LinkedIn /redir/redirect wrapper and cleans the destination", () => {
+  const destination = encodeURIComponent("https://example.com/post?utm_source=li&id=5");
+  const result = cleanUrl(`https://www.linkedin.com/redir/redirect?url=${destination}&urlhash=abc&trk=public_post`);
+
+  assert.equal(result.url, "https://example.com/post?id=5");
+  assert.deepEqual(result.removedParameters, ["utm_source"]);
+  assert.deepEqual(result.unwrappedFrom, ["www.linkedin.com"]);
+});
+
+test("unwraps an Instagram l.instagram.com outbound link and cleans the destination", () => {
+  const destination = encodeURIComponent("https://example.com/shop?utm_source=ig&fbclid=PAZ&item=7");
+  const result = cleanUrl(`https://l.instagram.com/?u=${destination}&e=AT0abc`);
+
+  assert.equal(result.url, "https://example.com/shop?item=7");
+  assert.deepEqual(result.removedParameters, ["utm_source", "fbclid"]);
+  assert.deepEqual(result.unwrappedFrom, ["l.instagram.com"]);
+});
+
+test("unwraps Google /url wrappers on country domains", () => {
+  const destination = encodeURIComponent("https://example.com/?utm_source=x&id=1");
+
+  for (const host of ["www.google.co.uk", "www.google.de", "www.google.com.au", "google.co.jp"]) {
+    const result = cleanUrl(`https://${host}/url?q=${destination}&sa=D`);
+    assert.equal(result.url, "https://example.com/?id=1", host);
+    assert.deepEqual(result.unwrappedFrom, [host], host);
+  }
+});
+
+test("unwraps Google search-result links that carry the destination in url=", () => {
+  const destination = encodeURIComponent("https://example.com/article?utm_campaign=y&page=2");
+  const result = cleanUrl(`https://www.google.co.uk/url?sa=t&rct=j&q=&esrc=s&source=web&url=${destination}&usg=AOv`);
+
+  assert.equal(result.url, "https://example.com/article?page=2");
+  assert.deepEqual(result.unwrappedFrom, ["www.google.co.uk"]);
+  assert.equal(result.inspection.redirectLayers[0].parameter, "url");
+});
+
+test("does not treat lookalike Google hosts or other paths as wrappers", () => {
+  const destination = encodeURIComponent("https://example.com/");
+
+  for (const input of [
+    `https://google.example.com/url?q=${destination}`,
+    `https://notgoogle.com/url?q=${destination}`,
+    `https://www.google.co.uk/search?q=${destination}`,
+    `https://l.instagram.com/other?u=${destination}`
+  ]) {
+    assert.deepEqual(cleanUrl(input).unwrappedFrom, [], input);
+  }
+});
+
 test("recursively unwraps nested Google then Facebook wrappers", () => {
   const inner = "https://example.com/page?utm_source=x";
   const facebook = `https://l.facebook.com/l.php?u=${encodeURIComponent(inner)}&h=AT`;
@@ -269,6 +319,14 @@ test("does not follow opaque shorteners", () => {
   assert.deepEqual(result.removedParameters, ["utm_source"]);
   assert.deepEqual(result.unwrappedFrom, []);
   assert.equal(isOpaqueShortener("https://bit.ly/abc?utm_source=x"), true);
+});
+
+test("removes si on Spotify share links but keeps other Spotify values", () => {
+  const result = cleanUrl("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC?si=a1b2c3d4e5f6&context=spotify%3Aplaylist%3A37i9");
+
+  assert.equal(result.url, "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC?context=spotify%3Aplaylist%3A37i9");
+  assert.deepEqual(result.removedParameters, ["si"]);
+  assert.equal(cleanUrl("https://spotify.example/track?si=keep").url, "https://spotify.example/track?si=keep");
 });
 
 test("removes si only on YouTube hosts", () => {

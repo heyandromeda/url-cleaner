@@ -37,9 +37,9 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Removes tracker families such as `utm_*`, `hsa_*`, `mtm_*`, `piwik_*`, and `_ga_*`
 - Removes explicit Matomo parameters such as `pk_campaign` and `pk_kwd` while preserving unrelated names such as `pk_live`
 - Preserves unknown and functional parameters by default
-- Applies site-specific rules conservatively, including removing `si` only from YouTube links
+- Applies site-specific rules conservatively, including removing `si` only from YouTube and Spotify links
 - Keeps YouTube parameters such as `v`, `t`, and `list`
-- Unwraps known Google, Facebook, Outlook Safe Links, YouTube, LinkedIn `/safety/go`, and `href.li` redirect wrappers locally, then cleans the destination
+- Unwraps known Google (including country domains such as `google.co.uk`), Facebook, Instagram `l.instagram.com`, Outlook Safe Links, YouTube, LinkedIn `/safety/go` and `/redir/redirect`, and `href.li` redirect wrappers locally, then cleans the destination
 - Limits nested wrapper unwrapping to five levels, says so when a link is still wrapped after that, and falls back safely when a destination is invalid
 - Accepts only HTTP and HTTPS URLs
 - Preserves URL paths, hashes, search queries, page numbers, product IDs, and language settings
@@ -111,7 +111,7 @@ https://example.com/page?id=9
 
 URL Cleaner extracts the destination from the Google wrapper without opening it or making a network request, removes `utm_source`, keeps `id=9`, and displays a **Redirect unwrapped** notice naming the wrapper host.
 
-The same local behavior supports Facebook `/l.php`, Outlook Safe Links, YouTube `/redirect`, and `href.li`. Nested known wrappers are handled up to five levels deep, including destinations that were percent-encoded twice. Cleaning, URL X-Ray, and the tracking fingerprint share one unwrap engine, so they always report the same layers.
+The same local behavior supports Google country domains and search-result links that use `url=`, Facebook `/l.php`, Instagram `l.instagram.com`, Outlook Safe Links, YouTube `/redirect`, LinkedIn `/safety/go` and `/redir/redirect`, and `href.li`. Nested known wrappers are handled up to five levels deep, including destinations that were percent-encoded twice. Cleaning, URL X-Ray, and the tracking fingerprint share one unwrap engine, so they always report the same layers.
 
 ### Apply tracker rules only where they belong
 
@@ -125,7 +125,7 @@ https://intranet.example/report?si=42&year=2024
 → https://intranet.example/report?si=42&year=2024
 ```
 
-The `si` parameter is removed from YouTube sharing links but preserved on unrelated sites. Matomo names such as `pk_campaign` and `pk_kwd` are removed, while unrelated names such as `pk_live` remain.
+The `si` parameter is removed from YouTube and Spotify sharing links but preserved on unrelated sites. Matomo names such as `pk_campaign` and `pk_kwd` are removed, while unrelated names such as `pk_live` remain.
 
 ### Reject unsupported URL schemes
 
@@ -219,7 +219,7 @@ The test suite covers:
 - Invalid and non-HTTP(S) input
 - Case-insensitive tracker names
 - Known redirect wrappers, including nested wrappers
-- Site-scoped parameters such as YouTube `si`
+- Site-scoped parameters such as YouTube and Spotify `si`
 - Explicit Matomo parameters while preserving unrelated `pk_*` names
 - Known opaque URL shorteners that are warned about without being followed
 - Batch cleaning that continues after invalid lines

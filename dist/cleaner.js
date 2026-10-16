@@ -23,9 +23,14 @@ export const YOUTUBE_HOSTS = new Set([
   "youtu.be"
 ]);
 
+export const SPOTIFY_HOSTS = new Set(["open.spotify.com"]);
+
 export const HOST_TRACKING_PARAMETERS = new Map(
-  [...YOUTUBE_HOSTS].map((host) => [host, new Set(["si"])])
+  [...YOUTUBE_HOSTS, ...SPOTIFY_HOSTS].map((host) => [host, new Set(["si"])])
 );
+
+// google.com plus country domains such as google.co.uk, google.de and google.com.au.
+const GOOGLE_HOST_PATTERN = /^google\.(?:com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})$/;
 
 export const OPAQUE_SHORTENER_HOSTS = new Set([
   "bit.ly", "buff.ly", "cutt.ly", "goo.gl", "is.gd", "ow.ly",
@@ -85,11 +90,17 @@ function getWrapperInfo(url) {
   const host = normalizeHostname(url.hostname);
   const path = url.pathname;
 
-  if ((host === "google.com" || host === "googleadservices.com") && path === "/url") {
-    return { parameter: "q", destination: url.searchParams.get("q") };
+  if ((GOOGLE_HOST_PATTERN.test(host) || host === "googleadservices.com") && path === "/url") {
+    // Gmail and Docs use q=; search-result links leave q empty and use url=.
+    const parameter = ["q", "url"].find((name) => validHttpDestination(url.searchParams.get(name) ?? "")) ?? "q";
+    return { parameter, destination: url.searchParams.get(parameter) };
   }
 
   if ((host === "facebook.com" || host === "l.facebook.com" || host === "lm.facebook.com") && path === "/l.php") {
+    return { parameter: "u", destination: url.searchParams.get("u") };
+  }
+
+  if (host === "l.instagram.com" && path === "/") {
     return { parameter: "u", destination: url.searchParams.get("u") };
   }
 
@@ -101,7 +112,7 @@ function getWrapperInfo(url) {
     return { parameter: "q", destination: url.searchParams.get("q") };
   }
 
-  if (host === "linkedin.com" && path === "/safety/go") {
+  if (host === "linkedin.com" && (path === "/safety/go" || path === "/redir/redirect" || path === "/redir/redirect/")) {
     return { parameter: "url", destination: url.searchParams.get("url") };
   }
 

@@ -81,7 +81,7 @@ export const PARAMETER_EXPLANATIONS = {
   pk_medium: "Matomo campaign medium.",
   pk_content: "Matomo campaign content.",
   pk_cid: "Matomo campaign identifier.",
-  si: "YouTube share identifier commonly added to shared video links."
+  si: "Share identifier added to links copied from YouTube and Spotify; removed only on those sites."
 };
 
 export const PREFIX_EXPLANATIONS = {
