@@ -5,6 +5,7 @@ import {
   detectWeirdness,
   inspectUrl,
   isOpaqueShortener,
+  MAX_UNWRAP_DEPTH,
   trackingFingerprint
 } from "../dist/cleaner.js";
 
@@ -199,6 +200,58 @@ test("recursively unwraps nested Google then Facebook wrappers", () => {
   assert.equal(result.url, "https://example.com/page");
   assert.deepEqual(result.removedParameters, ["utm_source"]);
   assert.deepEqual(result.unwrappedFrom, ["www.google.com", "l.facebook.com"]);
+});
+
+test("href.li keeps the destination's #fragment", () => {
+  const result = cleanUrl("https://href.li/?https://example.com/page?utm_source=x&id=2#section");
+
+  assert.equal(result.url, "https://example.com/page?id=2#section");
+  assert.deepEqual(result.unwrappedFrom, ["href.li"]);
+});
+
+test("cleaning, X-Ray and fingerprint agree on a double-encoded wrapper", () => {
+  const result = cleanUrl("https://www.google.com/url?q=https%253A%252F%252Fexample.com%252F%253Futm_source%253Dx%2526id%253D4");
+
+  assert.equal(result.url, "https://example.com/?id=4");
+  assert.deepEqual(result.removedParameters, ["utm_source"]);
+  assert.deepEqual(result.unwrappedFrom, ["www.google.com"]);
+  assert.equal(result.inspection.redirectLayers.length, result.unwrappedFrom.length);
+  assert.equal(result.fingerprint.categories.wrappers, result.unwrappedFrom.length);
+});
+
+function nestGoogleWrappers(destination, layers) {
+  let url = destination;
+  for (let index = 0; index < layers; index += 1) {
+    url = `https://www.google.com/url?q=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
+test("unwraps four nested wrappers so no tracker is left inside", () => {
+  const result = cleanUrl(nestGoogleWrappers("https://example.com/?utm_source=deep&id=1", 4));
+
+  assert.equal(result.url, "https://example.com/?id=1");
+  assert.deepEqual(result.removedParameters, ["utm_source"]);
+  assert.equal(result.unwrappedFrom.length, 4);
+  assert.equal(result.unwrapLimitReached, false);
+  assert.equal(result.inspection.redirectLayers.length, 4);
+});
+
+test("reports when the unwrap limit stops before the real destination", () => {
+  const result = cleanUrl(nestGoogleWrappers("https://example.com/?utm_source=deep", MAX_UNWRAP_DEPTH + 1));
+
+  assert.equal(result.unwrapLimitReached, true);
+  assert.equal(result.unwrappedFrom.length, MAX_UNWRAP_DEPTH);
+  assert.match(result.url, /^https:\/\/www\.google\.com\/url\?q=/);
+  assert.equal(result.inspection.redirectLayers.length, MAX_UNWRAP_DEPTH);
+});
+
+test("stops unwrapping when a wrapper loops back to an earlier layer", () => {
+  const loop = "https://www.google.com/url?q=https%3A%2F%2Fl.facebook.com%2Fl.php%3Fu%3Dhttps%253A%252F%252Fwww.google.com%252Furl%253Fq%253Dhttps%25253A%25252F%25252Fl.facebook.com%25252Fl.php";
+  const result = cleanUrl(loop);
+
+  assert.ok(result.unwrappedFrom.length <= MAX_UNWRAP_DEPTH);
+  assert.equal(result.inspection.redirectLayers.length, result.unwrappedFrom.length);
 });
 
 test("cleans a wrapper in place when its destination is not a URL", () => {

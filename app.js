@@ -70,14 +70,17 @@ function showMessage(text, kind = "info") {
   message.dataset.kind = kind;
 }
 
-function renderUnwrapNotice(unwrappedFrom = []) {
+function renderUnwrapNotice(unwrappedFrom = [], limitReached = false) {
   const hosts = unwrappedFrom.filter(Boolean);
   unwrapWarning.hidden = hosts.length === 0;
   if (hosts.length === 0) return;
 
-  unwrapWarningText.textContent = hosts.length === 1
-    ? `This link used a redirect wrapper on ${hosts[0]}. The destination was cleaned locally without opening it.`
-    : `This link used redirect wrappers on ${hosts.join(", ")}. The destination was cleaned locally without opening it.`;
+  const wrappers = hosts.length === 1
+    ? `This link used a redirect wrapper on ${hosts[0]}.`
+    : `This link used redirect wrappers on ${hosts.join(", ")}.`;
+  unwrapWarningText.textContent = limitReached
+    ? `${wrappers} URL Cleaner stopped after ${hosts.length} layers, so the result is still a redirect link and may still carry tracking. Nothing was opened.`
+    : `${wrappers} The destination was cleaned locally without opening it.`;
 }
 
 function appendRemovedItem(list, parameter) {
@@ -231,7 +234,7 @@ function showCleanResult(result, { allowAutoCopy = true, originalValue = "", rev
   renderOriginalUrl(originalValue, result.removedParameters);
   output.textContent = result.url;
   renderRemoved(result.removedParameters);
-  renderUnwrapNotice(result.unwrappedFrom);
+  renderUnwrapNotice(result.unwrappedFrom, result.unwrapLimitReached);
   shortenerWarning.hidden = !isOpaqueShortener(originalValue) && !isOpaqueShortener(result.url);
   renderFingerprint(result.fingerprint);
   renderRedirectLayers(result.inspection.redirectLayers);
@@ -242,15 +245,17 @@ function showCleanResult(result, { allowAutoCopy = true, originalValue = "", rev
   copyButton.disabled = false;
 
   const unwrapped = result.unwrappedFrom.length > 0;
-  const baseMessage = unwrapped
-    ? result.removedParameters.length > 0
-      ? "Redirect unwrapped. Tracking parameters removed."
-      : "Redirect unwrapped. Destination had no tracking parameters."
-    : result.changed
-      ? "Tracking parameters removed."
-      : "Already clean — no tracking parameters found.";
+  const baseMessage = result.unwrapLimitReached
+    ? "Redirect partly unwrapped. The result is still a redirect link."
+    : unwrapped
+      ? result.removedParameters.length > 0
+        ? "Redirect unwrapped. Tracking parameters removed."
+        : "Redirect unwrapped. Destination had no tracking parameters."
+      : result.changed
+        ? "Tracking parameters removed."
+        : "Already clean — no tracking parameters found.";
 
-  showMessage(baseMessage, "success");
+  showMessage(baseMessage, result.unwrapLimitReached ? "info" : "success");
 
   if (allowAutoCopy && autoCopy.checked) {
     copyText(cleanedValue).then((copied) => {

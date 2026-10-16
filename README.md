@@ -40,7 +40,7 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Applies site-specific rules conservatively, including removing `si` only from YouTube links
 - Keeps YouTube parameters such as `v`, `t`, and `list`
 - Unwraps known Google, Facebook, Outlook Safe Links, YouTube, LinkedIn `/safety/go`, and `href.li` redirect wrappers locally, then cleans the destination
-- Limits nested wrapper unwrapping to three levels and falls back safely when a destination is invalid
+- Limits nested wrapper unwrapping to five levels, says so when a link is still wrapped after that, and falls back safely when a destination is invalid
 - Accepts only HTTP and HTTPS URLs
 - Preserves URL paths, hashes, search queries, page numbers, product IDs, and language settings
 - Paste directly from the clipboard with the **Paste** button
@@ -111,7 +111,7 @@ https://example.com/page?id=9
 
 URL Cleaner extracts the destination from the Google wrapper without opening it or making a network request, removes `utm_source`, keeps `id=9`, and displays a **Redirect unwrapped** notice naming the wrapper host.
 
-The same local behavior supports Facebook `/l.php`, Outlook Safe Links, YouTube `/redirect`, and `href.li`. Nested known wrappers are handled up to three levels deep.
+The same local behavior supports Facebook `/l.php`, Outlook Safe Links, YouTube `/redirect`, and `href.li`. Nested known wrappers are handled up to five levels deep, including destinations that were percent-encoded twice. Cleaning, URL X-Ray, and the tracking fingerprint share one unwrap engine, so they always report the same layers.
 
 ### Apply tracker rules only where they belong
 

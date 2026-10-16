@@ -45,7 +45,7 @@ const REDIRECT_RELATED_PARAMETERS = new Set([
   "url", "u", "to", "target", "destination", "redirect", "redirect_uri"
 ]);
 
-const MAX_UNWRAP_DEPTH = 3;
+export const MAX_UNWRAP_DEPTH = 5;
 
 function normalizeHostname(hostname) {
   return hostname.toLowerCase().replace(/^www\./, "");
@@ -70,11 +70,15 @@ function isTrackingParameter(name, hostname) {
 function getHrefLiDestination(url) {
   const raw = url.search.startsWith("?") ? url.search.slice(1) : "";
   if (!raw) return null;
+  let destination;
   try {
-    return decodeURIComponent(raw);
+    destination = decodeURIComponent(raw);
   } catch {
-    return raw;
+    destination = raw;
   }
+  // href.li takes the destination as its whole query, so a trailing #fragment
+  // was parsed as the wrapper's own hash but belongs to the destination.
+  return destination.includes("#") ? destination : destination + url.hash;
 }
 
 function getWrapperInfo(url) {
@@ -106,10 +110,6 @@ function getWrapperInfo(url) {
   }
 
   return null;
-}
-
-function getWrapperDestination(url) {
-  return getWrapperInfo(url)?.destination ?? null;
 }
 
 function parseHttpUrl(input) {
@@ -177,27 +177,35 @@ function validHttpDestination(value) {
   return null;
 }
 
+function nextRedirectLayer(url, visited) {
+  const info = getWrapperInfo(url);
+  if (!info?.destination) return null;
+  const destination = validHttpDestination(info.destination);
+  if (!destination || visited.has(destination.href)) return null;
+  return { info, destination };
+}
+
+// The single unwrap engine shared by cleaning, X-Ray, and the fingerprint, so
+// they always agree on which layers were found.
 function unwrapRedirectLayers(input, maximumDepth = MAX_UNWRAP_DEPTH) {
   let current = parseHttpUrl(input);
   const layers = [];
   const visited = new Set([current.href]);
+  let next = nextRedirectLayer(current, visited);
 
-  for (let depth = 0; depth < maximumDepth; depth += 1) {
-    const info = getWrapperInfo(current);
-    if (!info?.destination) break;
-    const destination = validHttpDestination(info.destination);
-    if (!destination || visited.has(destination.href)) break;
+  while (next && layers.length < maximumDepth) {
     layers.push({
       from: current.href,
       host: current.hostname,
-      parameter: info.parameter,
-      to: destination.href
+      parameter: next.info.parameter,
+      to: next.destination.href
     });
-    current = destination;
+    current = next.destination;
     visited.add(current.href);
+    next = nextRedirectLayer(current, visited);
   }
 
-  return { url: current, layers };
+  return { url: current, layers, limitReached: Boolean(next) };
 }
 
 export function categorizeParameter(name, hostname = "") {
@@ -298,38 +306,7 @@ export function isOpaqueShortener(input) {
   }
 }
 
-function cleanUrlAtDepth(input, depth) {
-  const value = input.trim();
-  if (!value) throw new TypeError("Enter a URL to clean.");
-
-  let url;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new TypeError("Enter a valid URL, including https:// or http://.");
-  }
-
-  if (!isHttpUrl(url)) {
-    throw new TypeError("Enter a valid URL, including https:// or http://.");
-  }
-
-  if (depth < MAX_UNWRAP_DEPTH) {
-    const destination = getWrapperDestination(url);
-    if (destination) {
-      try {
-        const nested = cleanUrlAtDepth(destination, depth + 1);
-        return {
-          url: nested.url,
-          removedParameters: nested.removedParameters,
-          changed: true,
-          unwrappedFrom: [url.hostname, ...nested.unwrappedFrom]
-        };
-      } catch {
-        // Destination is missing, malformed, or not http(s); clean the wrapper itself.
-      }
-    }
-  }
-
+function removeTrackingParameters(url) {
   const keptSegments = [];
   const removedParameters = [];
   for (const segment of querySegments(url.search)) {
@@ -340,18 +317,21 @@ function cleanUrlAtDepth(input, depth) {
     }
   }
   url.search = keptSegments.join("&");
-  return {
-    url: url.toString(),
-    removedParameters,
-    changed: removedParameters.length > 0,
-    unwrappedFrom: []
-  };
+  return removedParameters;
 }
 
 export function cleanUrl(input) {
-  const result = cleanUrlAtDepth(input, 0);
+  const redirect = unwrapRedirectLayers(input);
+  // A missing, malformed, or non-http(s) destination stops unwrapping, so the
+  // wrapper itself is cleaned instead.
+  const url = new URL(redirect.url.href);
+  const removedParameters = removeTrackingParameters(url);
   return {
-    ...result,
+    url: url.toString(),
+    removedParameters,
+    changed: removedParameters.length > 0 || redirect.layers.length > 0,
+    unwrappedFrom: redirect.layers.map((layer) => layer.host),
+    unwrapLimitReached: redirect.limitReached,
     fingerprint: trackingFingerprint(input),
     inspection: inspectUrl(input)
   };
