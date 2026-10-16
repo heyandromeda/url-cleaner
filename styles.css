@@ -232,9 +232,15 @@ button, input, textarea { font: inherit; }
   }
 }
 
-details[open] > summary .disclosure-chevron,
+details[open] > summary .disclosure-chevron-wrap,
+summary[aria-expanded="true"] .disclosure-chevron-wrap,
 .totd-toggle[aria-expanded="true"] .disclosure-chevron {
   transform: rotate(90deg);
+}
+
+.disclosure-chevron-wrap {
+  display: inline-flex;
+  flex: none;
 }
 
 details > summary {
@@ -548,15 +554,34 @@ html[data-theme="dark"] .setting input[type="checkbox"]:checked {
 }
 
 @media (hover: hover) {
-  .removed-list li:not(.muted):hover,
-  .category:hover,
   .xray-panel > summary:hover,
   .totd-toggle:hover {
     background-color: var(--color-hover);
   }
 
   .removed-list li:not(.muted):hover {
-    filter: none;
+    background-color: color-mix(in srgb, var(--chip-removed-bg) 80%, var(--color-text) 20%);
+  }
+
+  .removed-list li.aggressive-removal:hover {
+    background-color: color-mix(in srgb, var(--chip-aggressive-bg) 80%, var(--color-text) 20%);
+  }
+
+  .category:hover {
+    background-color: color-mix(in srgb, var(--chip-neutral-bg) 80%, var(--color-text) 20%);
+  }
+
+  .category-tracking:hover {
+    background-color: color-mix(in srgb, var(--chip-tracking-bg) 80%, var(--color-text) 20%);
+  }
+
+  .category-functional:hover {
+    background-color: color-mix(in srgb, var(--chip-functional-bg) 80%, var(--color-text) 20%);
+  }
+
+  .category-redirect-related:hover,
+  .category-affiliate-referral:hover {
+    background-color: color-mix(in srgb, var(--chip-affiliate-bg) 80%, var(--color-text) 20%);
   }
 }
 

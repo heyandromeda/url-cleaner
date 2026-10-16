@@ -45,7 +45,7 @@ test("Theo pass 2 corrections: theme toggle, primary, settings, placeholder", ()
 
   assert.match(html, /class="theme-toggle"/);
   assert.doesNotMatch(html, /class="[^"]*theme-toggle[^"]*secondary-button/);
-  assert.match(html, /placeholder="https:\/\/example\.com\/\?utm_source=ad"/);
+  assert.match(html, /placeholder="https:\/\/site\.com\/\?utm_source=x"/);
   assert.doesNotMatch(app, /createTextNode\(isDark \? "Light mode"/);
 
   assert.match(css, /--color-primary-bg: #e8e8e8/);

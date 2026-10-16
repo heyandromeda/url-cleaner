@@ -116,14 +116,31 @@ function applyTheme(theme) {
   }
 }
 
+function bindDisclosureChevron(details) {
+  if (!details) return;
+  const summary = details.querySelector(":scope > summary");
+  if (!summary?.querySelector(".disclosure-chevron")) return;
+  const syncExpanded = () => {
+    summary.setAttribute("aria-expanded", details.open ? "true" : "false");
+  };
+  syncExpanded();
+  if (details.dataset.chevronBound === "true") return;
+  details.dataset.chevronBound = "true";
+  details.addEventListener("toggle", syncExpanded);
+}
+
 function decorateDisclosureSummary(summary) {
   if (summary.querySelector(".disclosure-chevron")) return;
   const label = summary.textContent.trim();
   summary.textContent = "";
   const wrap = document.createElement("span");
   wrap.className = "disclosure-summary";
-  wrap.append(createIcon("chevronRight", { size: 16 }), document.createTextNode(label));
+  const chevronWrap = document.createElement("span");
+  chevronWrap.className = "disclosure-chevron-wrap";
+  chevronWrap.append(createIcon("chevronRight", { size: 16, className: "icon disclosure-chevron" }));
+  wrap.append(chevronWrap, document.createTextNode(label));
   summary.append(wrap);
+  bindDisclosureChevron(summary.closest("details"));
 }
 
 function decorateActionButtons() {
@@ -199,12 +216,16 @@ function appendRemovedItem(list, parameter, aggressive = false) {
   const summary = document.createElement("summary");
   const summaryWrap = document.createElement("span");
   summaryWrap.className = "disclosure-summary";
-  summaryWrap.append(createIcon("chevronRight", { size: 16, className: "icon disclosure-chevron" }), document.createTextNode(label));
+  const chevronWrap = document.createElement("span");
+  chevronWrap.className = "disclosure-chevron-wrap";
+  chevronWrap.append(createIcon("chevronRight", { size: 16, className: "icon disclosure-chevron" }));
+  summaryWrap.append(chevronWrap, document.createTextNode(label));
   summary.append(summaryWrap);
   const body = document.createElement("p");
   body.className = "param-explanation";
   body.textContent = explanation;
   details.append(summary, body);
+  bindDisclosureChevron(details);
   item.append(details);
   list.append(item);
 }
@@ -387,6 +408,7 @@ function showCleanResult(result, { allowAutoCopy = true, originalValue = "", rev
   renderRedirectLayers(result.inspection.redirectLayers);
   renderInspection(result.inspection);
   xrayPanel.open = Boolean(revealInspection);
+  bindDisclosureChevron(xrayPanel);
   resultPanel.hidden = false;
   batchPanel.hidden = true;
   copyButton.disabled = false;
