@@ -44,6 +44,14 @@ test("web app manifest uses local UC icons and a GET share_target", () => {
   assert.equal(existsSync(join(root, "apple-touch-icon.png")), true);
 });
 
+test("index.html loads theme-init before styles for CSP-safe theming", () => {
+  const html = readFileSync(join(root, "index.html"), "utf8");
+  assert.match(html, /<script src="\.\/theme-init\.js"><\/script>/);
+  const initAt = html.indexOf("./theme-init.js");
+  const cssAt = html.indexOf("./styles.css");
+  assert.ok(initAt < cssAt);
+});
+
 test("index.html links the manifest and existing icons", () => {
   const html = readFileSync(join(root, "index.html"), "utf8");
   assert.match(html, /<link rel="manifest" href="\.\/manifest\.webmanifest"/);

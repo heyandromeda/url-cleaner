@@ -9,7 +9,8 @@
     <meta property="og:title" content="URL Cleaner" />
     <meta property="og:description" content="Remove common tracking parameters from URLs locally in your browser." />
     <meta property="og:type" content="website" />
-    <meta name="theme-color" content="#063a1a" />
+    <meta name="theme-color" content="#ffffff" />
+    <script src="./theme-init.js"></script>
     <link rel="icon" href="./favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="icon" type="image/png" href="./favicon.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180" />
@@ -20,7 +21,18 @@
   <body>
     <main class="app-shell">
       <section class="cleaner-card" aria-labelledby="page-title">
-        <div class="eyebrow">LOCAL UTILITY</div>
+        <div class="page-toolbar">
+          <div class="eyebrow">LOCAL UTILITY</div>
+          <button
+            id="theme-toggle"
+            type="button"
+            class="secondary-button theme-toggle"
+            aria-pressed="false"
+            aria-label="Dark mode"
+          >
+            Dark mode
+          </button>
+        </div>
         <h1 id="page-title">URL Cleaner</h1>
         <p class="intro">Remove common tracking parameters while keeping the query values your link needs.</p>
 
