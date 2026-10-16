@@ -14,12 +14,7 @@ Remove common tracking parameters from URLs without stripping parameters that a 
 
 ### Try the nightly lab
 
-The separate **[public nightly build](https://andromeda-url-cleaner-nightly.vercel.app)** currently includes three experiments that are not part of stable `main`:
-- DEV-7 — Encoded value decoder
-- DEV-9 — Opt-in aggressive cleaning
-- DEV-12 — Opt-in identical-duplicate cleanup
-
-Stable `main` now includes the former nightly experiments for URL X-Ray (DEV-2), tracking fingerprint (DEV-3), and the URL weirdness detector (DEV-11).
+The separate **[public nightly build](https://andromeda-url-cleaner-nightly.vercel.app)** is where experiments land before stable. Every current nightly experiment has been promoted to stable `main`: URL X-Ray (DEV-2), tracking fingerprint (DEV-3), the encoded value decoder (DEV-7), opt-in aggressive cleaning (DEV-9), the URL weirdness detector (DEV-11), and opt-in identical-duplicate cleanup (DEV-12).
 
 ## Why this exists
 
@@ -59,6 +54,9 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Lists every unwrapped redirect layer with its wrapper host, the parameter that held the destination, and where it pointed
 - Includes a URL X-Ray view that breaks the link into scheme, host, port, path, fragment, and parameters tagged as tracking, affiliate/referral, redirect-related, functional, or unknown
 - **Inspect URL** opens the X-Ray directly and never auto-copies
+- Decodes double-encoded parameter values in the X-Ray so a buried destination such as `https%253A%252F%252F…` is shown readable, without opening or fetching it
+- Optional **Aggressive cleaning** also removes broader referral and campaign names (`ref`, `source`, `src`, `campaign`, `partner`, `affiliate`, `clickid`, and similar), marks each one as `(aggressive)`, and is off by default because some sites need those names
+- Optional **Remove identical duplicates** drops repeated parameters only when name and value are both identical (`tag=a&tag=a`), keeps repeats with different values (`item=1&item=2`), and is off by default so signed links stay untouched
 - Flags unusual URL structure (without claiming malice) via the weirdness detector: very long queries, repeated parameter names, embedded usernames or passwords, punycode hosts, non-standard ports, double percent-encoding, percent-encoded plain letters or digits, nested `#` in parameter values, and stacked redirect wrappers
 - Opens the native system Share Sheet for a cleaned URL on supported browsers
 - Warns when a shortened link hides a destination that cannot be inspected locally
@@ -214,7 +212,8 @@ The test suite covers:
 - Known opaque URL shorteners that are warned about without being followed
 - Batch cleaning that continues after invalid lines
 - Local tracker explanations, rich tracker-of-the-day profiles, and deterministic daily selection
-- Tracking fingerprint scoring, URL X-Ray categorization, and weirdness flags
+- Tracking fingerprint scoring, URL X-Ray categorization, encoded value decoding, and weirdness flags
+- Opt-in aggressive cleaning and identical-duplicate cleanup, including batch mode
 - Share-target, `#url=` and `?url=` handoff parsing, and bookmarklet redirect-only behavior
 - Manifest, service worker, and CSP constraints for the installable app
 - Every root web file matching its `dist/` copy byte-for-byte, since Vercel serves `dist/`
@@ -249,7 +248,7 @@ The tracker lists live in [cleaner.js](./cleaner.js):
 
 For example, a family prefix of `example_` would remove `example_source` and `example_campaign`.
 
-Avoid adding broad names such as `id`, `ref`, `source`, or `token`: those can be required for a page to work. Add only parameters confirmed to be tracking-related.
+Avoid adding broad names such as `id`, `ref`, `source`, or `token`: those can be required for a page to work. Add only parameters confirmed to be tracking-related. Broader names that are usually but not always tracking belong in `AGGRESSIVE_PARAMETERS`, which only applies when aggressive cleaning is switched on.
 
 ## Important limitation
 
@@ -257,7 +256,7 @@ No tracker list can identify every parameter used by every website. This project
 
 ## Privacy
 
-URL cleaning happens locally in your browser. URLs and clipboard contents are not uploaded or stored. Only three preferences are saved locally: whether to clean on paste, whether to auto-copy, and whether the Tracker of the Day card is collapsed. The app has no backend, accounts, analytics, database, or telemetry.
+URL cleaning happens locally in your browser. URLs and clipboard contents are not uploaded or stored. Only five preferences are saved locally: whether to clean on paste, whether to auto-copy, whether aggressive cleaning and duplicate cleanup are on, and whether the Tracker of the Day card is collapsed. The app has no backend, accounts, analytics, database, or telemetry.
 
 How a link reaches the app matters:
 
