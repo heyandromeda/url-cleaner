@@ -1,6 +1,13 @@
 import { cleanBatch, cleanedUrlsFromBatch, isOpaqueShortener, querySegments } from "./cleaner.js";
 import { explainParameter, trackerOfTheDay } from "./explanations.js";
 import { bookmarkletCode, canReadClipboard, parseHandoffUrl } from "./handoff.js";
+import {
+  nextThemeAfterToggle,
+  readStoredThemePreference,
+  resolveTheme,
+  saveThemePreference,
+  themeColorFor
+} from "./theme.js";
 
 const form = document.querySelector("#clean-form");
 const input = document.querySelector("#url-input");
@@ -43,6 +50,8 @@ const totdName = document.querySelector("#totd-name");
 const totdDetails = document.querySelector("#totd-details");
 const totdToggle = document.querySelector("#totd-toggle");
 const bookmarklet = document.querySelector("#bookmarklet");
+const themeToggle = document.querySelector("#theme-toggle");
+const themeColorMeta = document.querySelector('meta[name="theme-color"]');
 
 const CLEAN_ON_PASTE_KEY = "url-cleaner.clean-on-paste";
 const AUTO_COPY_KEY = "url-cleaner.auto-copy";
@@ -69,6 +78,37 @@ function saveSetting(key, value) {
   } catch {
     // Settings are a convenience; the cleaner still works if storage is unavailable.
   }
+}
+
+function systemPrefersDark() {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
+function activeTheme() {
+  return resolveTheme(readStoredThemePreference(localStorage), systemPrefersDark());
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute("content", themeColorFor(theme));
+  }
+  if (themeToggle) {
+    const isDark = theme === "dark";
+    themeToggle.setAttribute("aria-pressed", isDark ? "true" : "false");
+    themeToggle.setAttribute("aria-label", isDark ? "Light mode" : "Dark mode");
+    themeToggle.textContent = isDark ? "Light mode" : "Dark mode";
+  }
+}
+
+function initTheme() {
+  applyTheme(activeTheme());
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (readStoredThemePreference(localStorage) === null) {
+      applyTheme(activeTheme());
+    }
+  });
 }
 
 function showMessage(text, kind = "info") {
@@ -588,6 +628,8 @@ function loadHandoff() {
   return true;
 }
 
+initTheme();
+
 cleanOnPaste.checked = readSetting(CLEAN_ON_PASTE_KEY, true);
 autoCopy.checked = readSetting(AUTO_COPY_KEY, false);
 aggressiveMode.checked = readSetting(AGGRESSIVE_MODE_KEY, false);
@@ -671,6 +713,12 @@ shareButton.addEventListener("click", async () => {
       showMessage("Sharing was unavailable. Copy the URL instead.", "error");
     }
   }
+});
+
+themeToggle.addEventListener("click", () => {
+  const next = nextThemeAfterToggle(activeTheme());
+  saveThemePreference(localStorage, next);
+  applyTheme(next);
 });
 
 totdToggle.addEventListener("click", () => {
