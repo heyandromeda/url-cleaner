@@ -162,7 +162,31 @@ const TOOLS = {
 // ---------- JSON-RPC ----------
 const ok = (id, result) => ({ jsonrpc: "2.0", id, result });
 const err = (id, code, message) => ({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
-const toolResult = (obj, isError = false) => ({ content: [{ type: "text", text: JSON.stringify(obj, null, 2) }], structuredContent: obj, ...(isError ? { isError: true } : {}) });
+const list = (a) => a.join(", ");
+function cleanLine(r) {
+  if (!r.changed) return `Already clean: ${r.cleaned} (nothing removed).`;
+  const parts = [`Cleaned: ${r.cleaned}`];
+  if (r.unwrappedFrom?.length) parts.push(`Unwrapped a redirect from ${list(r.unwrappedFrom)}.`);
+  if (r.removedParams?.length) parts.push(`Removed ${list(r.removedParams.map((n) => `${n} (${r.explanations?.[n] || "tracking"})`))}.`);
+  if (r.preservedParams?.length) parts.push(`Kept ${list(r.preservedParams)}.`);
+  return parts.join("\n");
+}
+function summarize(name, o, isError) {
+  if (isError) return `URL Cleaner couldn't process that: ${o.error}`;
+  if (name === "clean_url") return cleanLine(o);
+  if (name === "clean_urls_batch") return `Cleaned ${o.okCount} of ${o.count} URLs:\n` + o.results.map((r) => r.ok ? `- ${r.cleaned}${r.removedParams?.length ? ` (removed ${list(r.removedParams)})` : ""}` : `- couldn't clean ${r.original}: ${r.error}`).join("\n");
+  if (name === "inspect_url") return `Tracking level: ${o.fingerprint?.label ?? "unknown"}.` + (o.opaqueShortener ? " This is a short link; URL Cleaner can't see where it goes without opening it, and it never does." : "");
+  if (name === "explain_changes") return [`Cleaned: ${o.cleaned}`, ...o.unwrapped, ...o.removed.map((r) => `Removed ${r.name}: ${r.why}`), ...o.preserved.map((p) => `Kept ${p.name}: ${p.reason.replace(/^Kept: /, "")}`)].join("\n");
+  if (name === "get_cleaner_capabilities") return `URL Cleaner engine ${String(o.engine.sha).slice(0, 7)}: removes ${o.features.trackingParameterCount} known tracking parameters, unwraps redirects up to ${o.features.redirectUnwrapping.maxDepth} layers, explains changes with ${o.features.trackerProfiles} tracker profiles. It never opens or expands links.`;
+  return "Done.";
+}
+const toolResult = (obj, isError = false, name = "") => {
+  const out = { summary: summarize(name, obj, isError), ...obj };
+  return { content: [
+    { type: "text", text: out.summary },
+    { type: "text", text: "Raw result (show only if the user asks):\n" + JSON.stringify(out) }
+  ], structuredContent: out, ...(isError ? { isError: true } : {}) };
+};
 
 function log(fields) { process.stderr.write(JSON.stringify({ t: new Date().toISOString(), ...fields }) + "\n"); } // never logs arguments
 
@@ -175,7 +199,7 @@ function handle(msg) {
   if (method === "initialize") {
     const v = PROTOCOL_VERSIONS.includes(params?.protocolVersion) ? params.protocolVersion : PROTOCOL_VERSIONS[0];
     return ok(msg.id, { protocolVersion: v, capabilities: { tools: { listChanged: false } }, serverInfo: SERVER_INFO,
-      instructions: "Official URL Cleaner tools. Use clean_url when asked to 'clean this using URL Cleaner'. Results come from the real engine (see engineInvoked). URLs are never fetched." });
+      instructions: "Official URL Cleaner tools. Use clean_url when asked to 'clean this using URL Cleaner'. Results come from the real engine (see engineInvoked). URLs are never fetched. Reply to the user with the plain-language `summary` field and the cleaned link; show the raw JSON only if they ask." });
   }
   if (method === "ping") return ok(msg.id, {});
   if (method === "tools/list") return ok(msg.id, { tools: Object.entries(TOOLS).map(([name, t]) => ({ name, description: t.description, inputSchema: t.inputSchema,
@@ -184,11 +208,11 @@ function handle(msg) {
     const name = params?.name; const tool = TOOLS[name];
     if (!tool) return err(msg.id, -32602, `Unknown tool: ${String(name).slice(0, 64)}`);
     const t0 = performance.now(); let status = "ok";
-    try { return ok(msg.id, toolResult(tool.run(params.arguments || {}))); }
+    try { return ok(msg.id, toolResult(tool.run(params.arguments || {}), false, name)); }
     catch (e) {
       status = e instanceof InputError || e instanceof TypeError ? "input_error" : "error";
       const message = status === "error" ? "Internal error while running the URL Cleaner engine." : e.message;
-      return ok(msg.id, toolResult({ error: message, tool: name, engine: { sha: ENGINE_SHA } }, true));
+      return ok(msg.id, toolResult({ error: message, tool: name, engine: { sha: ENGINE_SHA } }, true, name));
     } finally { log({ tool: name, ms: Math.round(performance.now() - t0), status }); }
   }
   return err(msg.id, -32601, `Method not found: ${method.slice(0, 64)}`);

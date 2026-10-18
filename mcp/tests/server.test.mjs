@@ -42,7 +42,8 @@ test("stdio: handshake, list, clean_url matches engine.cleanUrl exactly", async 
   assert.equal(r.structuredContent.cleaned, direct.url);
   assert.deepEqual(r.structuredContent.removedParams, direct.removedParameters);
   assert.equal(r.structuredContent.engineInvoked.sha, SHA);
-  assert.deepEqual(JSON.parse(r.content[0].text), r.structuredContent);
+  assert.match(r.content[0].text, /^Cleaned: /);
+  assert.deepEqual(JSON.parse(r.content[1].text.replace(/^[^\n]*\n/, "")), r.structuredContent);
   const bad = (await s.rpc(4, "tools/call", { name: "clean_url", arguments: { url: "ht!tp:/bad" } })).result;
   assert.equal(bad.isError, true);
   const missing = (await s.rpc(5, "tools/call", { name: "clean_url", arguments: {} })).result;
