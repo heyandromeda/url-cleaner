@@ -25,8 +25,8 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Removes tracker families such as `utm_*`, `hsa_*`, `mtm_*`, `piwik_*`, and `_ga_*`
 - Removes explicit Matomo parameters such as `pk_campaign` and `pk_kwd` while preserving unrelated names such as `pk_live`
 - Preserves unknown and functional parameters by default
-- Applies site-specific rules conservatively, including removing `si` only from YouTube and Spotify links
-- Keeps YouTube parameters such as `v`, `t`, and `list`
+- Applies site-specific rules conservatively, including YouTube and Spotify `si`, YouTube `pp` and `feature`, X/Twitter `s` and `t`, TikTok share tokens, Reddit `share_id`, and Amazon `pd_rd_*` / `pf_rd_*` affiliate tags
+- Keeps YouTube parameters such as `v`, `t`, `list`, and `index`, and keeps shopping parameters such as Amazon `th`, `psc`, and `s`
 - Unwraps known Google (including country domains such as `google.co.uk`), Facebook, Instagram `l.instagram.com`, Outlook Safe Links, YouTube, LinkedIn `/safety/go` and `/redir/redirect`, and `href.li` redirect wrappers locally, then cleans the destination
 - Limits nested wrapper unwrapping to five levels, says so when a link is still wrapped after that, and falls back safely when a destination is invalid
 - Accepts only HTTP and HTTPS URLs
@@ -237,10 +237,11 @@ The tracker lists live in [cleaner.js](./cleaner.js):
 
 - Add a lowercase exact-match parameter to `TRACKING_PARAMETERS`
 - Add a lowercase family prefix to `TRACKING_PARAMETER_PREFIXES`
+- Add a host rule in `HOST_RULES` when a name is only tracking on a specific site
 
 For example, a family prefix of `example_` would remove `example_source` and `example_campaign`.
 
-Avoid adding broad names such as `id`, `ref`, `source`, or `token`: those can be required for a page to work. Add only parameters confirmed to be tracking-related. Broader names that are usually but not always tracking belong in `AGGRESSIVE_PARAMETERS`, which only applies when aggressive cleaning is switched on.
+Avoid adding broad names such as `id`, `ref`, `source`, `s`, or `token`: those can be required for a page to work. Add only parameters confirmed to be tracking-related. Broader names that are usually but not always tracking belong in `AGGRESSIVE_PARAMETERS`, which only applies when aggressive cleaning is switched on. Names that are tracking on one site and meaningful on another, such as X's `s` or YouTube's `feature`, belong in a host rule.
 
 ## Important limitation
 

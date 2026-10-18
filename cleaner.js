@@ -3,15 +3,25 @@ export const TRACKING_PARAMETERS = new Set([
   "utm_id", "utm_name", "fbclid", "fb_action_ids", "fb_action_types",
   "fb_source", "fb_ref", "gclid", "dclid", "gbraid", "wbraid",
   "gad_source", "gad_campaignid", "gclsrc", "gclaw", "gcldc", "_gac",
-  "_gcl_au", "msclkid", "cvid", "twclid", "ttclid", "yclid", "ymclid",
-  "ysclid", "srsltid", "epik", "scid", "s_kwcid", "li_fat_id", "mc_cid",
-  "mc_eid", "_ga", "_gl", "_hsenc", "_hsmi", "hsctatracking", "mkt_tok",
-  "cjevent", "irclickid", "mkcid", "mkevt", "aff_fcid", "aff_fsk",
-  "aff_platform", "aff_trace_key", "oly_enc_id", "oly_anon_id",
+  "_gcl_au", "_gcl_aw", "_gcl_dc", "_gcl_gs", "_gcl_gb", "usqp",
+  "msclkid", "twclid", "ttclid", "yclid", "ymclid",
+  "ysclid", "yadclid", "srsltid", "epik", "scid", "sccid", "s_kwcid",
+  "li_fat_id", "mc_cid",
+  "mc_eid", "_ga", "_gl", "_hsenc", "_hsmi", "__hstc", "__hssc", "__hsfp",
+  "hsctatracking", "mkt_tok",
+  "cjevent", "irclickid", "irgwc", "mkcid", "mkevt", "aff_fcid", "aff_fsk",
+  "aff_platform", "aff_trace_key", "sscid", "awc", "ranmid", "raneaid", "ransiteid",
+  "oly_enc_id", "oly_anon_id",
   "ck_subscriber_id", "dm_i", "mibextid", "_openstat", "rb_clickid", "s_cid",
   "s_fid", "s_ppv", "s_channel", "s_ptc", "s_plt", "s_vnum", "s_invisit",
   "s_cc", "s_sq", "vero_conv", "vero_id", "igshid", "igsh",
-  "pk_campaign", "pk_kwd", "pk_source", "pk_medium", "pk_content", "pk_cid"
+  "pk_campaign", "pk_kwd", "pk_keyword", "pk_source", "pk_medium", "pk_content",
+  "pk_cid", "pk_group", "pk_placement",
+  "action_object_map", "action_ref_map", "action_type_map",
+  "rdt_cid", "ef_id", "ocid", "wt.mc_id",
+  "__s", "_bhlid", "_kx", "ml_subscriber", "ml_subscriber_hash",
+  "et_cid", "et_lid", "et_rid", "sfmc_id", "sfmc_activityid",
+  "vgo_ee", "wickedid", "itsct", "itscg", "bsft_clkid", "bsft_uid"
 ]);
 
 export const TRACKING_PARAMETER_PREFIXES = ["utm_", "hsa_", "mtm_", "piwik_", "_ga_"];
@@ -28,6 +38,7 @@ export const YOUTUBE_HOSTS = new Set([
   "youtube.com",
   "m.youtube.com",
   "music.youtube.com",
+  "youtube-nocookie.com",
   "youtu.be"
 ]);
 
@@ -39,10 +50,109 @@ export const HOST_TRACKING_PARAMETERS = new Map(
 
 // google.com plus country domains such as google.co.uk, google.de and google.com.au.
 const GOOGLE_HOST_PATTERN = /^google\.(?:com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})$/;
+const AMAZON_HOST_PATTERN = /(?:^|\.)amazon\.(?:com(?:\.[a-z]{2})?|co\.[a-z]{2}|[a-z]{2})$/;
+const EBAY_HOST_PATTERN = /(?:^|\.)ebay\.(?:com(?:\.[a-z]{2})?|co\.[a-z]{2}|[a-z]{2})$/;
+const ETSY_HOST_PATTERN = /(?:^|\.)etsy\.com$/;
+
+const APPLE_MEDIA_HOSTS = new Set([
+  "music.apple.com",
+  "itunes.apple.com",
+  "geo.itunes.apple.com",
+  "apps.apple.com",
+  "tv.apple.com",
+  "podcasts.apple.com",
+  "appsto.re"
+]);
+
+// Removed only on hosts where the name is known to be tracking. Short or
+// common names (s, t, ref, feature, tag) stay on every other site.
+const HOST_RULES = [
+  {
+    suffixes: ["youtube.com", "youtu.be", "youtube-nocookie.com"],
+    parameters: new Set([
+      "pp", "feature",
+      "embeds_referring_euri", "embeds_referring_origin",
+      "embeds_euri", "embeds_origin", "embeds_loader_url_for_pings",
+      "source_ve_path"
+    ]),
+    exceptPath: (pathname) => pathname === "/signin" || pathname.startsWith("/signin/")
+  },
+  {
+    suffixes: ["x.com", "twitter.com"],
+    parameters: new Set(["s", "t", "ref_src", "ref_url", "cxt"]),
+    exceptPath: (pathname) => pathname === "/i/redirect" || pathname.startsWith("/i/redirect/")
+  },
+  {
+    suffixes: ["tiktok.com"],
+    parameters: new Set([
+      "_t", "_r", "is_from_webapp", "sender_device", "sender_web_id",
+      "is_copy_url", "share_item_id", "tt_from", "refer", "u_code",
+      "sharer_language", "referer_url", "referer_video_id", "embed_source"
+    ])
+  },
+  {
+    suffixes: ["reddit.com"],
+    parameters: new Set(["share_id", "correlation_id", "ref_campaign", "ref_source"])
+  },
+  {
+    suffixes: ["instagram.com"],
+    parameters: new Set(["ig_rid"])
+  },
+  {
+    suffixes: ["threads.net", "threads.com"],
+    parameters: new Set(["xmt"])
+  },
+  {
+    suffixes: ["linkedin.com"],
+    parameters: new Set(["trk", "lipi", "trackingid", "trackingcode", "rcm", "ebp"])
+  },
+  {
+    suffixes: ["facebook.com", "fb.com"],
+    parameters: new Set([
+      "__tn__", "comment_tracking", "sfnsn", "idorvanity", "paipv",
+      "_rdr", "referral_story_type", "action_history", "ftentidentifier", "ls_ref"
+    ])
+  },
+  {
+    match: (host) => AMAZON_HOST_PATTERN.test(host),
+    parameters: new Set([
+      "tag", "ascsubtag", "linkcode", "linkid", "creative", "creativeasin",
+      "camp", "dib", "dib_tag", "crid", "sprefix", "content-id", "ref_",
+      "aaxitk", "ref", "qid"
+    ]),
+    prefixes: ["pd_rd_", "pf_rd_"]
+  },
+  {
+    match: (host) => EBAY_HOST_PATTERN.test(host),
+    parameters: new Set(["_trkparms", "_trksid", "_from", "mkrid", "campid", "toolid"])
+  },
+  {
+    match: (host) => ETSY_HOST_PATTERN.test(host),
+    parameters: new Set([
+      "ga_order", "ga_search_type", "ga_view_type", "ga_search_query",
+      "organic_search_click", "click_key", "frs", "sts", "ref"
+    ])
+  },
+  {
+    match: (host) => GOOGLE_HOST_PATTERN.test(host),
+    path: /^\/search(?:\/|$)/,
+    parameters: new Set(["ved", "ei", "oq", "uact", "sca_esv", "gs_lp", "gs_lcrp", "sei"])
+  },
+  {
+    suffixes: ["bing.com", "msn.com"],
+    parameters: new Set(["cvid"])
+  },
+  {
+    hosts: APPLE_MEDIA_HOSTS,
+    parameters: new Set(["at", "ct"])
+  }
+];
 
 export const OPAQUE_SHORTENER_HOSTS = new Set([
-  "bit.ly", "buff.ly", "cutt.ly", "goo.gl", "is.gd", "ow.ly",
-  "rebrand.ly", "shorturl.at", "t.co", "tiny.cc", "tinyurl.com"
+  "a.co", "amzn.to", "bit.ly", "buff.ly", "cutt.ly", "goo.gl", "is.gd",
+  "lnkd.in", "ow.ly", "pin.it", "rb.gy", "rebrand.ly", "shorturl.at",
+  "spoti.fi", "t.co", "t.ly", "tiny.cc", "tinyurl.com",
+  "vm.tiktok.com", "vt.tiktok.com"
 ]);
 
 const FUNCTIONAL_PARAMETERS = new Set([
@@ -71,7 +181,29 @@ function isHttpUrl(url) {
   return url.protocol === "http:" || url.protocol === "https:";
 }
 
-function isTrackingParameter(name, hostname) {
+function hostRuleApplies(rule, hostname, pathname) {
+  const host = normalizeHostname(hostname);
+  const matched = rule.hosts
+    ? rule.hosts.has(host)
+    : rule.suffixes
+      ? rule.suffixes.some((suffix) => host === suffix || host.endsWith(`.${suffix}`))
+      : rule.match(host);
+  if (!matched) return false;
+  if (rule.path && !rule.path.test(pathname || "")) return false;
+  if (rule.exceptPath?.(pathname || "")) return false;
+  return true;
+}
+
+function isHostRuleParameter(name, hostname, pathname) {
+  for (const rule of HOST_RULES) {
+    if (!hostRuleApplies(rule, hostname, pathname)) continue;
+    if (rule.parameters.has(name)) return true;
+    if (rule.prefixes?.some((prefix) => name.startsWith(prefix))) return true;
+  }
+  return false;
+}
+
+function isTrackingParameter(name, hostname, pathname = "") {
   const normalizedName = name.toLowerCase();
   if (TRACKING_PARAMETER_PREFIXES.some((prefix) => normalizedName.startsWith(prefix))) {
     return true;
@@ -80,7 +212,8 @@ function isTrackingParameter(name, hostname) {
     return true;
   }
   const hostTrackers = HOST_TRACKING_PARAMETERS.get(normalizeHostname(hostname));
-  return Boolean(hostTrackers?.has(normalizedName));
+  if (hostTrackers?.has(normalizedName)) return true;
+  return isHostRuleParameter(normalizedName, hostname, pathname);
 }
 
 function getHrefLiDestination(url) {
@@ -242,9 +375,9 @@ function unwrapRedirectLayers(input, maximumDepth = MAX_UNWRAP_DEPTH) {
   return { url: current, layers, limitReached: Boolean(next) };
 }
 
-export function categorizeParameter(name, hostname = "") {
+export function categorizeParameter(name, hostname = "", pathname = "") {
   const normalized = String(name).toLowerCase();
-  if (isTrackingParameter(normalized, hostname)) return "tracking";
+  if (isTrackingParameter(normalized, hostname, pathname)) return "tracking";
   if (AFFILIATE_PARAMETERS.has(normalized)) return "affiliate/referral";
   if (REDIRECT_RELATED_PARAMETERS.has(normalized)) return "redirect-related";
   if (FUNCTIONAL_PARAMETERS.has(normalized)) return "functional";
@@ -295,7 +428,7 @@ export function trackingFingerprint(input) {
 
   for (const url of inspectedUrls.values()) {
     for (const [name] of url.searchParams) {
-      const category = categorizeParameter(name, url.hostname);
+      const category = categorizeParameter(name, url.hostname, url.pathname);
       if (category === "tracking") tracking += 1;
       if (category === "affiliate/referral") affiliate += 1;
     }
@@ -318,7 +451,7 @@ export function fingerprintRelevantParametersOnDestination(input) {
   const hostname = redirect.url.hostname;
   const parameters = [];
   for (const [name, value] of redirect.url.searchParams) {
-    const category = categorizeParameter(name, hostname);
+    const category = categorizeParameter(name, hostname, redirect.url.pathname);
     if (category === "tracking" || category === "affiliate/referral") {
       parameters.push({ name, value, category });
     }
@@ -368,7 +501,7 @@ export function inspectUrl(input) {
     parameters: [...url.searchParams].map(([name, value]) => ({
       name,
       value,
-      category: categorizeParameter(name, url.hostname),
+      category: categorizeParameter(name, url.hostname, url.pathname),
       decodedValues: decodeForInspection(value)
     })),
     redirectLayers: redirect.layers,
@@ -395,7 +528,7 @@ function removeTrackingParameters(url, { aggressive = false, removeDuplicatePara
   for (const [index, segment] of querySegments(url.search).entries()) {
     // Identical means same name and same decoded value; a=1&a=2 is never touched.
     const pair = JSON.stringify([segment.name, segment.value]);
-    if (isTrackingParameter(segment.name, url.hostname)) {
+    if (isTrackingParameter(segment.name, url.hostname, url.pathname)) {
       removedParameters.push(segment.name);
     } else if (aggressive && AGGRESSIVE_PARAMETERS.has(segment.name.toLowerCase())) {
       removedParameters.push(segment.name);
