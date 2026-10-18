@@ -4,7 +4,8 @@ import {
   fingerprintRemovedKeptDetail,
   isOpaqueShortener,
   isOriginalQuerySegmentRemoved,
-  querySegments
+  querySegments,
+  removedDuplicateIndicesForBeforeView
 } from "./cleaner.js";
 import { explainParameter, trackerOfTheDay } from "./explanations.js";
 import { canReadClipboard, parseHandoffUrl } from "./handoff.js";
@@ -382,7 +383,11 @@ function hideResults() {
 
 function showCleanResult(result, { allowAutoCopy = true, originalValue = "", revealInspection = false } = {}) {
   cleanedValue = result.url;
-  renderOriginalUrl(originalValue, result.removedParameters, result.removedDuplicateIndices);
+  renderOriginalUrl(
+    originalValue,
+    result.removedParameters,
+    removedDuplicateIndicesForBeforeView(result)
+  );
   output.textContent = result.url;
   renderRemoved(result.removedParameters, removedList, result.aggressiveRemovedParameters);
   renderDuplicateNotice(result.duplicateParameters);

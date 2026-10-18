@@ -167,6 +167,12 @@ export function isOriginalQuerySegmentRemoved(name, index, removedParameters, re
   return removedNames.has(String(name).toLowerCase()) || removedDuplicateIndices.includes(index);
 }
 
+// Duplicate indices are computed on the cleaned URL (after unwrap). The Before
+// view shows the pasted URL, so skip index-based marks when a wrapper was peeled.
+export function removedDuplicateIndicesForBeforeView(result) {
+  return result.unwrappedFrom.length > 0 ? [] : result.removedDuplicateIndices;
+}
+
 export function querySegments(search) {
   const query = search.startsWith("?") ? search.slice(1) : search;
   return query.split("&").filter(Boolean).map((raw) => {
