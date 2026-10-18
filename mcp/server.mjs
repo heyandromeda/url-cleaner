@@ -27,6 +27,8 @@ const SERVER_INFO = { name: "url-cleaner", version: "0.1.0" };
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const MAX_BATCH = 100;
 const MAX_URL_LEN = 8192;
+const MAX_HTTP_BODY_BYTES = 1_000_000;
+const BATCH_ITEM_ERROR = "Every item must be a non-empty single-line string.";
 
 const proof = (...fns) => ({ engineInvoked: { functions: fns, module: "url-cleaner/cleaner.js", sha: ENGINE_SHA } });
 const queryNames = (href) => [...new URL(href).searchParams.keys()];
@@ -85,13 +87,34 @@ const TOOLS = {
       const urls = args?.urls;
       if (!Array.isArray(urls) || urls.length === 0) throw new InputError("Missing required argument `urls` (non-empty array of strings).");
       if (urls.length > MAX_BATCH) throw new InputError(`At most ${MAX_BATCH} URLs per batch.`);
-      if (urls.some((u) => typeof u !== "string" || /[\r\n]/.test(u) || !u.trim())) throw new InputError("Every item must be a non-empty single-line string.");
-      const entries = engine.cleanBatch(urls.join("\n"), opts(args));
-      const results = entries.map((e) => e.ok
-        ? { index: e.line - 1, ok: true, ...cleanedShape(e.input, e.result) }
-        : { index: e.line - 1, ok: false, original: e.input, error: e.error });
-      return { count: results.length, okCount: results.filter((r) => r.ok).length,
-        cleanedUrls: engine.cleanedUrlsFromBatch(entries), results, ...proof("cleanBatch", "cleanedUrlsFromBatch") };
+      const results = new Array(urls.length);
+      const validLines = [];
+      for (let index = 0; index < urls.length; index += 1) {
+        const u = urls[index];
+        if (typeof u !== "string" || /[\r\n]/.test(u) || !u.trim()) {
+          results[index] = { index, ok: false, original: String(u ?? ""), error: BATCH_ITEM_ERROR };
+          continue;
+        }
+        validLines.push({ index, input: u.trim() });
+      }
+      let batchEntries = [];
+      if (validLines.length > 0) {
+        batchEntries = engine.cleanBatch(validLines.map((v) => v.input).join("\n"), opts(args));
+        for (let i = 0; i < batchEntries.length; i += 1) {
+          const e = batchEntries[i];
+          const slot = validLines[i].index;
+          results[slot] = e.ok
+            ? { index: slot, ok: true, ...cleanedShape(e.input, e.result) }
+            : { index: slot, ok: false, original: e.input, error: e.error };
+        }
+      }
+      return {
+        count: urls.length,
+        okCount: results.filter((r) => r?.ok).length,
+        cleanedUrls: engine.cleanedUrlsFromBatch(batchEntries),
+        results,
+        ...proof("cleanBatch", "cleanedUrlsFromBatch")
+      };
     }
   },
   inspect_url: {
@@ -233,9 +256,23 @@ function startHttp() {
     if (req.method === "GET") return send(res, 405, { error: "SSE stream not offered; use POST" }, { allow: "POST" });
     if (req.method === "DELETE") return send(res, 405, { error: "stateless server" }, { allow: "POST" });
     if (req.method !== "POST") return send(res, 405, { error: "method not allowed" }, { allow: "POST" });
-    let body = ""; let size = 0;
-    req.on("data", (c) => { size += c.length; if (size > 1_000_000) { req.destroy(); } else body += c; });
+    const chunks = [];
+    let size = 0;
+    let bodyTooLarge = false;
+    req.on("data", (chunk) => {
+      if (bodyTooLarge) return;
+      size += chunk.length;
+      if (size > MAX_HTTP_BODY_BYTES) {
+        bodyTooLarge = true;
+        send(res, 413, err(null, -32000, "Request body too large"));
+        req.resume();
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on("end", () => {
+      if (bodyTooLarge) return;
+      const body = Buffer.concat(chunks).toString("utf8");
       let payload; try { payload = JSON.parse(body); } catch { return send(res, 400, err(null, -32700, "Parse error")); }
       const out = dispatch(payload);
       if (!out) return send(res, 202);
