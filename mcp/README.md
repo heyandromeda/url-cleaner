@@ -40,7 +40,7 @@ Environment:
 | Variable | Purpose |
 |---|---|
 | `MCP_AUTH_TOKEN` | Required for HTTP mode (≥ 24 characters) |
-| `HOST` | Default `127.0.0.1`. If you bind `0.0.0.0`, the default allowed `Host` values follow the bind address only—they do **not** include `localhost` or `127.0.0.1`. Local HTTP clients must then set `MCP_ALLOWED_HOSTS` (e.g. `MCP_ALLOWED_HOSTS=127.0.0.1:8787,localhost:8787`). |
+| `HOST` | Default `127.0.0.1` |
 | `PORT` | Default `8787` |
 | `ENGINE_DIR` | Default `..` (repo root) |
 | `ENGINE_SHA` | Optional override for `engineInvoked.sha` |
