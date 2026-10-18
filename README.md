@@ -57,6 +57,13 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Loads a `#url=` handoff into a tab that is already open, without a page reload
 - Handles invalid URLs clearly
 - Runs entirely in the browser with no backend, accounts, analytics, database, or external API
+- **MCP server** (`mcp/`): zero-dependency stdio/HTTP adapter so Grok Bots, Cursor, Claude Code, Codex, and other MCP clients can call the same cleaning engine locally (URLs are never fetched)
+
+## MCP server
+
+The [`mcp/`](./mcp/) folder ships an official Model Context Protocol server that wraps the repo engine (`cleanUrl`, `inspectUrl`, batch clean, explanations, capabilities). Use **stdio** for local IDE and agent configs, or **HTTP** on `127.0.0.1` with a bearer token for tools that need a remote URL on your own machine.
+
+It is not deployed with the static site on Vercel. Setup, tools, auth, and client examples: **[mcp/README.md](./mcp/README.md)**.
 
 ## Why choose URL Cleaner
 

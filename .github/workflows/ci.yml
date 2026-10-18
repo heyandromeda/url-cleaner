@@ -35,4 +35,7 @@ jobs:
 
       - run: npm test
 
+      - name: MCP server tests
+        run: cd mcp && node --test tests/*.mjs
+
       - run: npm run test:playwright

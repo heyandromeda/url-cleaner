@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "url-cleaner": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/url-cleaner/mcp/server.mjs", "--stdio"]
+    },
+    "url-cleaner-remote": {
+      "type": "http",
+      "url": "https://YOUR-HOST/mcp",
+      "headers": { "Authorization": "Bearer ${URL_CLEANER_MCP_TOKEN}" }
+    }
+  }
+}
