@@ -3,6 +3,7 @@ import {
   cleanedUrlsFromBatch,
   fingerprintRemovedKeptDetail,
   isOpaqueShortener,
+  isOriginalQuerySegmentRemoved,
   querySegments
 } from "./cleaner.js";
 import { explainParameter, trackerOfTheDay } from "./explanations.js";
@@ -16,6 +17,12 @@ import {
   themeColorFor,
   toggleAppliedTheme
 } from "./theme.js";
+import {
+  STORAGE_KEYS,
+  openAppStorage,
+  readBooleanSetting,
+  writeBooleanSetting
+} from "./storage.js";
 
 const form = document.querySelector("#clean-form");
 const input = document.querySelector("#url-input");
@@ -61,31 +68,21 @@ const totdToggle = document.querySelector("#totd-toggle");
 const themeToggle = document.querySelector("#theme-toggle");
 const themeColorMeta = document.querySelector('meta[name="theme-color"]');
 
-const CLEAN_ON_PASTE_KEY = "url-cleaner.clean-on-paste";
-const AUTO_COPY_KEY = "url-cleaner.auto-copy";
-const TOTD_COLLAPSED_KEY = "url-cleaner.totd-collapsed";
-const AGGRESSIVE_MODE_KEY = "url-cleaner.aggressive-mode";
-const REMOVE_DUPLICATES_KEY = "url-cleaner.remove-duplicates";
 let cleanedValue = "";
 let batchCopyValue = "";
 let clipboardOfferValue = "";
 let totdCollapsed = false;
 
+function appStorage() {
+  return openAppStorage(globalThis);
+}
+
 function readSetting(key, fallback) {
-  try {
-    const value = localStorage.getItem(key);
-    return value === null ? fallback : value === "true";
-  } catch {
-    return fallback;
-  }
+  return readBooleanSetting(appStorage(), key, fallback);
 }
 
 function saveSetting(key, value) {
-  try {
-    localStorage.setItem(key, String(value));
-  } catch {
-    // Settings are a convenience; the cleaner still works if storage is unavailable.
-  }
+  writeBooleanSetting(appStorage(), key, value);
 }
 
 function systemPrefersDark() {
@@ -337,24 +334,15 @@ function renderInspection(inspection) {
   }
 }
 
-function renderOriginalUrl(value, removedParameters, duplicateParameters = []) {
+function renderOriginalUrl(value, removedParameters, removedDuplicateIndices = []) {
   const url = new URL(value.trim());
-  const removedNames = new Set(removedParameters.map((name) => name.toLowerCase()));
-  const duplicateNames = new Set(duplicateParameters);
-  const seenPairs = new Set();
   const base = url.href.slice(0, url.href.length - url.search.length - url.hash.length);
 
   originalOutput.replaceChildren(document.createTextNode(base));
 
-  querySegments(url.search).forEach(({ raw, name, value: segmentValue }, index) => {
+  querySegments(url.search).forEach(({ raw, name }, index) => {
     originalOutput.append(document.createTextNode(index === 0 ? "?" : "&"));
-    // Mirror the cleaner: the first copy of an identical pair is kept, later copies are removed.
-    let removed = removedNames.has(name.toLowerCase());
-    if (!removed && duplicateNames.has(name)) {
-      const pair = JSON.stringify([name, segmentValue]);
-      removed = seenPairs.has(pair);
-      seenPairs.add(pair);
-    }
+    const removed = isOriginalQuerySegmentRemoved(name, index, removedParameters, removedDuplicateIndices);
     const segment = document.createElement(removed ? "mark" : "span");
     segment.textContent = raw;
     originalOutput.append(segment);
@@ -394,7 +382,7 @@ function hideResults() {
 
 function showCleanResult(result, { allowAutoCopy = true, originalValue = "", revealInspection = false } = {}) {
   cleanedValue = result.url;
-  renderOriginalUrl(originalValue, result.removedParameters, result.duplicateParameters);
+  renderOriginalUrl(originalValue, result.removedParameters, result.removedDuplicateIndices);
   output.textContent = result.url;
   renderRemoved(result.removedParameters, removedList, result.aggressiveRemovedParameters);
   renderDuplicateNotice(result.duplicateParameters);
@@ -639,7 +627,7 @@ function renderTrackerOfTheDay() {
   const fact = trackerOfTheDay();
   totdName.textContent = fact.name;
   renderTrackerDetails(fact);
-  totdCollapsed = readSetting(TOTD_COLLAPSED_KEY, true);
+  totdCollapsed = readSetting(STORAGE_KEYS.totdCollapsed, true);
   applyTotdCollapsedState();
   totd.hidden = false;
 }
@@ -698,10 +686,10 @@ function loadHandoff() {
 initTheme();
 decorateActionButtons();
 
-cleanOnPaste.checked = readSetting(CLEAN_ON_PASTE_KEY, true);
-autoCopy.checked = readSetting(AUTO_COPY_KEY, false);
-aggressiveMode.checked = readSetting(AGGRESSIVE_MODE_KEY, false);
-removeDuplicates.checked = readSetting(REMOVE_DUPLICATES_KEY, false);
+cleanOnPaste.checked = readSetting(STORAGE_KEYS.cleanOnPaste, true);
+autoCopy.checked = readSetting(STORAGE_KEYS.autoCopy, false);
+aggressiveMode.checked = readSetting(STORAGE_KEYS.aggressiveMode, false);
+removeDuplicates.checked = readSetting(STORAGE_KEYS.removeDuplicates, false);
 shareButton.hidden = typeof navigator.share !== "function";
 renderTrackerOfTheDay();
 
@@ -735,14 +723,14 @@ input.addEventListener("paste", () => {
 });
 
 cleanOnPaste.addEventListener("change", () => {
-  saveSetting(CLEAN_ON_PASTE_KEY, cleanOnPaste.checked);
+  saveSetting(STORAGE_KEYS.cleanOnPaste, cleanOnPaste.checked);
 });
 
 autoCopy.addEventListener("change", () => {
-  saveSetting(AUTO_COPY_KEY, autoCopy.checked);
+  saveSetting(STORAGE_KEYS.autoCopy, autoCopy.checked);
 });
 
-for (const [toggle, key] of [[aggressiveMode, AGGRESSIVE_MODE_KEY], [removeDuplicates, REMOVE_DUPLICATES_KEY]]) {
+for (const [toggle, key] of [[aggressiveMode, STORAGE_KEYS.aggressiveMode], [removeDuplicates, STORAGE_KEYS.removeDuplicates]]) {
   toggle.addEventListener("change", () => {
     saveSetting(key, toggle.checked);
     if (input.value.trim()) runClean({ allowAutoCopy: false });
@@ -792,7 +780,7 @@ themeToggle.addEventListener("click", () => {
 
 totdToggle.addEventListener("click", () => {
   totdCollapsed = !totdCollapsed;
-  saveSetting(TOTD_COLLAPSED_KEY, totdCollapsed);
+  saveSetting(STORAGE_KEYS.totdCollapsed, totdCollapsed);
   applyTotdCollapsedState();
 });
 

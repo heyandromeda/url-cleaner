@@ -162,6 +162,11 @@ function decodeQueryComponent(value) {
 
 // Splits a serialized query into raw "name=value" segments so kept parameters
 // can be written back byte-for-byte instead of being re-encoded.
+export function isOriginalQuerySegmentRemoved(name, index, removedParameters, removedDuplicateIndices) {
+  const removedNames = new Set(removedParameters.map((parameter) => parameter.toLowerCase()));
+  return removedNames.has(String(name).toLowerCase()) || removedDuplicateIndices.includes(index);
+}
+
 export function querySegments(search) {
   const query = search.startsWith("?") ? search.slice(1) : search;
   return query.split("&").filter(Boolean).map((raw) => {
@@ -379,8 +384,9 @@ function removeTrackingParameters(url, { aggressive = false, removeDuplicatePara
   const removedParameters = [];
   const aggressiveRemovedParameters = [];
   const duplicateParameters = [];
+  const removedDuplicateIndices = [];
   const seenPairs = new Set();
-  for (const segment of querySegments(url.search)) {
+  for (const [index, segment] of querySegments(url.search).entries()) {
     // Identical means same name and same decoded value; a=1&a=2 is never touched.
     const pair = JSON.stringify([segment.name, segment.value]);
     if (isTrackingParameter(segment.name, url.hostname)) {
@@ -390,13 +396,14 @@ function removeTrackingParameters(url, { aggressive = false, removeDuplicatePara
       aggressiveRemovedParameters.push(segment.name);
     } else if (removeDuplicateParameters && seenPairs.has(pair)) {
       duplicateParameters.push(segment.name);
+      removedDuplicateIndices.push(index);
     } else {
       keptSegments.push(segment.raw);
       seenPairs.add(pair);
     }
   }
   url.search = keptSegments.join("&");
-  return { removedParameters, aggressiveRemovedParameters, duplicateParameters };
+  return { removedParameters, aggressiveRemovedParameters, duplicateParameters, removedDuplicateIndices };
 }
 
 export function cleanUrl(input, options = {}) {
@@ -404,12 +411,13 @@ export function cleanUrl(input, options = {}) {
   // A missing, malformed, or non-http(s) destination stops unwrapping, so the
   // wrapper itself is cleaned instead.
   const url = new URL(redirect.url.href);
-  const { removedParameters, aggressiveRemovedParameters, duplicateParameters } = removeTrackingParameters(url, options);
+  const { removedParameters, aggressiveRemovedParameters, duplicateParameters, removedDuplicateIndices } = removeTrackingParameters(url, options);
   return {
     url: url.toString(),
     removedParameters,
     aggressiveRemovedParameters,
     duplicateParameters,
+    removedDuplicateIndices,
     changed: removedParameters.length > 0 || duplicateParameters.length > 0 || redirect.layers.length > 0,
     unwrappedFrom: redirect.layers.map((layer) => layer.host),
     unwrapLimitReached: redirect.limitReached,

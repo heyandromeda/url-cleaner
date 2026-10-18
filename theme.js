@@ -1,4 +1,6 @@
-export const THEME_STORAGE_KEY = "url-cleaner.theme";
+import { STORAGE_KEYS, openAppStorage, readThemePreference, writeThemePreference } from "./storage.js";
+
+export const THEME_STORAGE_KEY = STORAGE_KEYS.theme;
 
 export const THEME_COLORS = {
   light: "#ffffff",
@@ -7,13 +9,7 @@ export const THEME_COLORS = {
 
 /** @returns {"light" | "dark" | null} */
 export function readStoredThemePreference(storage) {
-  try {
-    const value = storage.getItem(THEME_STORAGE_KEY);
-    if (value === "light" || value === "dark") return value;
-    return null;
-  } catch {
-    return null;
-  }
+  return readThemePreference(storage);
 }
 
 /** @param {"light" | "dark" | null} preference */
@@ -23,11 +19,7 @@ export function resolveTheme(preference, systemPrefersDark) {
 }
 
 export function openThemeStorage(globalObject) {
-  try {
-    return globalObject.localStorage;
-  } catch {
-    return null;
-  }
+  return openAppStorage(globalObject);
 }
 
 export function resolveActiveTheme(globalObject, systemPrefersDark) {
@@ -48,12 +40,7 @@ export function nextThemeAfterToggle(currentTheme) {
 
 /** @param {"light" | "dark"} theme */
 export function saveThemePreference(storage, theme) {
-  if (!storage) return;
-  try {
-    storage.setItem(THEME_STORAGE_KEY, theme);
-  } catch {
-    // Theme still applies for this session if storage is unavailable.
-  }
+  writeThemePreference(storage, theme);
 }
 
 /** @param {"light" | "dark"} appliedTheme */
