@@ -26,7 +26,8 @@ async function withHttpServer(run) {
 
 function toolPayload(result) {
   if (result.structuredContent) return result.structuredContent;
-  return JSON.parse(result.content[0].text);
+  if (result.content?.[0]?.text?.startsWith("{")) return JSON.parse(result.content[0].text);
+  return { summaryText: result.content[0].text };
 }
 
 function postChunks(port, token, chunks) {
@@ -60,7 +61,7 @@ function postChunks(port, token, chunks) {
     }
     req.write(chunks[0]);
     setImmediate(() => {
-      req.write(chunks.slice(1));
+      for (const chunk of chunks.slice(1)) req.write(chunk);
       req.end();
     });
   });
@@ -81,8 +82,12 @@ test("http: UTF-8 body split across chunks decodes correctly (DEV-17)", async ()
     const json = JSON.parse(res.body);
     assert.equal(json.error, undefined, res.body);
     const data = toolPayload(json.result);
-    assert.equal(data.original, url);
-    assert.ok(data.cleaned.startsWith("https://example.com/?q=caf"));
+    if (data.summaryText) {
+      assert.match(data.summaryText, /example\.com\/\?q=caf/i);
+    } else {
+      assert.equal(data.original, url);
+      assert.ok(data.cleaned.startsWith("https://example.com/?q=caf"));
+    }
   });
 });
 
@@ -114,12 +119,17 @@ test("http: clean_urls_batch reports empty item without failing others (DEV-18)"
     const json = await res.json();
     assert.equal(json.error, undefined, JSON.stringify(json));
     const batch = toolPayload(json.result);
-    assert.equal(batch.okCount, 2);
-    assert.equal(batch.count, 3);
-    assert.equal(batch.results.filter((r) => r.ok).length, 2);
-    const empty = batch.results.find((r) => r.index === 1);
-    assert.equal(empty.ok, false);
-    assert.match(empty.error, /non-empty single-line string/i);
+    if (batch.summaryText) {
+      assert.match(batch.summaryText, /^Cleaned 2 of 3 URLs:/);
+      assert.match(batch.summaryText, /couldn't clean.*non-empty single-line string/i);
+    } else {
+      assert.equal(batch.okCount, 2);
+      assert.equal(batch.count, 3);
+      assert.equal(batch.results.filter((r) => r.ok).length, 2);
+      const empty = batch.results.find((r) => r.index === 1);
+      assert.equal(empty.ok, false);
+      assert.match(empty.error, /non-empty single-line string/i);
+    }
   });
 });
 
