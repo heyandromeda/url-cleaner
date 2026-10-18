@@ -1,6 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanUrl, isOpaqueShortener } from "../dist/cleaner.js";
+import {
+  cleanBatch,
+  cleanUrl,
+  detectWeirdness,
+  inspectUrl,
+  isOpaqueShortener,
+  MAX_UNWRAP_DEPTH,
+  trackingFingerprint
+} from "../dist/cleaner.js";
 
 test("removes a URL containing only UTM parameters", () => {
   const result = cleanUrl("https://example.com/article?utm_source=news&utm_campaign=spring");
@@ -166,6 +174,75 @@ test("unwraps an href.li query-as-URL wrapper and cleans the destination", () =>
   assert.deepEqual(result.unwrappedFrom, ["href.li"]);
 });
 
+test("removes Instagram igsh and igshid share trackers", () => {
+  const igsh = cleanUrl("https://www.instagram.com/p/AbCdEf/?igsh=SHARETOKEN");
+  const both = cleanUrl("https://example.com/recipe?igshid=YmMyMTA2M2Y=&igsh=xyz&id=9");
+
+  assert.equal(igsh.url, "https://www.instagram.com/p/AbCdEf/");
+  assert.deepEqual(igsh.removedParameters, ["igsh"]);
+  assert.equal(both.url, "https://example.com/recipe?id=9");
+  assert.deepEqual(both.removedParameters, ["igshid", "igsh"]);
+});
+
+test("unwraps a LinkedIn /safety/go wrapper and cleans the destination", () => {
+  const destination = encodeURIComponent("https://example.com/page?utm_source=li&id=3");
+  const result = cleanUrl(`https://www.linkedin.com/safety/go?url=${destination}`);
+
+  assert.equal(result.url, "https://example.com/page?id=3");
+  assert.deepEqual(result.removedParameters, ["utm_source"]);
+  assert.deepEqual(result.unwrappedFrom, ["www.linkedin.com"]);
+});
+
+test("unwraps a LinkedIn /redir/redirect wrapper and cleans the destination", () => {
+  const destination = encodeURIComponent("https://example.com/post?utm_source=li&id=5");
+  const result = cleanUrl(`https://www.linkedin.com/redir/redirect?url=${destination}&urlhash=abc&trk=public_post`);
+
+  assert.equal(result.url, "https://example.com/post?id=5");
+  assert.deepEqual(result.removedParameters, ["utm_source"]);
+  assert.deepEqual(result.unwrappedFrom, ["www.linkedin.com"]);
+});
+
+test("unwraps an Instagram l.instagram.com outbound link and cleans the destination", () => {
+  const destination = encodeURIComponent("https://example.com/shop?utm_source=ig&fbclid=PAZ&item=7");
+  const result = cleanUrl(`https://l.instagram.com/?u=${destination}&e=AT0abc`);
+
+  assert.equal(result.url, "https://example.com/shop?item=7");
+  assert.deepEqual(result.removedParameters, ["utm_source", "fbclid"]);
+  assert.deepEqual(result.unwrappedFrom, ["l.instagram.com"]);
+});
+
+test("unwraps Google /url wrappers on country domains", () => {
+  const destination = encodeURIComponent("https://example.com/?utm_source=x&id=1");
+
+  for (const host of ["www.google.co.uk", "www.google.de", "www.google.com.au", "google.co.jp"]) {
+    const result = cleanUrl(`https://${host}/url?q=${destination}&sa=D`);
+    assert.equal(result.url, "https://example.com/?id=1", host);
+    assert.deepEqual(result.unwrappedFrom, [host], host);
+  }
+});
+
+test("unwraps Google search-result links that carry the destination in url=", () => {
+  const destination = encodeURIComponent("https://example.com/article?utm_campaign=y&page=2");
+  const result = cleanUrl(`https://www.google.co.uk/url?sa=t&rct=j&q=&esrc=s&source=web&url=${destination}&usg=AOv`);
+
+  assert.equal(result.url, "https://example.com/article?page=2");
+  assert.deepEqual(result.unwrappedFrom, ["www.google.co.uk"]);
+  assert.equal(result.inspection.redirectLayers[0].parameter, "url");
+});
+
+test("does not treat lookalike Google hosts or other paths as wrappers", () => {
+  const destination = encodeURIComponent("https://example.com/");
+
+  for (const input of [
+    `https://google.example.com/url?q=${destination}`,
+    `https://notgoogle.com/url?q=${destination}`,
+    `https://www.google.co.uk/search?q=${destination}`,
+    `https://l.instagram.com/other?u=${destination}`
+  ]) {
+    assert.deepEqual(cleanUrl(input).unwrappedFrom, [], input);
+  }
+});
+
 test("recursively unwraps nested Google then Facebook wrappers", () => {
   const inner = "https://example.com/page?utm_source=x";
   const facebook = `https://l.facebook.com/l.php?u=${encodeURIComponent(inner)}&h=AT`;
@@ -174,6 +251,58 @@ test("recursively unwraps nested Google then Facebook wrappers", () => {
   assert.equal(result.url, "https://example.com/page");
   assert.deepEqual(result.removedParameters, ["utm_source"]);
   assert.deepEqual(result.unwrappedFrom, ["www.google.com", "l.facebook.com"]);
+});
+
+test("href.li keeps the destination's #fragment", () => {
+  const result = cleanUrl("https://href.li/?https://example.com/page?utm_source=x&id=2#section");
+
+  assert.equal(result.url, "https://example.com/page?id=2#section");
+  assert.deepEqual(result.unwrappedFrom, ["href.li"]);
+});
+
+test("cleaning, X-Ray and fingerprint agree on a double-encoded wrapper", () => {
+  const result = cleanUrl("https://www.google.com/url?q=https%253A%252F%252Fexample.com%252F%253Futm_source%253Dx%2526id%253D4");
+
+  assert.equal(result.url, "https://example.com/?id=4");
+  assert.deepEqual(result.removedParameters, ["utm_source"]);
+  assert.deepEqual(result.unwrappedFrom, ["www.google.com"]);
+  assert.equal(result.inspection.redirectLayers.length, result.unwrappedFrom.length);
+  assert.equal(result.fingerprint.categories.wrappers, result.unwrappedFrom.length);
+});
+
+function nestGoogleWrappers(destination, layers) {
+  let url = destination;
+  for (let index = 0; index < layers; index += 1) {
+    url = `https://www.google.com/url?q=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
+test("unwraps four nested wrappers so no tracker is left inside", () => {
+  const result = cleanUrl(nestGoogleWrappers("https://example.com/?utm_source=deep&id=1", 4));
+
+  assert.equal(result.url, "https://example.com/?id=1");
+  assert.deepEqual(result.removedParameters, ["utm_source"]);
+  assert.equal(result.unwrappedFrom.length, 4);
+  assert.equal(result.unwrapLimitReached, false);
+  assert.equal(result.inspection.redirectLayers.length, 4);
+});
+
+test("reports when the unwrap limit stops before the real destination", () => {
+  const result = cleanUrl(nestGoogleWrappers("https://example.com/?utm_source=deep", MAX_UNWRAP_DEPTH + 1));
+
+  assert.equal(result.unwrapLimitReached, true);
+  assert.equal(result.unwrappedFrom.length, MAX_UNWRAP_DEPTH);
+  assert.match(result.url, /^https:\/\/www\.google\.com\/url\?q=/);
+  assert.equal(result.inspection.redirectLayers.length, MAX_UNWRAP_DEPTH);
+});
+
+test("stops unwrapping when a wrapper loops back to an earlier layer", () => {
+  const loop = "https://www.google.com/url?q=https%3A%2F%2Fl.facebook.com%2Fl.php%3Fu%3Dhttps%253A%252F%252Fwww.google.com%252Furl%253Fq%253Dhttps%25253A%25252F%25252Fl.facebook.com%25252Fl.php";
+  const result = cleanUrl(loop);
+
+  assert.ok(result.unwrappedFrom.length <= MAX_UNWRAP_DEPTH);
+  assert.equal(result.inspection.redirectLayers.length, result.unwrappedFrom.length);
 });
 
 test("cleans a wrapper in place when its destination is not a URL", () => {
@@ -191,6 +320,14 @@ test("does not follow opaque shorteners", () => {
   assert.deepEqual(result.removedParameters, ["utm_source"]);
   assert.deepEqual(result.unwrappedFrom, []);
   assert.equal(isOpaqueShortener("https://bit.ly/abc?utm_source=x"), true);
+});
+
+test("removes si on Spotify share links but keeps other Spotify values", () => {
+  const result = cleanUrl("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC?si=a1b2c3d4e5f6&context=spotify%3Aplaylist%3A37i9");
+
+  assert.equal(result.url, "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC?context=spotify%3Aplaylist%3A37i9");
+  assert.deepEqual(result.removedParameters, ["si"]);
+  assert.equal(cleanUrl("https://spotify.example/track?si=keep").url, "https://spotify.example/track?si=keep");
 });
 
 test("removes si only on YouTube hosts", () => {
@@ -219,6 +356,38 @@ test("normalizes a trailing question mark or ampersand", () => {
   assert.equal(cleanUrl("https://example.com/page?utm_source=x").url, "https://example.com/page");
 });
 
+test("keeps surviving query segments byte-for-byte", () => {
+  const cases = [
+    ["https://example.com/s?q=hello%20world&utm_source=x", "https://example.com/s?q=hello%20world"],
+    ["https://example.com/s?q=a+b&utm_source=x", "https://example.com/s?q=a+b"],
+    ["https://example.com/p?next=/a/b:c,d&gclid=1", "https://example.com/p?next=/a/b:c,d"],
+    ["https://example.com/p?a=~x(1)!*&fbclid=1", "https://example.com/p?a=~x(1)!*"],
+    ["https://example.com/p?name=caf%E9&utm_source=x", "https://example.com/p?name=caf%E9"],
+    ["https://example.com/p?a=1;b=2&utm_source=x", "https://example.com/p?a=1;b=2"],
+    ["https://example.com/p?debug&utm_source=x", "https://example.com/p?debug"],
+    ["https://example.com/?/blog/post&utm_source=x", "https://example.com/?/blog/post"]
+  ];
+
+  for (const [input, expected] of cases) {
+    assert.equal(cleanUrl(input).url, expected, input);
+  }
+});
+
+test("returns an already-clean URL without re-encoding it", () => {
+  const input = "https://example.com/s?q=hello%20world&tag=a&tag=b&flag&name=caf%E9#top";
+  const result = cleanUrl(input);
+
+  assert.equal(result.url, input);
+  assert.equal(result.changed, false);
+});
+
+test("removes percent-encoded tracker names and reports them decoded", () => {
+  const result = cleanUrl("https://example.com/?utm%5Fsource=x&GCLID=y&keep=1");
+
+  assert.equal(result.url, "https://example.com/?keep=1");
+  assert.deepEqual(result.removedParameters, ["utm_source", "GCLID"]);
+});
+
 test("still drops utm_source from a long query string", () => {
   const long = `https://example.com/page?${Array.from({ length: 80 }, (_, index) => `p${index}=value`).join("&")}&utm_source=news`;
   const result = cleanUrl(long);
@@ -228,4 +397,150 @@ test("still drops utm_source from a long query string", () => {
   assert.equal(params.has("utm_source"), false);
   assert.equal(params.get("p0"), "value");
   assert.equal(params.get("p79"), "value");
+});
+
+test("X-Ray categorizes parameters and decodes double-encoded values", () => {
+  const nested = encodeURIComponent(encodeURIComponent("https://example.com/path?q=yes"));
+  const inspection = inspectUrl(`https://example.org/view?url=${nested}&utm_source=mail&id=7#part`);
+
+  assert.equal(inspection.scheme, "https");
+  assert.equal(inspection.fragment, "part");
+  assert.deepEqual(
+    inspection.parameters.map(({ category }) => category),
+    ["redirect-related", "tracking", "functional"]
+  );
+  assert.deepEqual(inspection.parameters[0].decodedValues, ["https://example.com/path?q=yes"]);
+  assert.deepEqual(inspection.parameters[2].decodedValues, []);
+});
+
+test("X-Ray decoder stops on malformed encoding instead of throwing", () => {
+  const inspection = inspectUrl("https://example.org/?v=%2525E0");
+
+  assert.deepEqual(inspection.parameters[0].decodedValues, ["%E0"]);
+});
+
+test("aggressive mode is opt-in and reports its broader removals", () => {
+  const input = "https://example.com/?ref=friend&Source=partner&id=42";
+  assert.equal(cleanUrl(input).url, input);
+  assert.deepEqual(cleanUrl(input).aggressiveRemovedParameters, []);
+
+  const aggressive = cleanUrl(input, { aggressive: true });
+  assert.equal(aggressive.url, "https://example.com/?id=42");
+  assert.deepEqual(aggressive.removedParameters, ["ref", "Source"]);
+  assert.deepEqual(aggressive.aggressiveRemovedParameters, ["ref", "Source"]);
+});
+
+test("aggressive mode still keeps kept parameters byte-for-byte", () => {
+  const result = cleanUrl("https://example.com/?q=a%20b+c&src=feed&utm_source=x", { aggressive: true });
+
+  assert.equal(result.url, "https://example.com/?q=a%20b+c");
+  assert.deepEqual(result.aggressiveRemovedParameters, ["src"]);
+});
+
+test("removes only identical duplicate parameter pairs when opted in", () => {
+  const result = cleanUrl("https://example.com/?tag=a&tag=a&tag=b&item=1&item=2&Tag=a", { removeDuplicateParameters: true });
+
+  assert.equal(result.url, "https://example.com/?tag=a&tag=b&item=1&item=2&Tag=a");
+  assert.deepEqual(result.duplicateParameters, ["tag"]);
+  assert.deepEqual(result.removedDuplicateIndices, [1]);
+  assert.equal(result.changed, true);
+});
+
+test("reports duplicate removal indices for each dropped identical occurrence", () => {
+  const result = cleanUrl("https://example.com/?tag=a&tag=a&k=1&k=1&k=1", { removeDuplicateParameters: true });
+
+  assert.equal(result.url, "https://example.com/?tag=a&k=1");
+  assert.deepEqual(result.removedDuplicateIndices, [1, 3, 4]);
+  assert.deepEqual(result.duplicateParameters, ["tag", "k", "k"]);
+});
+
+test("duplicate removal indices skip differing values and leave tracker indices empty", () => {
+  const result = cleanUrl("https://example.com/?tag=a&tag=b&tag=a&utm_source=x", { removeDuplicateParameters: true });
+
+  assert.equal(result.url, "https://example.com/?tag=a&tag=b");
+  assert.deepEqual(result.removedDuplicateIndices, [2]);
+  assert.deepEqual(result.duplicateParameters, ["tag"]);
+});
+
+test("duplicate cleanup treats differently encoded equal values as identical", () => {
+  const result = cleanUrl("https://example.com/?q=a%20b&q=a+b", { removeDuplicateParameters: true });
+
+  assert.equal(result.url, "https://example.com/?q=a%20b");
+});
+
+test("duplicate cleanup is opt-in so signed URLs remain untouched by default", () => {
+  const input = "https://example.com/?x=1&x=1&signature=abc";
+
+  assert.equal(cleanUrl(input).url, input);
+  assert.deepEqual(cleanUrl(input).duplicateParameters, []);
+  assert.equal(cleanUrl(input, { removeDuplicateParameters: true }).url, "https://example.com/?x=1&signature=abc");
+});
+
+test("batch cleaning passes cleaning options to every line", () => {
+  const results = cleanBatch("https://a.example/?ref=x&id=1\nhttps://b.example/?k=1&k=1", {
+    aggressive: true,
+    removeDuplicateParameters: true
+  });
+
+  assert.deepEqual(results.map((entry) => entry.result.url), ["https://a.example/?id=1", "https://b.example/?k=1"]);
+});
+
+test("tracking fingerprint has a transparent count and severity", () => {
+  const score = trackingFingerprint("https://example.com/?utm_source=a&fbclid=b&ref=partner");
+
+  assert.equal(score.count, 3);
+  assert.equal(score.label, "Tracker confetti");
+  assert.deepEqual(score.categories, { tracking: 2, affiliate: 1, wrappers: 0 });
+});
+
+test("tracking fingerprint counts trackers inside a known redirect destination", () => {
+  const destination = "https://example.com/?utm_source=a&fbclid=b";
+  const score = trackingFingerprint(`https://www.google.com/url?q=${encodeURIComponent(destination)}`);
+
+  assert.equal(score.count, 3);
+  assert.deepEqual(score.categories, { tracking: 2, affiliate: 0, wrappers: 1 });
+});
+
+test("weirdness detector reports unusual structure without a threat verdict", () => {
+  const flags = detectWeirdness("https://user:pass@xn--bcher-kva.example:8443/?tag=a&tag=b&next=page%23section");
+
+  assert.ok(flags.some((flag) => flag.includes("repeated")));
+  assert.ok(flags.some((flag) => flag.includes("username or password")));
+  assert.ok(flags.some((flag) => flag.includes("punycode")));
+  assert.ok(flags.some((flag) => flag.includes("8443")));
+  assert.ok(flags.some((flag) => flag.includes("fragment")));
+});
+
+test("weirdness detector does not flag ordinary non-Latin or encoded-punctuation URLs", () => {
+  for (const input of [
+    "https://ar.wikipedia.org/wiki/%D9%85%D8%AA%D8%B5%D9%81%D8%AD",
+    "https://ar.wikipedia.org/wiki/متصفح",
+    "https://ja.wikipedia.org/wiki/東京?lang=ja",
+    "https://example.com/search?q=hello%20world%2C%20again&next=%2Fhome",
+    "https://example.com/?ref=%2575tm"
+  ]) {
+    assert.deepEqual(
+      detectWeirdness(input).filter((flag) => flag.includes("letters or digits")),
+      [],
+      input
+    );
+  }
+});
+
+test("weirdness detector flags percent-encoded plain letters or digits", () => {
+  for (const input of [
+    "https://example.com/%6C%6F%67%69%6E",
+    "https://example.com/account?next=%41dmin",
+    "https://example.com/v%31/page"
+  ]) {
+    assert.ok(detectWeirdness(input).some((flag) => flag.includes("letters or digits")), input);
+  }
+});
+
+test("cleanUrl attaches fingerprint and inspection for the single-result UI", () => {
+  const result = cleanUrl("https://example.com/?utm_source=a&id=1");
+
+  assert.equal(result.fingerprint.count, 1);
+  assert.equal(result.inspection.parameters[0].category, "tracking");
+  assert.deepEqual(result.unwrappedFrom, []);
 });

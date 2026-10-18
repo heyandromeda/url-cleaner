@@ -1,3 +1,30 @@
+const TRAILING_PUNCTUATION = ".,;:!?";
+
+// Drops sentence punctuation after a link found in prose, plus a closing
+// parenthesis only when it has no partner inside the link, so
+// "(see https://en.wikipedia.org/wiki/Urchin_(software))" keeps "(software)".
+function trimLinkEnd(candidate) {
+  let unmatchedClosers = 0;
+  for (const char of candidate) {
+    if (char === ")") unmatchedClosers += 1;
+    if (char === "(") unmatchedClosers -= 1;
+  }
+
+  let end = candidate.length;
+  while (end > 0) {
+    const char = candidate[end - 1];
+    if (TRAILING_PUNCTUATION.includes(char)) {
+      end -= 1;
+    } else if (char === ")" && unmatchedClosers > 0) {
+      end -= 1;
+      unmatchedClosers -= 1;
+    } else {
+      break;
+    }
+  }
+  return candidate.slice(0, end);
+}
+
 export function extractHttpUrl(value) {
   if (value == null) return "";
   const text = String(value).trim();
@@ -12,9 +39,9 @@ export function extractHttpUrl(value) {
     // Fall through and search inside surrounding text.
   }
 
-  const match = text.match(/https?:\/\/[^\s<>"'()]+/i);
+  const match = text.match(/https?:\/\/[^\s<>"']+/i);
   if (!match) return "";
-  const candidate = match[0].replace(/[.,;:]+$/, "");
+  const candidate = trimLinkEnd(match[0]);
   try {
     const url = new URL(candidate);
     if (url.protocol === "http:" || url.protocol === "https:") {
@@ -44,10 +71,11 @@ export function parseHandoffParams(searchParams) {
   return "";
 }
 
-export function bookmarkletCode(origin) {
-  const base = String(origin).replace(/\/+$/, "");
-  const target = `${base}/?url=`;
-  return `javascript:void(location.href=${JSON.stringify(target)}+encodeURIComponent(location.href))`;
+// Links handed over after the "#" (#url=) are never sent to the server, so
+// they win. The ?url= form stays for the share target and legacy handoff links.
+export function parseHandoffUrl(href) {
+  const url = new URL(href);
+  return parseHandoffParams(url.hash.slice(1)) || parseHandoffParams(url.searchParams);
 }
 
 export function canReadClipboard(permissionState) {

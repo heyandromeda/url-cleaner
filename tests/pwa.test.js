@@ -11,6 +11,7 @@ const MIRRORED = [
   "app.js",
   "cleaner.js",
   "explanations.js",
+  "tracker-profiles.js",
   "handoff.js",
   "styles.css",
   "sw.js",
@@ -43,16 +44,25 @@ test("web app manifest uses local UC icons and a GET share_target", () => {
   assert.equal(existsSync(join(root, "apple-touch-icon.png")), true);
 });
 
+test("index.html loads theme-init before styles for CSP-safe theming", () => {
+  const html = readFileSync(join(root, "index.html"), "utf8");
+  assert.match(html, /<script src="\.\/theme-init\.js"><\/script>/);
+  const initAt = html.indexOf("./theme-init.js");
+  const cssAt = html.indexOf("./styles.css");
+  assert.ok(initAt < cssAt);
+});
+
 test("index.html links the manifest and existing icons", () => {
   const html = readFileSync(join(root, "index.html"), "utf8");
   assert.match(html, /<link rel="manifest" href="\.\/manifest\.webmanifest"/);
   assert.match(html, /<link rel="apple-touch-icon" href="\.\/apple-touch-icon\.png"/);
-  assert.match(html, /id="bookmarklet"/);
+  assert.doesNotMatch(html, /id="bookmarklet"/);
   assert.match(html, /id="tracker-of-the-day"/);
   assert.match(html, /id="batch-panel"/);
   const app = readFileSync(join(root, "app.js"), "utf8");
   assert.match(app, /serviceWorker\.register\("\.\/sw\.js"\)/);
   assert.match(app, /canReadClipboard/);
+  assert.match(app, /parseHandoffUrl/);
 });
 
 test("service worker does not cache or fetch URLs", () => {
@@ -65,6 +75,23 @@ test("service worker does not cache or fetch URLs", () => {
 test("hidden tracker-of-the-day is not shown by flex display", () => {
   const css = readFileSync(join(root, "styles.css"), "utf8");
   assert.match(css, /\.totd\[hidden\]\s*\{\s*display:\s*none;/);
+  assert.match(css, /\.totd-details\[hidden\]\s*\{\s*display:\s*none;/);
+  assert.match(css, /\.totd-example-url/);
+});
+
+test("tracker of the day uses an accessible expand and collapse control", () => {
+  const html = readFileSync(join(root, "index.html"), "utf8");
+  const app = readFileSync(join(root, "app.js"), "utf8");
+  assert.match(html, /id="totd-toggle"/);
+  assert.match(html, /aria-controls="totd-details"/);
+  assert.match(html, /aria-expanded="false"/);
+  assert.match(html, />\s*Expand\s*<\/button>/);
+  assert.match(html, /id="totd-details"/);
+  assert.doesNotMatch(html, /id="totd-dismiss"/);
+  assert.match(app, /STORAGE_KEYS\.totdCollapsed|"url-cleaner\.totd-collapsed"/);
+  assert.match(app, /aria-expanded/);
+  assert.match(app, /totd-sources/);
+  assert.doesNotMatch(app, /totd-dismissed/);
 });
 
 test("CSP stays strict and still allows the manifest", () => {

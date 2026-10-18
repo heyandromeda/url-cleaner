@@ -2,25 +2,12 @@
 
 Remove common tracking parameters from URLs without stripping parameters that a page actually needs.
 
-> 🧪 **Want the experimental version? [Open URL Cleaner Nightly](https://andromeda-url-cleaner-nightly.vercel.app).** It is deployed separately from the stable `main` build.
-
 > **Built entirely with [Cursor](https://cursor.com/), [Claude Code](https://www.anthropic.com/claude-code) and [ChatGPT Codex](https://openai.com/codex/).**
 
 [![Open live tool](https://img.shields.io/badge/TRY%20IT-Live%20URL%20Cleaner-2563eb?style=for-the-badge)](https://andromeda-url-cleaner.vercel.app)
-[![Nightly build](https://img.shields.io/badge/TRY%20NIGHTLY-Experimental-f59e0b?style=for-the-badge)](https://andromeda-url-cleaner-nightly.vercel.app)
 [![Browser only](https://img.shields.io/badge/RUNS%20LOCALLY-No%20backend-16a34a?style=flat-square)](https://github.com/heyandromeda/url-cleaner)
 
-**[Open the stable tool](https://andromeda-url-cleaner.vercel.app)** · **[Use the nightly build](https://andromeda-url-cleaner-nightly.vercel.app)** · **[Browse the source](https://github.com/heyandromeda/url-cleaner)** · **[View the tests](https://github.com/heyandromeda/url-cleaner/blob/main/tests/url-cleaner.test.js)**
-
-### Try the nightly lab
-
-The separate **[public nightly build](https://andromeda-url-cleaner-nightly.vercel.app)** currently includes six experiments that are not part of stable `main`:
-- DEV-2 — URL X-Ray
-- DEV-3 — Tracking fingerprint
-- DEV-7 — Encoded value decoder
-- DEV-9 — Opt-in aggressive cleaning
-- DEV-11 — URL weirdness detector
-- DEV-12 — Opt-in identical-duplicate cleanup
+**[Open the live tool](https://andromeda-url-cleaner.vercel.app)** · **[Browse the source](https://github.com/heyandromeda/url-cleaner)** · **[View the tests](https://github.com/heyandromeda/url-cleaner/blob/main/tests/url-cleaner.test.js)**
 
 ## Why this exists
 
@@ -38,27 +25,36 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Removes tracker families such as `utm_*`, `hsa_*`, `mtm_*`, `piwik_*`, and `_ga_*`
 - Removes explicit Matomo parameters such as `pk_campaign` and `pk_kwd` while preserving unrelated names such as `pk_live`
 - Preserves unknown and functional parameters by default
-- Applies site-specific rules conservatively, including removing `si` only from YouTube links
+- Applies site-specific rules conservatively, including removing `si` only from YouTube and Spotify links
 - Keeps YouTube parameters such as `v`, `t`, and `list`
-- Unwraps known Google, Facebook, Outlook Safe Links, YouTube, and `href.li` redirect wrappers locally, then cleans the destination
-- Limits nested wrapper unwrapping to three levels and falls back safely when a destination is invalid
+- Unwraps known Google (including country domains such as `google.co.uk`), Facebook, Instagram `l.instagram.com`, Outlook Safe Links, YouTube, LinkedIn `/safety/go` and `/redir/redirect`, and `href.li` redirect wrappers locally, then cleans the destination
+- Limits nested wrapper unwrapping to five levels, says so when a link is still wrapped after that, and falls back safely when a destination is invalid
 - Accepts only HTTP and HTTPS URLs
 - Preserves URL paths, hashes, search queries, page numbers, product IDs, and language settings
+- Writes kept parameters back exactly as they were written, so values are never re-encoded or reordered
 - Paste directly from the clipboard with the **Paste** button
 - Optionally cleans automatically whenever you paste
 - If clipboard read is already permitted, offers to clean whatever is on the clipboard when the page opens
 - Cleans a batch of URLs pasted one per line, with per-line success or failure and one-click copy of cleaned results
 - Explains recognized removed tracking parameters from the results view; tap a name to expand a short local note, and unknown names are not described
-- Shows a dismissible tracker-of-the-day fact chosen locally from the explanation list
-- Includes a bookmarklet that only opens URL Cleaner with the current page URL
+- Shows a collapsible Tracker of the Day card with a richer local explanation, example URL, privacy notes, fun facts, and cited sources; expand/collapse preference is remembered in localStorage
 - Installable as a PWA with a share target so a phone can hand a link to the local cleaner
 - Optionally copies every successfully cleaned URL automatically
-- Remembers the two settings locally without storing URLs or clipboard contents
+- Remembers your settings locally without storing URLs or clipboard contents
 - Shows a mobile-friendly before/after view and highlights exactly which parameters were removed
+- Shows a local tracking fingerprint: one count of tracking parameters, affiliate/referral parameters, and redirect wrappers, labeled from **Clean slate** to **Tracking parade**
+- Lists every unwrapped redirect layer with its wrapper host, the parameter that held the destination, and where it pointed
+- Includes a URL X-Ray view that breaks the link into scheme, host, port, path, fragment, and parameters tagged as tracking, affiliate/referral, redirect-related, functional, or unknown
+- **Inspect URL** opens the X-Ray directly and never auto-copies
+- Decodes double-encoded parameter values in the X-Ray so a buried destination such as `https%253A%252F%252F…` is shown readable, without opening or fetching it
+- Optional **Aggressive cleaning** also removes broader referral and campaign names (`ref`, `source`, `src`, `campaign`, `partner`, `affiliate`, `clickid`, and similar), marks each one as `(aggressive)`, and is off by default because some sites need those names
+- Optional **Remove identical duplicates** drops repeated parameters only when name and value are both identical (`tag=a&tag=a`), keeps repeats with different values (`item=1&item=2`), and is off by default so signed links stay untouched
+- Flags unusual URL structure (without claiming malice) via the weirdness detector: very long queries, repeated parameter names, embedded usernames or passwords, punycode hosts, non-standard ports, double percent-encoding, percent-encoded plain letters or digits, nested `#` in parameter values, and stacked redirect wrappers
 - Opens the native system Share Sheet for a cleaned URL on supported browsers
 - Warns when a shortened link hides a destination that cannot be inspected locally
 - Copies the cleaned URL with one click
-- Supports pressing Enter to clean
+- Picks the link out of shared text such as `check this out: https://…!`, dropping trailing punctuation and unmatched closing parentheses while keeping ones that belong to the URL, like `Urchin_(software)`
+- Loads a `#url=` handoff into a tab that is already open, without a page reload
 - Handles invalid URLs clearly
 - Runs entirely in the browser with no backend, accounts, analytics, database, or external API
 
@@ -109,7 +105,7 @@ https://example.com/page?id=9
 
 URL Cleaner extracts the destination from the Google wrapper without opening it or making a network request, removes `utm_source`, keeps `id=9`, and displays a **Redirect unwrapped** notice naming the wrapper host.
 
-The same local behavior supports Facebook `/l.php`, Outlook Safe Links, YouTube `/redirect`, and `href.li`. Nested known wrappers are handled up to three levels deep.
+The same local behavior supports Google country domains and search-result links that use `url=`, Facebook `/l.php`, Instagram `l.instagram.com`, Outlook Safe Links, YouTube `/redirect`, LinkedIn `/safety/go` and `/redir/redirect`, and `href.li`. Nested known wrappers are handled up to five levels deep, including destinations that were percent-encoded twice. Cleaning, URL X-Ray, and the tracking fingerprint share one unwrap engine, so they always report the same layers.
 
 ### Apply tracker rules only where they belong
 
@@ -123,7 +119,7 @@ https://intranet.example/report?si=42&year=2024
 → https://intranet.example/report?si=42&year=2024
 ```
 
-The `si` parameter is removed from YouTube sharing links but preserved on unrelated sites. Matomo names such as `pk_campaign` and `pk_kwd` are removed, while unrelated names such as `pk_live` remain.
+The `si` parameter is removed from YouTube and Spotify sharing links but preserved on unrelated sites. Matomo names such as `pk_campaign` and `pk_kwd` are removed, while unrelated names such as `pk_live` remain.
 
 ### Reject unsupported URL schemes
 
@@ -137,7 +133,7 @@ Known shortened links receive an informational notice. URL Cleaner cleans the vi
 
 Open **[andromeda-url-cleaner.vercel.app](https://andromeda-url-cleaner.vercel.app)**, paste a URL, and select **Clean URL**.
 
-The app does not upload the URL anywhere. Copying and pasting use your browser's clipboard permission.
+The app does not upload the URL anywhere. Copying and pasting use your browser's clipboard permission. See [Privacy](#privacy) for how handoffs from the Shortcut and share target work.
 
 ## Share Sheet shortcut for iPhone, iPad, and Mac
 
@@ -156,33 +152,19 @@ You can get the same practical flow with an Apple Shortcut:
 5. Add **URL Encode** or **Encode URL**, using the URL from the previous action.
 6. Add a **Text** action containing this URL, replacing the bracketed part with the encoded value:
    ```
-   https://andromeda-url-cleaner.vercel.app?url=[Encoded URL]
+   https://andromeda-url-cleaner.vercel.app/#url=[Encoded URL]
    ```
 7. Add **Open URLs** using that Text action.
 8. Save it as **Clean URL with URL Cleaner**.
 
 Now share a URL from Safari or another app, choose the shortcut, and URL Cleaner will open with the URL loaded and cleaned automatically. Tap **Share** to open the system Share Sheet, or tap **Copy**.
 
-### Publish a public install link
-
-Apple creates public Shortcut links from an iPhone, iPad, or Mac signed in to iCloud; the link cannot be generated by this website or repository.
-
-1. Open **Clean URL with URL Cleaner** in the Shortcuts app.
-2. Select **Share**, then **Copy iCloud Link**.
-3. Replace `PUBLIC_ICLOUD_SHORTCUT_LINK` below with the copied `https://www.icloud.com/shortcuts/...` URL:
-
-   ```markdown
-   [![Add URL Cleaner Shortcut](https://img.shields.io/badge/ADD-URL%20Cleaner%20Shortcut-7c3aed?style=for-the-badge)](PUBLIC_ICLOUD_SHORTCUT_LINK)
-   ```
-
-Keeping the public link in this README makes the Shortcut installable while leaving Apple as the trusted source for the signed Shortcut file.
-
 ### Share Sheet limitations
 
-- The Shortcut handoff is local to the browser after the page opens; no URL is sent to a backend.
+- The Shortcut passes the link after the `#`, which browsers never send to a server, so the link stays on your device. Older Shortcuts that use `?url=` still work, but that form sends the link to the web host in the page request; switch them to `/#url=`.
 - The **Share** button uses the browser's Web Share support. It appears only where that API is available; **Copy** remains the fallback.
 - iOS and macOS may block silent clipboard writes when a page opens without a direct user gesture. The app therefore always displays the cleaned URL, and the **Share** and **Copy** buttons remain reliable final steps.
-- The app removes the `url` handoff value from the address bar after loading it.
+- The app removes the handoff value from the address bar after loading it.
 
 ## Run locally
 
@@ -217,13 +199,18 @@ The test suite covers:
 - Invalid and non-HTTP(S) input
 - Case-insensitive tracker names
 - Known redirect wrappers, including nested wrappers
-- Site-scoped parameters such as YouTube `si`
+- Site-scoped parameters such as YouTube and Spotify `si`
 - Explicit Matomo parameters while preserving unrelated `pk_*` names
 - Known opaque URL shorteners that are warned about without being followed
 - Batch cleaning that continues after invalid lines
-- Local tracker explanations and deterministic tracker-of-the-day selection
-- Share-target / `?url=` handoff parsing and bookmarklet redirect-only behavior
+- Local tracker explanations, rich tracker-of-the-day profiles, and deterministic daily selection
+- Tracking fingerprint scoring, URL X-Ray categorization, encoded value decoding, and weirdness flags
+- Opt-in aggressive cleaning and identical-duplicate cleanup, including batch mode
+- Share-target, `#url=` and `?url=` handoff parsing
 - Manifest, service worker, and CSP constraints for the installable app
+- Every root web file matching its `dist/` copy byte-for-byte, since Vercel serves `dist/`
+
+GitHub Actions runs `npm test` on every push to `main` and on pull requests.
 
 ## Project structure
 
@@ -231,13 +218,16 @@ The test suite covers:
 | --- | --- |
 | [index.html](./index.html) | Runnable app page |
 | [styles.css](./styles.css) | Minimal styling |
-| [cleaner.js](./cleaner.js) | URL-cleaning logic, tracker lists, and batch processing |
+| [cleaner.js](./cleaner.js) | URL-cleaning logic, tracker lists, inspection helpers, and batch processing |
 | [explanations.js](./explanations.js) | Local tracker explanations and tracker-of-the-day selection |
-| [handoff.js](./handoff.js) | Share-target, bookmarklet, and clipboard-permission helpers |
+| [tracker-profiles.js](./tracker-profiles.js) | Sourced educational profiles for Tracker of the Day |
+| [handoff.js](./handoff.js) | Share-target, hash handoff, and clipboard-permission helpers |
 | [app.js](./app.js) | Form, clipboard, settings, and copy interactions |
 | [manifest.webmanifest](./manifest.webmanifest) | Web app manifest and share target |
 | [sw.js](./sw.js) | Minimal service worker for installability (no caching) |
-| [tests/url-cleaner.test.js](./tests/url-cleaner.test.js) | Automated tests |
+| [tests/](./tests) | Automated tests (cleaning, batch, explanations, handoff, PWA, favicon, production URL, `dist/` sync) |
+| [vercel.json](./vercel.json) | Vercel config: serves `dist/` and sets the security headers |
+| [.github/workflows/test.yml](./.github/workflows/test.yml) | Runs `npm test` in CI |
 | [LICENSE](./LICENSE) | MIT License |
 | [dist/](./dist) | Static-site copy used by the hosted deployment |
 
@@ -250,7 +240,7 @@ The tracker lists live in [cleaner.js](./cleaner.js):
 
 For example, a family prefix of `example_` would remove `example_source` and `example_campaign`.
 
-Avoid adding broad names such as `id`, `ref`, `source`, or `token`: those can be required for a page to work. Add only parameters confirmed to be tracking-related.
+Avoid adding broad names such as `id`, `ref`, `source`, or `token`: those can be required for a page to work. Add only parameters confirmed to be tracking-related. Broader names that are usually but not always tracking belong in `AGGRESSIVE_PARAMETERS`, which only applies when aggressive cleaning is switched on.
 
 ## Important limitation
 
@@ -258,7 +248,15 @@ No tracker list can identify every parameter used by every website. This project
 
 ## Privacy
 
-URL cleaning happens locally in your browser. URLs and clipboard contents are not uploaded or stored. Only the two setting preferences are saved locally: whether to clean on paste and whether to auto-copy. The app has no backend, accounts, analytics, database, or telemetry.
+URL cleaning happens locally in your browser. URLs and clipboard contents are not uploaded or stored. Only six preferences are saved locally: whether to clean on paste, whether to auto-copy, whether aggressive cleaning and duplicate cleanup are on, whether the Tracker of the Day card is collapsed, and whether light or dark theme is selected. The app has no backend, accounts, analytics, database, or telemetry.
+
+How a link reaches the app matters:
+
+- **Paste, Paste button, clipboard offer:** the link never leaves the page.
+- **Shortcut (`/#url=`):** the link is passed after the `#`. Browsers do not send that part to the server, so the host only sees a plain request for the page.
+- **Android share target and old `?url=` links:** the Web Share Target API can only pass the link as a query string, so the shared link is included in the page request to the static host (Vercel) before the app cleans it and removes it from the address bar. Use the Shortcut or paste if you want to avoid that.
+
+The hosted site enforces this with security headers set in [vercel.json](./vercel.json). The Content Security Policy uses `connect-src 'none'`, so the page cannot make network requests even if it tried, and only loads its own scripts and styles. It also sends `Referrer-Policy: no-referrer`, refuses to be framed, and disables camera, microphone, geolocation, payment, and USB access. The service worker exists only for installability and caches nothing.
 
 ## License
 

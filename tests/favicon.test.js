@@ -154,4 +154,5 @@ test("CSP allows same-origin favicon files", () => {
   const csp = vercel.headers[0].headers.find((header) => header.key === "Content-Security-Policy").value;
   assert.match(csp, /img-src[^;]*'self'/);
   assert.equal(vercel.outputDirectory, "dist");
+  assert.equal(vercel.buildCommand, "npm run build");
 });

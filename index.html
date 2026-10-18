@@ -9,7 +9,8 @@
     <meta property="og:title" content="URL Cleaner" />
     <meta property="og:description" content="Remove common tracking parameters from URLs locally in your browser." />
     <meta property="og:type" content="website" />
-    <meta name="theme-color" content="#063a1a" />
+    <meta name="theme-color" content="#ffffff" />
+    <script src="./theme-init.js"></script>
     <link rel="icon" href="./favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="icon" type="image/png" href="./favicon.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180" />
@@ -20,17 +21,18 @@
   <body>
     <main class="app-shell">
       <section class="cleaner-card" aria-labelledby="page-title">
-        <div class="eyebrow">LOCAL UTILITY</div>
+        <div class="page-toolbar">
+          <div class="eyebrow">LOCAL UTILITY</div>
+          <button
+            id="theme-toggle"
+            type="button"
+            class="theme-toggle"
+            aria-pressed="false"
+            aria-label="Dark mode"
+          ></button>
+        </div>
         <h1 id="page-title">URL Cleaner</h1>
         <p class="intro">Remove common tracking parameters while keeping the query values your link needs.</p>
-
-        <aside id="tracker-of-the-day" class="totd" hidden>
-          <div>
-            <p class="totd-label">Tracker of the day</p>
-            <p id="totd-body"></p>
-          </div>
-          <button id="totd-dismiss" type="button" class="secondary-button">Dismiss</button>
-        </aside>
 
         <aside id="clipboard-offer" class="notice" hidden>
           <strong>Clipboard</strong>
@@ -41,19 +43,23 @@
           </div>
         </aside>
 
-        <form id="clean-form" class="clean-form">
+        <form id="clean-form" class="clean-form" novalidate>
           <label for="url-input">URLs to clean</label>
           <p class="field-hint" id="url-input-hint">One URL per line. Paste a list to clean a batch.</p>
-          <textarea id="url-input" name="url" rows="3" inputmode="url" autocomplete="off" spellcheck="false" aria-describedby="url-input-hint" placeholder="https://example.com/page?utm_source=newsletter" required></textarea>
+          <textarea id="url-input" name="url" rows="3" inputmode="url" autocomplete="off" spellcheck="false" aria-describedby="url-input-hint" placeholder="https://site.com/?utm_source=x" required></textarea>
           <div class="input-row">
             <button id="paste-button" type="button" class="secondary-button">Paste</button>
             <button type="submit" class="primary-button">Clean URL</button>
+            <button id="inspect-button" type="button" class="secondary-button">Inspect URL</button>
           </div>
 
           <fieldset class="settings">
             <legend>Settings</legend>
             <label class="setting"><input id="clean-on-paste" type="checkbox" checked /> Clean on paste</label>
             <label class="setting"><input id="auto-copy" type="checkbox" /> Auto-copy cleaned URL</label>
+            <label class="setting"><input id="aggressive-mode" type="checkbox" aria-describedby="cleaning-options-hint" /> Aggressive cleaning</label>
+            <label class="setting"><input id="remove-duplicates" type="checkbox" aria-describedby="cleaning-options-hint" /> Remove identical duplicates</label>
+            <p class="field-hint settings-hint" id="cleaning-options-hint">Aggressive cleaning also removes broader names such as <code>ref</code> and <code>source</code>, which some sites need. Leave duplicate cleanup off for signed links.</p>
           </fieldset>
         </form>
 
@@ -84,11 +90,44 @@
             <p>Its destination cannot be inspected locally without following the redirect. The visible URL was cleaned, but the hidden destination was not opened or checked.</p>
           </aside>
 
+          <aside id="duplicate-notice" class="notice" hidden>
+            <strong>Duplicates removed</strong>
+            <p></p>
+          </aside>
+
+          <section class="fingerprint-summary" aria-labelledby="fingerprint-title">
+            <div>
+              <h2 id="fingerprint-title">Tracking fingerprint</h2>
+              <p id="fingerprint-detail"></p>
+            </div>
+            <div id="fingerprint-count" class="fingerprint-score" role="group" aria-labelledby="fingerprint-count-value fingerprint-removed-caption">
+              <span id="fingerprint-count-value" class="fingerprint-count-value"></span>
+              <span id="fingerprint-removed-caption" class="fingerprint-removed-caption">removed</span>
+            </div>
+          </section>
+
+          <section id="redirect-layers-panel" class="redirect-layers-panel" hidden>
+            <h2>Redirect layers</h2>
+            <ol id="redirect-layers-list"></ol>
+          </section>
+
           <div class="removed-heading">
             <h2>Removed parameters</h2>
           </div>
           <p class="field-hint" id="removed-hint" hidden>Tap a parameter to see what commonly uses it.</p>
           <ul id="removed-list" class="removed-list" aria-describedby="removed-hint"></ul>
+
+          <details id="xray-panel" class="xray-panel">
+            <summary>URL X-Ray</summary>
+            <dl id="url-parts" class="url-parts"></dl>
+            <h3>Parameters</h3>
+            <div id="parameter-breakdown" class="parameter-breakdown"></div>
+            <section id="weirdness-panel" class="weirdness-panel">
+              <h3>Unusual characteristics</h3>
+              <p>These signals are not proof that a URL is malicious.</p>
+              <ul id="weirdness-list"></ul>
+            </section>
+          </details>
         </section>
 
         <section id="batch-panel" class="result-panel" aria-labelledby="batch-title" hidden>
@@ -99,13 +138,27 @@
           <ol id="batch-list" class="batch-list"></ol>
         </section>
 
-        <section class="extras" aria-labelledby="bookmarklet-title">
-          <h2 id="bookmarklet-title">Bookmarklet</h2>
-          <p class="field-hint">Drag this onto your bookmarks bar. It opens URL Cleaner with the current page’s URL. It does not inject a script into the other site.</p>
-          <a id="bookmarklet" class="bookmarklet-link" href="javascript:void(location.href='https://andromeda-url-cleaner.vercel.app/?url='+encodeURIComponent(location.href))">Clean with URL Cleaner</a>
-        </section>
+        <aside id="tracker-of-the-day" class="totd is-collapsed" hidden>
+          <div class="totd-header">
+            <div class="totd-heading">
+              <p class="totd-label" id="totd-label">Tracker of the day</p>
+              <p id="totd-name" class="totd-name"></p>
+            </div>
+            <button
+              id="totd-toggle"
+              type="button"
+              class="secondary-button totd-toggle"
+              aria-expanded="false"
+              aria-controls="totd-details"
+            >
+              Expand
+            </button>
+          </div>
+          <div id="totd-details" class="totd-details" hidden></div>
+        </aside>
+
       </section>
-      <p class="privacy-note">Runs entirely in your browser. Nothing is uploaded or stored. Installable as a local web app; sharing a link to this app is cleaned here, not sent to a server.</p>
+      <p class="privacy-note">Runs entirely in your browser. URLs are never uploaded or stored; only your settings are saved on this device.</p>
     </main>
     <script type="module" src="./app.js"></script>
   </body>
