@@ -48,6 +48,7 @@ test("http: rejects disallowed Origin before auth (DEV-16)", async () => {
     const evilBody = await evil.json();
     assert.equal(evilBody.error?.code, -32003);
     assert.match(evilBody.error?.message ?? "", /Origin/i);
+    assert.equal(evilBody.result, undefined);
 
     const evilNoAuth = await postMcp(
       base,
@@ -55,6 +56,7 @@ test("http: rejects disallowed Origin before auth (DEV-16)", async () => {
       { origin: "http://evil.example" }
     );
     assert.equal(evilNoAuth.status, 403);
+    assert.notEqual(evilNoAuth.status, 401);
 
     const allowed = await postMcp(
       base,
@@ -67,6 +69,8 @@ test("http: rejects disallowed Origin before auth (DEV-16)", async () => {
 
     const noOrigin = await postMcp(base, { jsonrpc: "2.0", id: 4, method: "tools/list" }, { token });
     assert.equal(noOrigin.status, 200);
+    const noOriginBody = await noOrigin.json();
+    assert.ok(Array.isArray(noOriginBody.result?.tools));
   });
 });
 
