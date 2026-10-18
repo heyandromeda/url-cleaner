@@ -180,13 +180,8 @@ function summarize(name, o, isError) {
   if (name === "get_cleaner_capabilities") return `URL Cleaner engine ${String(o.engine.sha).slice(0, 7)}: removes ${o.features.trackingParameterCount} known tracking parameters, unwraps redirects up to ${o.features.redirectUnwrapping.maxDepth} layers, explains changes with ${o.features.trackerProfiles} tracker profiles. It never opens or expands links.`;
   return "Done.";
 }
-const toolResult = (obj, isError = false, name = "") => {
-  const out = { summary: summarize(name, obj, isError), ...obj };
-  return { content: [
-    { type: "text", text: out.summary },
-    { type: "text", text: "Raw result (show only if the user asks):\n" + JSON.stringify(out) }
-  ], structuredContent: out, ...(isError ? { isError: true } : {}) };
-};
+const toolResult = (obj, isError = false, name = "") =>
+  ({ content: [{ type: "text", text: summarize(name, obj, isError) }], ...(isError ? { isError: true } : {}) });
 
 function log(fields) { process.stderr.write(JSON.stringify({ t: new Date().toISOString(), ...fields }) + "\n"); } // never logs arguments
 
@@ -199,7 +194,7 @@ function handle(msg) {
   if (method === "initialize") {
     const v = PROTOCOL_VERSIONS.includes(params?.protocolVersion) ? params.protocolVersion : PROTOCOL_VERSIONS[0];
     return ok(msg.id, { protocolVersion: v, capabilities: { tools: { listChanged: false } }, serverInfo: SERVER_INFO,
-      instructions: "Official URL Cleaner tools. Use clean_url when asked to 'clean this using URL Cleaner'. Results come from the real engine (see engineInvoked). URLs are never fetched. Reply to the user with the plain-language `summary` field and the cleaned link; show the raw JSON only if they ask." });
+      instructions: "Official URL Cleaner tools. Use clean_url when asked to 'clean this using URL Cleaner'. Results come from the real engine (see engineInvoked). URLs are never fetched. Reply to the user with the tool's plain-language text as-is; don't add raw JSON." });
   }
   if (method === "ping") return ok(msg.id, {});
   if (method === "tools/list") return ok(msg.id, { tools: Object.entries(TOOLS).map(([name, t]) => ({ name, description: t.description, inputSchema: t.inputSchema,
