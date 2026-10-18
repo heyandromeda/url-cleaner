@@ -6,6 +6,16 @@ Production ships **only** from the `main` branch through [Vercel](https://vercel
 
 Preview deployments for pull requests are created automatically by the same integration.
 
+## Build
+
+Vercel and CI generate `dist/` with:
+
+```bash
+npm run build
+```
+
+The `dist/` directory is not committed; edit the root web assets and run the build to refresh it locally.
+
 ## Tests
 
 Before opening a pull request, run:
@@ -15,4 +25,4 @@ npm test
 npm run test:playwright
 ```
 
-CI runs the same commands on every push to `main` and on every pull request.
+CI runs `npm run build`, then the same tests, on every push to `main` and on every pull request.

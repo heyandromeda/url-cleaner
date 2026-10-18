@@ -1,38 +1,14 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
-import { createServer } from "node:http";
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { playwrightArtifactsDir } from "./playwright-artifacts.mjs";
+import { startDistServer } from "./playwright-static-server.mjs";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const artifactsDir = playwrightArtifactsDir();
 const widths = [320, 390, 1280];
 
-function startServer() {
-  const mime = {
-    ".html": "text/html",
-    ".css": "text/css",
-    ".js": "application/javascript",
-    ".webmanifest": "application/manifest+json",
-    ".png": "image/png",
-    ".ico": "image/x-icon"
-  };
-
-  return new Promise((resolve) => {
-    const server = createServer((request, response) => {
-      const path = request.url === "/" ? "/index.html" : request.url.split("?")[0];
-      const filePath = join(root, decodeURIComponent(path.slice(1)));
-      const ext = filePath.slice(filePath.lastIndexOf("."));
-      response.writeHead(200, { "Content-Type": mime[ext] ?? "application/octet-stream" });
-      response.end(readFileSync(filePath));
-    });
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
-
-const server = await startServer();
+const server = await startDistServer();
 const port = server.address().port;
 const baseUrl = `http://127.0.0.1:${port}/`;
 const browser = await chromium.launch();
