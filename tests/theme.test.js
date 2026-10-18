@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { STORAGE_KEYS } from "../storage.js";
 import {
   THEME_STORAGE_KEY,
   nextThemeAfterToggle,
@@ -93,6 +94,7 @@ test("dark palette tokens are defined on html[data-theme=\"dark\"]", () => {
 });
 
 test("theme storage key matches app setting namespace", () => {
+  assert.equal(THEME_STORAGE_KEY, STORAGE_KEYS.theme);
   assert.equal(THEME_STORAGE_KEY, "url-cleaner.theme");
 });
 

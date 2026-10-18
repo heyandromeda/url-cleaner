@@ -88,7 +88,7 @@ test("tracker of the day uses an accessible expand and collapse control", () => 
   assert.match(html, />\s*Expand\s*<\/button>/);
   assert.match(html, /id="totd-details"/);
   assert.doesNotMatch(html, /id="totd-dismiss"/);
-  assert.match(app, /url-cleaner\.totd-collapsed/);
+  assert.match(app, /STORAGE_KEYS\.totdCollapsed|"url-cleaner\.totd-collapsed"/);
   assert.match(app, /aria-expanded/);
   assert.match(app, /totd-sources/);
   assert.doesNotMatch(app, /totd-dismissed/);

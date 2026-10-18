@@ -59,5 +59,5 @@ test("tracker of the day defaults collapsed in markup and app", () => {
   const html = readFileSync(join(root, "index.html"), "utf8");
   const app = readFileSync(join(root, "app.js"), "utf8");
   assert.match(html, /class="totd is-collapsed"/);
-  assert.match(app, /readSetting\(TOTD_COLLAPSED_KEY, true\)/);
+  assert.match(app, /readSetting\(STORAGE_KEYS\.totdCollapsed, true\)/);
 });
