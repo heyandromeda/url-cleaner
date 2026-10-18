@@ -68,20 +68,21 @@ function postChunks(port, token, chunks) {
 
 test("http: UTF-8 body split across chunks decodes correctly (DEV-17)", async () => {
   await withHttpServer(async ({ token, port }) => {
-    const url = "https://example.com/?note=café";
-    const raw = Buffer.from(
-      `{"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"clean_url","arguments":{"url":"${url}"}}}`,
-      "utf8"
-    );
-    const eBytes = Buffer.from("é", "utf8");
-    const idx = raw.indexOf(eBytes);
-    assert.ok(idx >= 0, "expected literal UTF-8 in JSON body");
-    const res = await postChunks(port, token, [raw.subarray(0, idx + 1), raw.subarray(idx + 1)]);
+    const url = "https://example.com/?q=café";
+    const raw = Buffer.concat([
+      Buffer.from('{"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"clean_url","arguments":{"url":"https://example.com/?q=caf', "utf8"),
+      Buffer.from([0xc3, 0xa9]),
+      Buffer.from('"}}}', "utf8")
+    ]);
+    const splitAt = raw.indexOf(0xc3);
+    assert.ok(splitAt > 0);
+    const res = await postChunks(port, token, [raw.subarray(0, splitAt + 1), raw.subarray(splitAt + 1)]);
     assert.equal(res.status, 200, res.body);
     const json = JSON.parse(res.body);
-    assert.ok(json.result?.structuredContent, () => res.body);
-    assert.equal(json.result.structuredContent.original, url);
-    assert.ok(json.result.structuredContent.cleaned.startsWith("https://example.com/?note=caf"));
+    assert.equal(json.error, undefined, res.body);
+    const data = toolPayload(json.result);
+    assert.equal(data.original, url);
+    assert.ok(data.cleaned.startsWith("https://example.com/?q=caf"));
   });
 });
 
@@ -111,8 +112,8 @@ test("http: clean_urls_batch reports empty item without failing others (DEV-18)"
     });
     assert.equal(res.status, 200);
     const json = await res.json();
-    assert.ok(json.result?.structuredContent, () => JSON.stringify(json));
-    const batch = json.result.structuredContent;
+    assert.equal(json.error, undefined, JSON.stringify(json));
+    const batch = toolPayload(json.result);
     assert.equal(batch.okCount, 2);
     assert.equal(batch.count, 3);
     assert.equal(batch.results.filter((r) => r.ok).length, 2);
