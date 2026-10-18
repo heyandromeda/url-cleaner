@@ -1,4 +1,4 @@
-// node --test tests/  — exercises the MCP server over stdio and HTTP against the repo engine. No network beyond 127.0.0.1.
+// node --test tests/*.mjs — exercises the MCP server over stdio and HTTP against the repo engine. No network beyond 127.0.0.1.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, execSync } from "node:child_process";
@@ -39,10 +39,10 @@ test("stdio: handshake, list, clean_url matches engine.cleanUrl exactly", async 
   assert.deepEqual(list.result.tools.map((t) => t.name).sort(), ["clean_url", "clean_urls_batch", "explain_changes", "get_cleaner_capabilities", "inspect_url"]);
   const r = (await s.rpc(3, "tools/call", { name: "clean_url", arguments: { url: TRACKED } })).result;
   const direct = engine.cleanUrl(TRACKED);
-  assert.equal(r.structuredContent.cleaned, direct.url);
-  assert.deepEqual(r.structuredContent.removedParams, direct.removedParameters);
-  assert.equal(r.structuredContent.engineInvoked.sha, SHA);
-  assert.deepEqual(JSON.parse(r.content[0].text), r.structuredContent);
+  assert.equal(r.content.length, 1);
+  assert.equal(r.structuredContent, undefined);
+  assert.ok(r.content[0].text.startsWith(`Cleaned: ${direct.url}`));
+  for (const n of direct.removedParameters) assert.ok(r.content[0].text.includes(`${n} (`));
   const bad = (await s.rpc(4, "tools/call", { name: "clean_url", arguments: { url: "ht!tp:/bad" } })).result;
   assert.equal(bad.isError, true);
   const missing = (await s.rpc(5, "tools/call", { name: "clean_url", arguments: {} })).result;
@@ -61,11 +61,11 @@ test("http: 401 without token, works with token, batch limit enforced", async ()
     assert.equal((await post({ jsonrpc: "2.0", id: 1, method: "ping" }, "wrong")).status, 401);
     assert.equal((await post({ jsonrpc: "2.0", method: "notifications/initialized" })).status, 202);
     const batch = await (await post({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "clean_urls_batch", arguments: { urls: [TRACKED, "ht!tp:/bad", "https://youtu.be/a?si=1"] } } })).json();
-    assert.equal(batch.result.structuredContent.okCount, 2);
+    assert.match(batch.result.content[0].text, /^Cleaned 2 of /);
     const tooMany = await (await post({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "clean_urls_batch", arguments: { urls: Array(101).fill(TRACKED) } } })).json();
     assert.equal(tooMany.result.isError, true);
     const caps = await (await post({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "get_cleaner_capabilities", arguments: {} } })).json();
-    assert.equal(caps.result.structuredContent.engine.sha, SHA);
+    assert.ok(caps.result.content[0].text.includes(SHA.slice(0, 7)));
   } finally { p.kill(); }
 });
 
