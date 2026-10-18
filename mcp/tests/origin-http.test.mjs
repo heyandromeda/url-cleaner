@@ -2,18 +2,19 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
+import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TRACKED = "https://example.com/?utm_source=x";
 
-async function withHttpServer(run) {
+async function withHttpServer(run, envExtra = {}) {
   const token = randomBytes(32).toString("hex");
   const port = 19000 + Math.floor(Math.random() * 1000);
   const child = spawn(process.execPath, ["server.mjs", "--http"], {
     cwd: ROOT,
-    env: { ...process.env, MCP_AUTH_TOKEN: token, PORT: String(port), HOST: "127.0.0.1" },
+    env: { ...process.env, MCP_AUTH_TOKEN: token, PORT: String(port), HOST: "127.0.0.1", ...envExtra },
     stdio: ["ignore", "ignore", "pipe"]
   });
   await new Promise((resolve) => child.stderr.once("data", resolve));
@@ -34,6 +35,32 @@ function postMcp(base, body, { token, origin } = {}) {
       ...(origin !== undefined ? { Origin: origin } : {})
     },
     body: JSON.stringify(body)
+  });
+}
+
+/** fetch cannot set a custom Host; use raw HTTP for Host allowlist tests. */
+function postMcpWithHost(port, body, { token, host, origin } = {}) {
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        hostname: "127.0.0.1",
+        port,
+        path: "/mcp",
+        method: "POST",
+        headers: {
+          host,
+          "content-type": "application/json",
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+          ...(origin !== undefined ? { origin } : {})
+        }
+      },
+      (res) => {
+        res.resume();
+        res.on("end", () => resolve({ status: res.statusCode }));
+      }
+    );
+    req.on("error", reject);
+    req.end(JSON.stringify(body));
   });
 }
 
@@ -79,4 +106,47 @@ test("http: /healthz ignores Origin checks", async () => {
     const res = await fetch(`${base}/healthz`, { headers: { Origin: "http://evil.example" } });
     assert.equal(res.status, 200);
   });
+});
+
+test("http: MCP_ALLOWED_ORIGINS matches full origin, not hostname only", async () => {
+  const allowed = "https://app.example:8443";
+  await withHttpServer(
+    async ({ token, base }) => {
+      const ping = { jsonrpc: "2.0", id: 1, method: "ping" };
+      assert.equal(
+        (await postMcp(base, ping, { token, origin: allowed })).status,
+        200
+      );
+      assert.equal(
+        (await postMcp(base, ping, { token, origin: "http://app.example" })).status,
+        403
+      );
+      assert.equal(
+        (await postMcp(base, ping, { token, origin: "https://app.example:9999" })).status,
+        403
+      );
+    },
+    { MCP_ALLOWED_ORIGINS: allowed }
+  );
+});
+
+test("http: MCP_ALLOWED_HOSTS permits proxy Host while default loopback still works", async () => {
+  await withHttpServer(
+    async ({ token, base, port }) => {
+      const ping = { jsonrpc: "2.0", id: 1, method: "ping" };
+      assert.equal(
+        (await postMcpWithHost(port, ping, { token, host: "mcp.example.com" })).status,
+        200
+      );
+      assert.equal(
+        (await postMcpWithHost(port, ping, { token, host: "other.example" })).status,
+        403
+      );
+      assert.equal(
+        (await postMcpWithHost(port, ping, { token, host: `127.0.0.1:${port}` })).status,
+        200
+      );
+    },
+    { MCP_ALLOWED_HOSTS: "mcp.example.com" }
+  );
 });
