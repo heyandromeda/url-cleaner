@@ -27,6 +27,10 @@ const SERVER_INFO = { name: "url-cleaner", version: "0.1.0" };
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const MAX_BATCH = 100;
 const MAX_URL_LEN = 8192;
+const MAX_HTTP_BODY_BYTES = 1_000_000;
+const BATCH_ITEM_ERROR = "Every item must be a non-empty single-line string.";
+const OPAQUE_SHORTENER_WARNING =
+  "Opaque shortener host: the real destination is hidden and URL Cleaner does not follow links, so it cannot be cleaned further.";
 
 const proof = (...fns) => ({ engineInvoked: { functions: fns, module: "url-cleaner/cleaner.js", sha: ENGINE_SHA } });
 const queryNames = (href) => [...new URL(href).searchParams.keys()];
@@ -48,7 +52,7 @@ function cleanedShape(input, r) {
   const warnings = [...r.inspection.weirdness];
   if (r.unwrapLimitReached) warnings.push(`Stopped unwrapping after ${engine.MAX_UNWRAP_DEPTH} redirect layers.`);
   if (keptDetail) warnings.push(`Tracking-related parameters kept: ${keptDetail.keptText}`);
-  if (engine.isOpaqueShortener(input)) warnings.push("Opaque shortener host: the real destination is hidden and URL Cleaner does not follow links, so it cannot be cleaned further.");
+  if (engine.isOpaqueShortener(input)) warnings.push(OPAQUE_SHORTENER_WARNING);
   return {
     original: input,
     cleaned: r.url,
@@ -85,13 +89,34 @@ const TOOLS = {
       const urls = args?.urls;
       if (!Array.isArray(urls) || urls.length === 0) throw new InputError("Missing required argument `urls` (non-empty array of strings).");
       if (urls.length > MAX_BATCH) throw new InputError(`At most ${MAX_BATCH} URLs per batch.`);
-      if (urls.some((u) => typeof u !== "string" || /[\r\n]/.test(u) || !u.trim())) throw new InputError("Every item must be a non-empty single-line string.");
-      const entries = engine.cleanBatch(urls.join("\n"), opts(args));
-      const results = entries.map((e) => e.ok
-        ? { index: e.line - 1, ok: true, ...cleanedShape(e.input, e.result) }
-        : { index: e.line - 1, ok: false, original: e.input, error: e.error });
-      return { count: results.length, okCount: results.filter((r) => r.ok).length,
-        cleanedUrls: engine.cleanedUrlsFromBatch(entries), results, ...proof("cleanBatch", "cleanedUrlsFromBatch") };
+      const results = new Array(urls.length);
+      const validLines = [];
+      for (let index = 0; index < urls.length; index += 1) {
+        const u = urls[index];
+        if (typeof u !== "string" || /[\r\n]/.test(u) || !u.trim()) {
+          results[index] = { index, ok: false, original: String(u ?? ""), error: BATCH_ITEM_ERROR };
+          continue;
+        }
+        validLines.push({ index, input: u.trim() });
+      }
+      let batchEntries = [];
+      if (validLines.length > 0) {
+        batchEntries = engine.cleanBatch(validLines.map((v) => v.input).join("\n"), opts(args));
+        for (let i = 0; i < batchEntries.length; i += 1) {
+          const e = batchEntries[i];
+          const slot = validLines[i].index;
+          results[slot] = e.ok
+            ? { index: slot, ok: true, ...cleanedShape(e.input, e.result) }
+            : { index: slot, ok: false, original: e.input, error: e.error };
+        }
+      }
+      return {
+        count: urls.length,
+        okCount: results.filter((r) => r?.ok).length,
+        cleanedUrls: engine.cleanedUrlsFromBatch(batchEntries),
+        results: Array.from({ length: urls.length }, (_, i) => results[i]),
+        ...proof("cleanBatch", "cleanedUrlsFromBatch")
+      };
     }
   },
   inspect_url: {
@@ -163,19 +188,60 @@ const TOOLS = {
 const ok = (id, result) => ({ jsonrpc: "2.0", id, result });
 const err = (id, code, message) => ({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
 const list = (a) => a.join(", ");
+function warningsForSummary(warnings) {
+  if (!warnings?.length) return [];
+  const opaque = warnings.filter((w) => w === OPAQUE_SHORTENER_WARNING);
+  const rest = warnings.filter((w) => w !== OPAQUE_SHORTENER_WARNING);
+  return [...opaque, ...rest];
+}
+function appendWarnings(text, warnings) {
+  const ordered = warningsForSummary(warnings);
+  if (!ordered.length) return text;
+  const lines = ordered.map((w) => `Warning: ${w}`);
+  return text ? `${text}\n${lines.join("\n")}` : lines.join("\n");
+}
+function isOpaqueShortenerOnlyResult(r) {
+  return !r.changed && r.warnings?.includes(OPAQUE_SHORTENER_WARNING);
+}
+function batchCountsAsCleaned(r) {
+  return r?.ok && !isOpaqueShortenerOnlyResult(r);
+}
 function cleanLine(r) {
-  if (!r.changed) return `Already clean: ${r.cleaned} (nothing removed).`;
-  const parts = [`Cleaned: ${r.cleaned}`];
-  if (r.unwrappedFrom?.length) parts.push(`Unwrapped a redirect from ${list(r.unwrappedFrom)}.`);
-  if (r.removedParams?.length) parts.push(`Removed ${list(r.removedParams.map((n) => `${n} (${r.explanations?.[n] || "tracking"})`))}.`);
-  if (r.preservedParams?.length) parts.push(`Kept ${list(r.preservedParams)}.`);
-  return parts.join("\n");
+  if (isOpaqueShortenerOnlyResult(r)) return appendWarnings("", r.warnings);
+  let text;
+  if (!r.changed) text = `Already clean: ${r.cleaned} (nothing removed).`;
+  else {
+    const parts = [`Cleaned: ${r.cleaned}`];
+    if (r.unwrappedFrom?.length) parts.push(`Unwrapped a redirect from ${list(r.unwrappedFrom)}.`);
+    if (r.removedParams?.length) parts.push(`Removed ${list(r.removedParams.map((n) => `${n} (${r.explanations?.[n] || "tracking"})`))}.`);
+    if (r.preservedParams?.length) parts.push(`Kept ${list(r.preservedParams)}.`);
+    text = parts.join("\n");
+  }
+  return appendWarnings(text, r.warnings);
+}
+function batchLine(r) {
+  if (!r.ok) {
+    const label = r.original?.trim() ? r.original : `item ${r.index + 1} (empty)`;
+    return `- couldn't clean ${label}: ${r.error}`;
+  }
+  if (isOpaqueShortenerOnlyResult(r)) return appendWarnings("", r.warnings);
+  const suffix = r.removedParams?.length ? ` (removed ${list(r.removedParams)})` : "";
+  return appendWarnings(`- ${r.cleaned}${suffix}`, r.warnings);
 }
 function summarize(name, o, isError) {
   if (isError) return `URL Cleaner couldn't process that: ${o.error}`;
   if (name === "clean_url") return cleanLine(o);
-  if (name === "clean_urls_batch") return `Cleaned ${o.okCount} of ${o.count} URLs:\n` + o.results.map((r) => r.ok ? `- ${r.cleaned}${r.removedParams?.length ? ` (removed ${list(r.removedParams)})` : ""}` : `- couldn't clean ${r.original}: ${r.error}`).join("\n");
-  if (name === "inspect_url") return `Tracking level: ${o.fingerprint?.label ?? "unknown"}.` + (o.opaqueShortener ? " This is a short link; URL Cleaner can't see where it goes without opening it, and it never does." : "");
+  if (name === "clean_urls_batch") {
+    const cleanedCount = o.results.filter(batchCountsAsCleaned).length;
+    return `Cleaned ${cleanedCount} of ${o.count} URLs:\n` + o.results.map(batchLine).join("\n");
+  }
+  if (name === "inspect_url") {
+    const lines = [];
+    if (o.opaqueShortener) lines.push(`Warning: ${OPAQUE_SHORTENER_WARNING}`);
+    else lines.push(`Tracking level: ${o.fingerprint?.label ?? "unknown"}.`);
+    for (const w of o.inspection?.weirdness ?? []) lines.push(`Warning: ${w}`);
+    return lines.join("\n");
+  }
   if (name === "explain_changes") return [`Cleaned: ${o.cleaned}`, ...o.unwrapped, ...o.removed.map((r) => `Removed ${r.name}: ${r.why}`), ...o.preserved.map((p) => `Kept ${p.name}: ${p.reason.replace(/^Kept: /, "")}`)].join("\n");
   if (name === "get_cleaner_capabilities") return `URL Cleaner engine ${String(o.engine.sha).slice(0, 7)}: removes ${o.features.trackingParameterCount} known tracking parameters, unwraps redirects up to ${o.features.redirectUnwrapping.maxDepth} layers, explains changes with ${o.features.trackerProfiles} tracker profiles. It never opens or expands links.`;
   return "Done.";
@@ -339,9 +405,23 @@ function startHttp() {
     if (req.method === "GET") return send(res, 405, { error: "SSE stream not offered; use POST" }, { allow: "POST" });
     if (req.method === "DELETE") return send(res, 405, { error: "stateless server" }, { allow: "POST" });
     if (req.method !== "POST") return send(res, 405, { error: "method not allowed" }, { allow: "POST" });
-    let body = ""; let size = 0;
-    req.on("data", (c) => { size += c.length; if (size > 1_000_000) { req.destroy(); } else body += c; });
+    const chunks = [];
+    let size = 0;
+    let bodyTooLarge = false;
+    req.on("data", (chunk) => {
+      if (bodyTooLarge) return;
+      size += chunk.length;
+      if (size > MAX_HTTP_BODY_BYTES) {
+        bodyTooLarge = true;
+        send(res, 413, err(null, -32000, "Request body too large"));
+        req.resume();
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on("end", () => {
+      if (bodyTooLarge) return;
+      const body = Buffer.concat(chunks).toString("utf8");
       let payload; try { payload = JSON.parse(body); } catch { return send(res, 400, err(null, -32700, "Parse error")); }
       const out = dispatch(payload);
       if (!out) return send(res, 202);
@@ -356,6 +436,9 @@ if (isMain) { if (process.argv.includes("--http")) startHttp(); else startStdio(
 export {
   TOOLS,
   handle,
+  summarize,
+  cleanLine,
+  appendWarnings,
   originHeaderAllowed,
   hostHeaderAllowed,
   loopbackOriginAllowed,
