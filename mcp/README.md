@@ -40,14 +40,20 @@ Environment:
 | Variable | Purpose |
 |---|---|
 | `MCP_AUTH_TOKEN` | Required for HTTP mode (≥ 24 characters) |
-| `HOST` | Default `127.0.0.1` |
+| `HOST` | Default `127.0.0.1`. With `HOST=0.0.0.0`, the default allowed `Host` set follows the bind address only and **excludes** `localhost` and `127.0.0.1`; local clients must set `MCP_ALLOWED_HOSTS` (see **Host** below). |
 | `PORT` | Default `8787` |
 | `ENGINE_DIR` | Default `..` (repo root) |
 | `ENGINE_SHA` | Optional override for `engineInvoked.sha` |
+| `MCP_ALLOWED_ORIGINS` | Optional comma-separated full origins (scheme + host + port, e.g. `https://app.example:8443`) for HTTP `/mcp`. Each entry is matched with `URL(entry).origin`. The default loopback rule (below) always applies too. |
+| `MCP_ALLOWED_HOSTS` | Optional comma-separated `Host` header values (e.g. `mcp.example.com`, `proxy.internal:8080`) for reverse proxies in front of the server. The default loopback `Host` rule always applies too. |
 
 ## Auth (HTTP)
 
 `Authorization: Bearer <MCP_AUTH_TOKEN>`. Comparison uses SHA-256 digests and `timingSafeEqual`. Wrong or missing token → `401` with `WWW-Authenticate: Bearer`.
+
+**Origin (DNS rebinding):** On `POST /mcp`, if the client sends an `Origin` header it must pass **either** the default loopback rule (`http`/`https` on `localhost`, `127.0.0.1`, or `[::1]` on **any** port) **or** match a full origin in `MCP_ALLOWED_ORIGINS` (scheme, host, and port compared via `URL().origin` — `https://app.example:8443` does not admit `http://app.example` or `https://app.example:9999`). A disallowed Origin returns **403** before auth or body handling. Requests with no `Origin` header are still accepted.
+
+**Host:** The `Host` header must match the bound loopback address/port **or** an entry in `MCP_ALLOWED_HOSTS` (comma-separated, lowercase). Values are compared literally to the request `Host` header. Include the port in each entry when the server listens on a non-80 port (e.g. `MCP_ALLOWED_HOSTS=127.0.0.1:8859,localhost:8859`); a bare host such as `127.0.0.1` does **not** match `127.0.0.1:8859` and returns **403**. On port **80** only, clients may send a host without `:80`, so a bare entry can match. Use this when binding `0.0.0.0` or when a reverse proxy forwards with a public hostname. `/healthz` is not subject to Origin checks.
 
 There is **no** public hosted MCP endpoint in this repo. Run stdio locally or bind HTTP on localhost for your own clients.
 
