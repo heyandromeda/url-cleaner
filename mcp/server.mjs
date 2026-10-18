@@ -163,19 +163,38 @@ const TOOLS = {
 const ok = (id, result) => ({ jsonrpc: "2.0", id, result });
 const err = (id, code, message) => ({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
 const list = (a) => a.join(", ");
+function appendWarnings(text, warnings) {
+  if (!warnings?.length) return text;
+  const lines = warnings.map((w) => `Warning: ${w}`);
+  return text ? `${text}\n${lines.join("\n")}` : lines.join("\n");
+}
 function cleanLine(r) {
-  if (!r.changed) return `Already clean: ${r.cleaned} (nothing removed).`;
-  const parts = [`Cleaned: ${r.cleaned}`];
-  if (r.unwrappedFrom?.length) parts.push(`Unwrapped a redirect from ${list(r.unwrappedFrom)}.`);
-  if (r.removedParams?.length) parts.push(`Removed ${list(r.removedParams.map((n) => `${n} (${r.explanations?.[n] || "tracking"})`))}.`);
-  if (r.preservedParams?.length) parts.push(`Kept ${list(r.preservedParams)}.`);
-  return parts.join("\n");
+  let text;
+  if (!r.changed) text = `Already clean: ${r.cleaned} (nothing removed).`;
+  else {
+    const parts = [`Cleaned: ${r.cleaned}`];
+    if (r.unwrappedFrom?.length) parts.push(`Unwrapped a redirect from ${list(r.unwrappedFrom)}.`);
+    if (r.removedParams?.length) parts.push(`Removed ${list(r.removedParams.map((n) => `${n} (${r.explanations?.[n] || "tracking"})`))}.`);
+    if (r.preservedParams?.length) parts.push(`Kept ${list(r.preservedParams)}.`);
+    text = parts.join("\n");
+  }
+  return appendWarnings(text, r.warnings);
+}
+function batchLine(r) {
+  if (!r.ok) return `- couldn't clean ${r.original}: ${r.error}`;
+  const suffix = r.removedParams?.length ? ` (removed ${list(r.removedParams)})` : "";
+  return appendWarnings(`- ${r.cleaned}${suffix}`, r.warnings);
 }
 function summarize(name, o, isError) {
   if (isError) return `URL Cleaner couldn't process that: ${o.error}`;
   if (name === "clean_url") return cleanLine(o);
-  if (name === "clean_urls_batch") return `Cleaned ${o.okCount} of ${o.count} URLs:\n` + o.results.map((r) => r.ok ? `- ${r.cleaned}${r.removedParams?.length ? ` (removed ${list(r.removedParams)})` : ""}` : `- couldn't clean ${r.original}: ${r.error}`).join("\n");
-  if (name === "inspect_url") return `Tracking level: ${o.fingerprint?.label ?? "unknown"}.` + (o.opaqueShortener ? " This is a short link; URL Cleaner can't see where it goes without opening it, and it never does." : "");
+  if (name === "clean_urls_batch") return `Cleaned ${o.okCount} of ${o.count} URLs:\n` + o.results.map(batchLine).join("\n");
+  if (name === "inspect_url") {
+    const lines = [`Tracking level: ${o.fingerprint?.label ?? "unknown"}.`];
+    if (o.opaqueShortener) lines.push("Warning: This is a short link; URL Cleaner can't see where it goes without opening it, and it never does.");
+    for (const w of o.inspection?.weirdness ?? []) lines.push(`Warning: ${w}`);
+    return lines.join("\n");
+  }
   if (name === "explain_changes") return [`Cleaned: ${o.cleaned}`, ...o.unwrapped, ...o.removed.map((r) => `Removed ${r.name}: ${r.why}`), ...o.preserved.map((p) => `Kept ${p.name}: ${p.reason.replace(/^Kept: /, "")}`)].join("\n");
   if (name === "get_cleaner_capabilities") return `URL Cleaner engine ${String(o.engine.sha).slice(0, 7)}: removes ${o.features.trackingParameterCount} known tracking parameters, unwraps redirects up to ${o.features.redirectUnwrapping.maxDepth} layers, explains changes with ${o.features.trackerProfiles} tracker profiles. It never opens or expands links.`;
   return "Done.";
@@ -266,4 +285,4 @@ function startHttp() {
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) { if (process.argv.includes("--http")) startHttp(); else startStdio(); }
-export { TOOLS, handle };
+export { TOOLS, handle, summarize, cleanLine, appendWarnings };
