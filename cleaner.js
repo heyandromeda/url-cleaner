@@ -11,7 +11,11 @@ export const TRACKING_PARAMETERS = new Set([
   "ck_subscriber_id", "dm_i", "mibextid", "_openstat", "rb_clickid", "s_cid",
   "s_fid", "s_ppv", "s_channel", "s_ptc", "s_plt", "s_vnum", "s_invisit",
   "s_cc", "s_sq", "vero_conv", "vero_id", "igshid", "igsh",
-  "pk_campaign", "pk_kwd", "pk_source", "pk_medium", "pk_content", "pk_cid"
+  "pk_campaign", "pk_kwd", "pk_source", "pk_medium", "pk_content", "pk_cid",
+  "adobe_mc", "adobe_mc_sdid", "icid", "tt_medium", "tt_content", "clickref",
+  "iterable_campaign_id", "iterable_template_id", "iterable_link_id", "braze_c_id",
+  "twcamp", "twsrc", "adj_t", "adj_campaign", "adj_adgroup", "adj_creative",
+  "zanpid", "_hsq"
 ]);
 
 export const TRACKING_PARAMETER_PREFIXES = ["utm_", "hsa_", "mtm_", "piwik_", "_ga_"];

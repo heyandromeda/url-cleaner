@@ -81,7 +81,25 @@ export const PARAMETER_EXPLANATIONS = {
   pk_medium: "Matomo campaign medium.",
   pk_content: "Matomo campaign content.",
   pk_cid: "Matomo campaign identifier.",
-  si: "Share identifier added to links copied from YouTube and Spotify; removed only on those sites."
+  si: "Share identifier added to links copied from YouTube and Spotify; removed only on those sites.",
+  adobe_mc: "Adobe Experience Cloud visitor ID (mid) passed between Experience Cloud solutions.",
+  adobe_mc_sdid: "Adobe Experience Cloud supplemental ID (SDID) for cross-domain identity.",
+  icid: "Adobe Analytics internal campaign identifier (ICID) on tracked marketing links.",
+  tt_medium: "TikTok marketing medium tag on shared or ads links (parallel to utm_medium).",
+  tt_content: "TikTok marketing content tag used to distinguish creatives on the same campaign.",
+  clickref: "Partnerize (formerly Performance Horizon) affiliate click reference.",
+  iterable_campaign_id: "Iterable email campaign identifier on tracked links.",
+  iterable_template_id: "Iterable email template identifier on tracked links.",
+  iterable_link_id: "Iterable tracked link identifier for message attribution.",
+  braze_c_id: "Braze campaign identifier on email or messaging links.",
+  twcamp: "X (Twitter) web intent campaign name parameter on share/intent URLs.",
+  twsrc: "X (Twitter) web intent source parameter on share/intent URLs.",
+  adj_t: "Adjust mobile attribution transaction parameter.",
+  adj_campaign: "Adjust mobile attribution campaign name.",
+  adj_adgroup: "Adjust mobile attribution ad group name.",
+  adj_creative: "Adjust mobile attribution creative name.",
+  zanpid: "Zanox / Awin affiliate click identifier (zanpid).",
+  _hsq: "HubSpot analytics queue parameter on tracked pages and links."
 };
 
 export const PREFIX_EXPLANATIONS = {
