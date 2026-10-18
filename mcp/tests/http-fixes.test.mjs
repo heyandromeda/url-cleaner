@@ -24,7 +24,13 @@ async function withHttpServer(run) {
   }
 }
 
+function toolPayload(result) {
+  if (result.structuredContent) return result.structuredContent;
+  return JSON.parse(result.content[0].text);
+}
+
 function postChunks(port, token, chunks) {
+  const body = Buffer.concat(chunks);
   return new Promise((resolve, reject) => {
     const req = http.request(
       {
@@ -33,7 +39,8 @@ function postChunks(port, token, chunks) {
         path: "/mcp",
         method: "POST",
         headers: {
-          "content-type": "application/json",
+          "content-type": "application/json; charset=utf-8",
+          "content-length": String(body.length),
           authorization: `Bearer ${token}`
         }
       },
@@ -47,8 +54,15 @@ function postChunks(port, token, chunks) {
       }
     );
     req.on("error", reject);
-    for (const chunk of chunks) req.write(chunk);
-    req.end();
+    if (chunks.length <= 1) {
+      req.end(body);
+      return;
+    }
+    req.write(chunks[0]);
+    setImmediate(() => {
+      req.write(chunks.slice(1));
+      req.end();
+    });
   });
 }
 
