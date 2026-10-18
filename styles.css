@@ -599,6 +599,10 @@ html[data-theme="dark"] .setting input[type="checkbox"]:checked {
   font-family: inherit;
 }
 
+.removed-list li:has(details[open]) {
+  flex: 1 1 100%;
+}
+
 .removed-list details { margin: 0; }
 
 .removed-list summary {
