@@ -44,10 +44,13 @@ Environment:
 | `PORT` | Default `8787` |
 | `ENGINE_DIR` | Default `..` (repo root) |
 | `ENGINE_SHA` | Optional override for `engineInvoked.sha` |
+| `MCP_ALLOWED_ORIGINS` | Optional comma-separated full origins for HTTP `/mcp` (default: any port on `http://localhost`, `http://127.0.0.1`, `http://[::1]`) |
 
 ## Auth (HTTP)
 
 `Authorization: Bearer <MCP_AUTH_TOKEN>`. Comparison uses SHA-256 digests and `timingSafeEqual`. Wrong or missing token → `401` with `WWW-Authenticate: Bearer`.
+
+**Origin (DNS rebinding):** On `POST /mcp`, if the client sends an `Origin` header it must match the allowlist (loopback hosts by default, or `MCP_ALLOWED_ORIGINS`). A disallowed Origin returns **403** with a JSON-RPC error **before** auth or body handling. Requests with no `Origin` header are still accepted. The `Host` header must match the bound loopback host and port. `/healthz` is not subject to Origin checks.
 
 There is **no** public hosted MCP endpoint in this repo. Run stdio locally or bind HTTP on localhost for your own clients.
 
