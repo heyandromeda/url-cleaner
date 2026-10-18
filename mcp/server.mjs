@@ -112,7 +112,7 @@ const TOOLS = {
         count: urls.length,
         okCount: results.filter((r) => r?.ok).length,
         cleanedUrls: engine.cleanedUrlsFromBatch(batchEntries),
-        results,
+        results: Array.from({ length: urls.length }, (_, i) => results[i]),
         ...proof("cleanBatch", "cleanedUrlsFromBatch")
       };
     }

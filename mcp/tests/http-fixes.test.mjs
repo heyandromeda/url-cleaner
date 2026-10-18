@@ -55,18 +55,17 @@ function postChunks(port, token, chunks) {
 test("http: UTF-8 body split across chunks decodes correctly (DEV-17)", async () => {
   await withHttpServer(async ({ token, port }) => {
     const url = "https://example.com/?note=café";
-    const payload = {
-      jsonrpc: "2.0",
-      id: 17,
-      method: "tools/call",
-      params: { name: "clean_url", arguments: { url } }
-    };
-    const raw = Buffer.from(JSON.stringify(payload), "utf8");
-    const splitAt = raw.indexOf(0xc3);
-    assert.ok(splitAt > 0, "expected multibyte UTF-8 in payload");
-    const res = await postChunks(port, token, [raw.subarray(0, splitAt + 1), raw.subarray(splitAt + 1)]);
-    assert.equal(res.status, 200);
+    const raw = Buffer.from(
+      `{"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"clean_url","arguments":{"url":"${url}"}}}`,
+      "utf8"
+    );
+    const eBytes = Buffer.from("é", "utf8");
+    const idx = raw.indexOf(eBytes);
+    assert.ok(idx >= 0, "expected literal UTF-8 in JSON body");
+    const res = await postChunks(port, token, [raw.subarray(0, idx + 1), raw.subarray(idx + 1)]);
+    assert.equal(res.status, 200, res.body);
     const json = JSON.parse(res.body);
+    assert.ok(json.result?.structuredContent, () => res.body);
     assert.equal(json.result.structuredContent.original, url);
     assert.ok(json.result.structuredContent.cleaned.startsWith("https://example.com/?note=caf"));
   });
@@ -98,6 +97,7 @@ test("http: clean_urls_batch reports empty item without failing others (DEV-18)"
     });
     assert.equal(res.status, 200);
     const json = await res.json();
+    assert.ok(json.result?.structuredContent, () => JSON.stringify(json));
     const batch = json.result.structuredContent;
     assert.equal(batch.okCount, 2);
     assert.equal(batch.count, 3);
