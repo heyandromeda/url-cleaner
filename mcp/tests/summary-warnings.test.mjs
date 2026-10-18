@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { MAX_UNWRAP_DEPTH, cleanUrl } from "../../cleaner.js";
 import { TOOLS, summarize } from "../server.mjs";
 
+const BITLY = "https://bit.ly/3abcXYZ";
+const OPAQUE_RE = /Warning: Opaque shortener host:/;
+
 function nestGoogleWrappers(destination, layers) {
   let url = destination;
   for (let i = 0; i < layers; i += 1) {
@@ -11,12 +14,26 @@ function nestGoogleWrappers(destination, layers) {
   return url;
 }
 
-test("clean_url summary includes opaque shortener warning when already clean", () => {
-  const url = "https://bit.ly/abc";
-  const text = summarize("clean_url", TOOLS.clean_url.run({ url }));
-  assert.match(text, /Already clean: https:\/\/bit\.ly\/abc/);
-  assert.match(text, /Warning:.*Opaque shortener/i);
-  assert.ok(text.includes("\nWarning:"), "summary must not be bare Already clean without warnings");
+test("opaque shortener: clean_url leads with shared warning, not Already clean", () => {
+  const text = summarize("clean_url", TOOLS.clean_url.run({ url: BITLY }));
+  assert.doesNotMatch(text, /Already clean:/i);
+  assert.doesNotMatch(text, /^Cleaned:/m);
+  assert.match(text, OPAQUE_RE);
+});
+
+test("opaque shortener: batch does not count unchanged shortener as cleaned", () => {
+  const text = summarize("clean_urls_batch", TOOLS.clean_urls_batch.run({ urls: [BITLY] }));
+  assert.match(text, /^Cleaned 0 of 1 URLs:/);
+  assert.doesNotMatch(text, /^Cleaned 1 of 1 URLs:/);
+  assert.match(text, OPAQUE_RE);
+  assert.doesNotMatch(text, /^- https:\/\/bit\.ly/m);
+});
+
+test("opaque shortener: inspect_url leads with shared warning, not Clean slate", () => {
+  const text = summarize("inspect_url", TOOLS.inspect_url.run({ url: BITLY }));
+  assert.match(text, new RegExp(`^${OPAQUE_RE.source}`));
+  assert.doesNotMatch(text, /Clean slate/i);
+  assert.doesNotMatch(text, /^Tracking level:/m);
 });
 
 test("clean_url summary includes unwrap limit warning", () => {
@@ -34,4 +51,12 @@ test("inspect_url summary lists tracking level and all weirdness flags", () => {
   assert.match(text, /Warning:.*username or password/i);
   assert.match(text, /Warning:.*punycode/i);
   assert.match(text, /Warning:.*8443/);
+});
+
+test("clean_urls_batch summary names empty item (merged with DEV-18)", () => {
+  const text = summarize("clean_urls_batch", TOOLS.clean_urls_batch.run({
+    urls: ["https://example.com/?utm_source=x", "", "https://example.org/?gclid=1"]
+  }));
+  assert.match(text, /^Cleaned 2 of 3 URLs:/);
+  assert.match(text, /couldn't clean item 2 \(empty\): Every item must be a non-empty single-line string\./);
 });
