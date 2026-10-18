@@ -2,6 +2,7 @@ import {
   cleanBatch,
   cleanedUrlsFromBatch,
   fingerprintRemovedKeptDetail,
+  beforeViewUrl,
   isOpaqueShortener,
   isOriginalQuerySegmentRemoved,
   querySegments
@@ -382,7 +383,7 @@ function hideResults() {
 
 function showCleanResult(result, { allowAutoCopy = true, originalValue = "", revealInspection = false } = {}) {
   cleanedValue = result.url;
-  renderOriginalUrl(originalValue, result.removedParameters, result.removedDuplicateIndices);
+  renderOriginalUrl(beforeViewUrl(originalValue, result), result.removedParameters, result.removedDuplicateIndices);
   output.textContent = result.url;
   renderRemoved(result.removedParameters, removedList, result.aggressiveRemovedParameters);
   renderDuplicateNotice(result.duplicateParameters);

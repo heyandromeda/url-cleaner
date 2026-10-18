@@ -167,6 +167,16 @@ export function isOriginalQuerySegmentRemoved(name, index, removedParameters, re
   return removedNames.has(String(name).toLowerCase()) || removedDuplicateIndices.includes(index);
 }
 
+// Duplicate indices are computed on the cleaned (usually unwrapped) URL. For redirect
+// wrappers, highlight against that inner URL instead of the outer wrapper query.
+export function beforeViewUrl(originalInput, result) {
+  if (result.removedDuplicateIndices.length === 0) return originalInput;
+  if (!result.unwrappedFrom?.length) return originalInput;
+  const layers = result.inspection?.redirectLayers ?? [];
+  if (layers.length === 0) return originalInput;
+  return layers[layers.length - 1].to;
+}
+
 export function querySegments(search) {
   const query = search.startsWith("?") ? search.slice(1) : search;
   return query.split("&").filter(Boolean).map((raw) => {
