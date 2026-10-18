@@ -8,6 +8,12 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
+function summaryText(result) {
+  assert.equal(result.content?.length, 1);
+  assert.equal(result.structuredContent, undefined);
+  return result.content[0].text;
+}
+
 async function withHttpServer(run) {
   const token = randomBytes(32).toString("hex");
   const port = 20000 + Math.floor(Math.random() * 1000);
@@ -22,12 +28,6 @@ async function withHttpServer(run) {
   } finally {
     child.kill();
   }
-}
-
-function toolPayload(result) {
-  if (result.structuredContent) return result.structuredContent;
-  if (result.content?.[0]?.text?.startsWith("{")) return JSON.parse(result.content[0].text);
-  return { summaryText: result.content[0].text };
 }
 
 function postChunks(port, token, chunks) {
@@ -69,11 +69,10 @@ function postChunks(port, token, chunks) {
 
 test("http: UTF-8 body split across chunks decodes correctly (DEV-17)", async () => {
   await withHttpServer(async ({ token, port }) => {
-    const url = "https://example.com/?q=café";
     const raw = Buffer.concat([
       Buffer.from('{"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"clean_url","arguments":{"url":"https://example.com/?q=caf', "utf8"),
       Buffer.from([0xc3, 0xa9]),
-      Buffer.from('"}}}', "utf8")
+      Buffer.from('&utm_source=x"}}}', "utf8")
     ]);
     const splitAt = raw.indexOf(0xc3);
     assert.ok(splitAt > 0);
@@ -81,13 +80,9 @@ test("http: UTF-8 body split across chunks decodes correctly (DEV-17)", async ()
     assert.equal(res.status, 200, res.body);
     const json = JSON.parse(res.body);
     assert.equal(json.error, undefined, res.body);
-    const data = toolPayload(json.result);
-    if (data.summaryText) {
-      assert.match(data.summaryText, /example\.com\/\?q=caf/i);
-    } else {
-      assert.equal(data.original, url);
-      assert.ok(data.cleaned.startsWith("https://example.com/?q=caf"));
-    }
+    const text = summaryText(json.result);
+    assert.match(text, /^Cleaned: https:\/\/example\.com\/\?q=caf(?:é|%C3%A9)/);
+    assert.match(text, /Removed utm_source/);
   });
 });
 
@@ -118,18 +113,11 @@ test("http: clean_urls_batch reports empty item without failing others (DEV-18)"
     assert.equal(res.status, 200);
     const json = await res.json();
     assert.equal(json.error, undefined, JSON.stringify(json));
-    const batch = toolPayload(json.result);
-    if (batch.summaryText) {
-      assert.match(batch.summaryText, /^Cleaned 2 of 3 URLs:/);
-      assert.match(batch.summaryText, /couldn't clean.*non-empty single-line string/i);
-    } else {
-      assert.equal(batch.okCount, 2);
-      assert.equal(batch.count, 3);
-      assert.equal(batch.results.filter((r) => r.ok).length, 2);
-      const empty = batch.results.find((r) => r.index === 1);
-      assert.equal(empty.ok, false);
-      assert.match(empty.error, /non-empty single-line string/i);
-    }
+    const text = summaryText(json.result);
+    assert.match(text, /^Cleaned 2 of 3 URLs:/);
+    assert.match(text, /couldn't clean item 2 \(empty\): Every item must be a non-empty single-line string\./);
+    assert.match(text, /example\.com/);
+    assert.match(text, /example\.org/);
   });
 });
 

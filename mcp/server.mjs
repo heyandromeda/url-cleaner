@@ -197,7 +197,13 @@ function cleanLine(r) {
 function summarize(name, o, isError) {
   if (isError) return `URL Cleaner couldn't process that: ${o.error}`;
   if (name === "clean_url") return cleanLine(o);
-  if (name === "clean_urls_batch") return `Cleaned ${o.okCount} of ${o.count} URLs:\n` + o.results.map((r) => r.ok ? `- ${r.cleaned}${r.removedParams?.length ? ` (removed ${list(r.removedParams)})` : ""}` : `- couldn't clean ${r.original}: ${r.error}`).join("\n");
+  if (name === "clean_urls_batch") {
+    return `Cleaned ${o.okCount} of ${o.count} URLs:\n` + o.results.map((r) => {
+      if (r.ok) return `- ${r.cleaned}${r.removedParams?.length ? ` (removed ${list(r.removedParams)})` : ""}`;
+      const label = r.original?.trim() ? r.original : `item ${r.index + 1} (empty)`;
+      return `- couldn't clean ${label}: ${r.error}`;
+    }).join("\n");
+  }
   if (name === "inspect_url") return `Tracking level: ${o.fingerprint?.label ?? "unknown"}.` + (o.opaqueShortener ? " This is a short link; URL Cleaner can't see where it goes without opening it, and it never does." : "");
   if (name === "explain_changes") return [`Cleaned: ${o.cleaned}`, ...o.unwrapped, ...o.removed.map((r) => `Removed ${r.name}: ${r.why}`), ...o.preserved.map((p) => `Kept ${p.name}: ${p.reason.replace(/^Kept: /, "")}`)].join("\n");
   if (name === "get_cleaner_capabilities") return `URL Cleaner engine ${String(o.engine.sha).slice(0, 7)}: removes ${o.features.trackingParameterCount} known tracking parameters, unwraps redirects up to ${o.features.redirectUnwrapping.maxDepth} layers, explains changes with ${o.features.trackerProfiles} tracker profiles. It never opens or expands links.`;
