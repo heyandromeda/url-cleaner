@@ -1,12 +1,9 @@
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { chromium } from "playwright";
 import { playwrightArtifactsDir } from "./playwright-artifacts.mjs";
+import { startDistServer } from "./playwright-static-server.mjs";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const artifactsDir = playwrightArtifactsDir();
 const viewports = [
   { width: 320, height: 900 },
@@ -15,28 +12,6 @@ const viewports = [
   { width: 1280, height: 900 },
   { width: 1440, height: 900 }
 ];
-
-function startServer() {
-  const mime = {
-    ".html": "text/html",
-    ".css": "text/css",
-    ".js": "application/javascript",
-    ".webmanifest": "application/manifest+json",
-    ".png": "image/png",
-    ".ico": "image/x-icon"
-  };
-
-  return new Promise((resolve) => {
-    const server = createServer((request, response) => {
-      const path = request.url === "/" ? "/index.html" : request.url.split("?")[0];
-      const filePath = join(root, decodeURIComponent(path.slice(1)));
-      const ext = filePath.slice(filePath.lastIndexOf("."));
-      response.writeHead(200, { "Content-Type": mime[ext] ?? "application/octet-stream" });
-      response.end(readFileSync(filePath));
-    });
-    server.listen(0, "127.0.0.1", () => resolve(server));
-  });
-}
 
 function contrastRatio(foreground, background) {
   const channel = (value) => {
@@ -58,7 +33,7 @@ async function parseRgb(page, selector, property) {
   }, property);
 }
 
-const server = await startServer();
+const server = await startDistServer();
 const port = server.address().port;
 const baseUrl = `http://127.0.0.1:${port}/`;
 const browser = await chromium.launch();
