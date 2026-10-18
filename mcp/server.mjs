@@ -305,15 +305,102 @@ function tokenOk(header, expected) {
   const a = createHash("sha256").update(m[1]).digest(), b = createHash("sha256").update(expected).digest();
   return timingSafeEqual(a, b);
 }
+
+const LOOPBACK_ORIGIN_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
+function loopbackOriginAllowed(originUrl) {
+  if (originUrl.protocol !== "http:" && originUrl.protocol !== "https:") return false;
+  const host = originUrl.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  return LOOPBACK_ORIGIN_HOSTS.has(host);
+}
+
+function loadExplicitAllowedOrigins() {
+  const raw = process.env.MCP_ALLOWED_ORIGINS;
+  if (!raw?.trim()) return new Set();
+  const origins = new Set();
+  for (const piece of raw.split(",")) {
+    const entry = piece.trim();
+    if (!entry) continue;
+    try {
+      origins.add(new URL(entry).origin);
+    } catch { /* ignore invalid entries */ }
+  }
+  return origins;
+}
+
+function originHeaderAllowed(originHeader, explicitAllowedOrigins) {
+  if (!originHeader) return true;
+  let originUrl;
+  try {
+    originUrl = new URL(originHeader);
+  } catch {
+    return false;
+  }
+  if (loopbackOriginAllowed(originUrl)) return true;
+  return explicitAllowedOrigins.has(originUrl.origin);
+}
+
+function defaultAllowedHostHeaders(bindHost, bindPort) {
+  const allowed = new Set();
+  const bind = bindHost.toLowerCase();
+  const withPort = (name) => (bindPort === 80 ? name : `${name}:${bindPort}`);
+  if (bind === "127.0.0.1" || bind === "localhost") {
+    allowed.add(withPort("127.0.0.1").toLowerCase());
+    allowed.add(withPort("localhost").toLowerCase());
+    allowed.add("127.0.0.1");
+    allowed.add("localhost");
+  } else if (bind === "::1") {
+    allowed.add(withPort("[::1]").toLowerCase());
+    allowed.add(withPort("::1").toLowerCase());
+    allowed.add("[::1]");
+    allowed.add("::1");
+  } else {
+    const name = bindHost.includes(":") ? `[${bindHost}]` : bindHost;
+    allowed.add(withPort(name).toLowerCase());
+    allowed.add(name.toLowerCase());
+  }
+  return allowed;
+}
+
+function loadAllowedHostHeaders() {
+  const raw = process.env.MCP_ALLOWED_HOSTS;
+  if (!raw?.trim()) return new Set();
+  const hosts = new Set();
+  for (const piece of raw.split(",")) {
+    const entry = piece.trim().toLowerCase();
+    if (entry) hosts.add(entry);
+  }
+  return hosts;
+}
+
+function hostHeaderAllowed(hostHeader, bindHost, bindPort, extraAllowedHosts) {
+  if (!hostHeader) return true;
+  const host = hostHeader.split(",")[0].trim().toLowerCase();
+  if (defaultAllowedHostHeaders(bindHost, bindPort).has(host)) return true;
+  return extraAllowedHosts.has(host);
+}
+
 function startHttp() {
   const TOKEN = process.env.MCP_AUTH_TOKEN;
   if (!TOKEN || TOKEN.length < 24) { console.error("MCP_AUTH_TOKEN must be set (>= 24 chars) for HTTP mode."); process.exit(1); }
   const HOST = process.env.HOST || "127.0.0.1"; const PORT = Number(process.env.PORT || 8787);
+  const explicitAllowedOrigins = loadExplicitAllowedOrigins();
+  const allowedHostHeaders = loadAllowedHostHeaders();
   const send = (res, code, body, extra = {}) => { res.writeHead(code, { "content-type": "application/json", ...extra }); res.end(body === undefined ? "" : JSON.stringify(body)); };
+  const rejectMcp = (res, message) => {
+    log({ http: "forbidden", reason: message });
+    send(res, 403, err(null, -32003, message));
+  };
   const server = http.createServer((req, res) => {
     const pathname = (req.url || "").split("?")[0];
     if (req.method === "GET" && pathname === "/healthz") return send(res, 200, { ok: true, engineSha: ENGINE_SHA });
     if (pathname !== "/mcp") return send(res, 404, { error: "not found" });
+    if (req.headers.origin && !originHeaderAllowed(req.headers.origin, explicitAllowedOrigins)) {
+      return rejectMcp(res, "Origin not allowed");
+    }
+    if (!hostHeaderAllowed(req.headers.host, HOST, PORT, allowedHostHeaders)) {
+      return rejectMcp(res, "Host not allowed");
+    }
     if (!tokenOk(req.headers.authorization, TOKEN)) { log({ http: "auth_rejected" }); return send(res, 401, err(null, -32001, "Unauthorized"), { "www-authenticate": 'Bearer realm="url-cleaner-mcp"' }); }
     if (req.method === "GET") return send(res, 405, { error: "SSE stream not offered; use POST" }, { allow: "POST" });
     if (req.method === "DELETE") return send(res, 405, { error: "stateless server" }, { allow: "POST" });
@@ -346,4 +433,16 @@ function startHttp() {
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) { if (process.argv.includes("--http")) startHttp(); else startStdio(); }
-export { TOOLS, handle, summarize, cleanLine, appendWarnings };
+export {
+  TOOLS,
+  handle,
+  summarize,
+  cleanLine,
+  appendWarnings,
+  originHeaderAllowed,
+  hostHeaderAllowed,
+  loopbackOriginAllowed,
+  loadExplicitAllowedOrigins,
+  loadAllowedHostHeaders,
+  defaultAllowedHostHeaders
+};
