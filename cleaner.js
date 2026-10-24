@@ -11,7 +11,13 @@ export const TRACKING_PARAMETERS = new Set([
   "ck_subscriber_id", "dm_i", "mibextid", "_openstat", "rb_clickid", "s_cid",
   "s_fid", "s_ppv", "s_channel", "s_ptc", "s_plt", "s_vnum", "s_invisit",
   "s_cc", "s_sq", "vero_conv", "vero_id", "igshid", "igsh",
-  "pk_campaign", "pk_kwd", "pk_source", "pk_medium", "pk_content", "pk_cid"
+  "pk_campaign", "pk_kwd", "pk_source", "pk_medium", "pk_content", "pk_cid",
+  "adobe_mc", "adobe_mc_sdid", "icid", "tt_medium", "tt_content",
+  "adj_campaign", "adj_adgroup", "adj_creative",
+  "__hssrc",
+  "iterable_campaign", "iterable_template",
+  "__iterable_campaign_id", "__iterable_template_id",
+  "_iterable_campaign_id", "_iterable_template_id"
 ]);
 
 export const TRACKING_PARAMETER_PREFIXES = ["utm_", "hsa_", "mtm_", "piwik_", "_ga_"];
@@ -21,7 +27,8 @@ export const TRACKING_PARAMETER_PREFIXES = ["utm_", "hsa_", "mtm_", "piwik_", "_
 export const AGGRESSIVE_PARAMETERS = new Set([
   "affiliate", "affiliate_id", "affid", "aff_id", "campaign", "campaignid",
   "clickid", "click_id", "partner", "partner_id", "ref", "referrer",
-  "referral", "source", "src", "tracking", "tracking_id"
+  "referral", "source", "src", "tracking", "tracking_id",
+  "clickref", "zanpid"
 ]);
 
 export const YOUTUBE_HOSTS = new Set([

@@ -81,7 +81,24 @@ export const PARAMETER_EXPLANATIONS = {
   pk_medium: "Matomo campaign medium.",
   pk_content: "Matomo campaign content.",
   pk_cid: "Matomo campaign identifier.",
-  si: "Share identifier added to links copied from YouTube and Spotify; removed only on those sites."
+  si: "Share identifier added to links copied from YouTube and Spotify; removed only on those sites.",
+  adobe_mc: "Adobe Experience Cloud visitor ID (mid) passed between Experience Cloud solutions.",
+  adobe_mc_sdid: "Adobe Experience Cloud supplemental ID (SDID) for cross-domain identity.",
+  icid: "Adobe Analytics internal campaign identifier (ICID) on tracked marketing links.",
+  tt_medium: "TikTok marketing medium tag on shared or ads links (parallel to utm_medium).",
+  tt_content: "TikTok marketing content tag used to distinguish creatives on the same campaign.",
+  adj_campaign: "Adjust campaign label on destination URLs (not the adj.st link token).",
+  adj_adgroup: "Adjust ad group label on destination URLs.",
+  adj_creative: "Adjust creative label on destination URLs.",
+  __hssrc: "HubSpot session-reset flag appended when HubSpot rotates session cookies.",
+  iterable_campaign: "Iterable Shopify integration campaign id query parameter.",
+  iterable_template: "Iterable Shopify integration template id query parameter.",
+  __iterable_campaign_id: "Iterable cart-attribution campaign id (Shopify integration).",
+  __iterable_template_id: "Iterable cart-attribution template id (Shopify integration).",
+  _iterable_campaign_id: "Alternate Iterable cart-attribution campaign id key.",
+  _iterable_template_id: "Alternate Iterable cart-attribution template id key.",
+  clickref: "Partnerize affiliate click reference (removed only with aggressive mode).",
+  zanpid: "Awin / Zanox affiliate click identifier (removed only with aggressive mode)."
 };
 
 export const PREFIX_EXPLANATIONS = {
