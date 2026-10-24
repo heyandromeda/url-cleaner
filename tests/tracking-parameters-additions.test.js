@@ -12,12 +12,7 @@ const NEW_GLOBAL_TRACKERS = [
   "adj_campaign",
   "adj_adgroup",
   "adj_creative",
-  "__hstc",
-  "__hssc",
-  "__hsfp",
   "__hssrc",
-  "ref_src",
-  "ref_url",
   "iterable_campaign",
   "iterable_template",
   "__iterable_campaign_id",
@@ -40,14 +35,9 @@ const REALISTIC = [
     expected: "https://www.adobe.com/creativecloud.html?promoid=XYZ"
   },
   {
-    name: "HubSpot cross-domain",
-    input: "https://www.example.com/pricing?__hstc=1.abc&__hssc=1.abc&__hsfp=999&plan=pro",
+    name: "HubSpot __hssrc",
+    input: "https://www.example.com/pricing?__hssrc=1&plan=pro",
     expected: "https://www.example.com/pricing?plan=pro"
-  },
-  {
-    name: "X embed ref tags",
-    input: "https://x.com/jack/status/20?ref_src=twsrc%5Etfw&ref_url=https%3A%2F%2Fexample.com",
-    expected: "https://x.com/jack/status/20"
   },
   {
     name: "Iterable Shopify params",
@@ -89,12 +79,6 @@ test("Iterable camelCase campaignId is not stripped (custom key, not Iterable in
   assert.equal(result.changed, false);
 });
 
-test("case-insensitive match for ref_src on X", () => {
-  const result = cleanUrl("https://twitter.com/i/status/1?REF_SRC=twsrc%5Etfw");
-  assert.equal(result.url, "https://twitter.com/i/status/1");
-  assert.ok(result.removedParameters.some((p) => p.toLowerCase() === "ref_src"));
-});
-
 for (const name of NEW_GLOBAL_TRACKERS) {
   test(`removes ${name} on generic site`, () => {
     const url = `https://example.com/page?id=42&${name}=track123`;
@@ -124,14 +108,16 @@ test("every new global tracker has a PARAMETER_EXPLANATIONS entry", () => {
   }
 });
 
-test("functional params stay (including ref vs ref_src)", () => {
+test("functional params stay (ref, adj_t, and params owned by PR #23 stay on this branch)", () => {
   const cases = [
     "https://example.com/search?q=hello&lang=en&page=2&id=9",
     "https://shop.example/item?ref=homepage",
     "https://app.example/auth?session=abc123&token=def456",
     "https://wiki.example/wiki/Topic?action=edit",
     "https://docs.example.com/guide?ref=navigation",
-    "https://abc.adj.st/deeplink?adj_t=token123"
+    "https://abc.adj.st/deeplink?adj_t=token123",
+    "https://x.com/jack/status/20?ref_src=twsrc%5Etfw&ref_url=https%3A%2F%2Fexample.com",
+    "https://www.example.com/pricing?__hstc=1.abc&__hssc=1.abc&__hsfp=999&plan=pro"
   ];
   for (const input of cases) {
     const result = cleanUrl(input);

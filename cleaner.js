@@ -14,7 +14,7 @@ export const TRACKING_PARAMETERS = new Set([
   "pk_campaign", "pk_kwd", "pk_source", "pk_medium", "pk_content", "pk_cid",
   "adobe_mc", "adobe_mc_sdid", "icid", "tt_medium", "tt_content",
   "adj_campaign", "adj_adgroup", "adj_creative",
-  "__hstc", "__hssc", "__hsfp", "__hssrc", "ref_src", "ref_url",
+  "__hssrc",
   "iterable_campaign", "iterable_template",
   "__iterable_campaign_id", "__iterable_template_id",
   "_iterable_campaign_id", "_iterable_template_id"
