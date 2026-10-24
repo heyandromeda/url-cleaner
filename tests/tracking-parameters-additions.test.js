@@ -108,16 +108,14 @@ test("every new global tracker has a PARAMETER_EXPLANATIONS entry", () => {
   }
 });
 
-test("functional params stay (ref, adj_t, and params owned by PR #23 stay on this branch)", () => {
+test("functional params stay (ref and adj_t stay; PR #23 owns the X and HubSpot cases below)", () => {
   const cases = [
     "https://example.com/search?q=hello&lang=en&page=2&id=9",
     "https://shop.example/item?ref=homepage",
     "https://app.example/auth?session=abc123&token=def456",
     "https://wiki.example/wiki/Topic?action=edit",
     "https://docs.example.com/guide?ref=navigation",
-    "https://abc.adj.st/deeplink?adj_t=token123",
-    "https://x.com/jack/status/20?ref_src=twsrc%5Etfw&ref_url=https%3A%2F%2Fexample.com",
-    "https://www.example.com/pricing?__hstc=1.abc&__hssc=1.abc&__hsfp=999&plan=pro"
+    "https://abc.adj.st/deeplink?adj_t=token123"
   ];
   for (const input of cases) {
     const result = cleanUrl(input);
@@ -125,4 +123,12 @@ test("functional params stay (ref, adj_t, and params owned by PR #23 stay on thi
     assert.equal(result.changed, false, input);
     assert.deepEqual(result.removedParameters, [], input);
   }
+});
+
+test("PR #23 parameters are removed once that branch is combined", () => {
+  const xShare = cleanUrl("https://x.com/jack/status/20?ref_src=twsrc%5Etfw&ref_url=https%3A%2F%2Fexample.com");
+  assert.equal(xShare.url, "https://x.com/jack/status/20");
+
+  const hubspot = cleanUrl("https://www.example.com/pricing?__hstc=1.abc&__hssc=1.abc&__hsfp=999&plan=pro");
+  assert.equal(hubspot.url, "https://www.example.com/pricing?plan=pro");
 });

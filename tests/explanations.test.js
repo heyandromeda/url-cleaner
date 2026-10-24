@@ -26,7 +26,7 @@ test("explains recognized trackers without inventing unknown ones", () => {
   assert.match(explainParameter("utm_custom_flag"), /UTM|Urchin/i);
   assert.match(explainParameter("si"), /YouTube/i);
   assert.equal(explainParameter("id"), null);
-  assert.equal(explainParameter("ref"), null);
+  assert.match(explainParameter("ref"), /Amazon|Etsy/i);
   assert.equal(explainParameter("totally_unknown_param"), null);
   assert.equal(explainParameter(""), null);
 });
