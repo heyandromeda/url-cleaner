@@ -5,7 +5,7 @@ Official MCP adapter for [URL Cleaner](https://github.com/heyandromeda/url-clean
 Every tool result comes from engine functions only. The server does not fetch or open URLs. Each result includes `engineInvoked` (function names + best-effort git SHA of the loaded engine).
 
 - **stdio** (default): newline-delimited JSON-RPC for Cursor, Claude Code, Codex, and other local MCP clients.
-- **HTTP**: Streamable HTTP on `POST /mcp` (JSON responses), bearer auth, binds `127.0.0.1` by default. `GET /healthz` is public.
+- **HTTP**: Streamable HTTP on `POST /mcp` (JSON responses), bearer auth, binds `127.0.0.1` by default. `GET /healthz` is unauthenticated and Host-checked (`{ ok: true }` only).
 - Protocol: `initialize`, `notifications/initialized`, `ping`, `tools/list`, `tools/call`. JSON-RPC batches accepted.
 - Logs (stderr): tool name, duration, status, and auth rejections only — never URLs, arguments, or tokens.
 
@@ -40,7 +40,7 @@ Environment:
 | Variable | Purpose |
 |---|---|
 | `MCP_AUTH_TOKEN` | Required for HTTP mode (≥ 24 characters) |
-| `HOST` | Default `127.0.0.1`. With `HOST=0.0.0.0`, the default allowed `Host` set follows the bind address only and **excludes** `localhost` and `127.0.0.1`; local clients must set `MCP_ALLOWED_HOSTS` (see **Host** below). |
+| `HOST` | Default `127.0.0.1`. Binding `0.0.0.0` or `::` also allows loopback `Host` values (`localhost`, `127.0.0.1`, `[::1]`, with and without port). Proxy hostnames still need `MCP_ALLOWED_HOSTS` (see **Host** below). |
 | `PORT` | Default `8787` |
 | `ENGINE_DIR` | Default `..` (repo root) |
 | `ENGINE_SHA` | Optional override for `engineInvoked.sha` |
@@ -53,7 +53,7 @@ Environment:
 
 **Origin (DNS rebinding):** On `POST /mcp`, if the client sends an `Origin` header it must pass **either** the default loopback rule (`http`/`https` on `localhost`, `127.0.0.1`, or `[::1]` on **any** port) **or** match a full origin in `MCP_ALLOWED_ORIGINS` (scheme, host, and port compared via `URL().origin` — `https://app.example:8443` does not admit `http://app.example` or `https://app.example:9999`). A disallowed Origin returns **403** before auth or body handling. Requests with no `Origin` header are still accepted.
 
-**Host:** The `Host` header must match the bound loopback address/port **or** an entry in `MCP_ALLOWED_HOSTS` (comma-separated, lowercase). Values are compared literally to the request `Host` header. Include the port in each entry when the server listens on a non-80 port (e.g. `MCP_ALLOWED_HOSTS=127.0.0.1:8859,localhost:8859`); a bare host such as `127.0.0.1` does **not** match `127.0.0.1:8859` and returns **403**. On port **80** only, clients may send a host without `:80`, so a bare entry can match. Use this when binding `0.0.0.0` or when a reverse proxy forwards with a public hostname. `/healthz` is not subject to Origin checks.
+**Host:** The `Host` header must match the bound address/port **or** an entry in `MCP_ALLOWED_HOSTS` (comma-separated, lowercase). Values are compared literally to the request `Host` header. Include the port in each entry when the server listens on a non-80 port (e.g. `MCP_ALLOWED_HOSTS=127.0.0.1:8859,localhost:8859`); a bare host such as `127.0.0.1` does **not** match `127.0.0.1:8859` and returns **403**. On port **80** only, clients may send a host without `:80`, so a bare entry can match. When binding `0.0.0.0` or `::`, the defaults also include loopback names (`localhost`, `127.0.0.1`, `[::1]`, with and without the listen port) so local clients work without `MCP_ALLOWED_HOSTS`. Use `MCP_ALLOWED_HOSTS` when a reverse proxy forwards with a public hostname. `/healthz` is Host-checked the same way, is not subject to Origin or token checks, and does not include the engine SHA.
 
 There is **no** public hosted MCP endpoint in this repo. Run stdio locally or bind HTTP on localhost for your own clients.
 

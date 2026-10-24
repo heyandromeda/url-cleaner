@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   canReadClipboard,
   extractHttpUrl,
+  hasHandoffFields,
   parseHandoffParams,
   parseHandoffUrl
 } from "../dist/handoff.js";
@@ -27,6 +28,54 @@ test("share-target and query handoff read url, then text, then title", () => {
   assert.equal(parseHandoffParams("text=no%20link%20here"), "");
 });
 
+test("share-target hash falls back from an invalid url field to text, then title", () => {
+  const app = "https://andromeda-url-cleaner.vercel.app/";
+  const hash = (fields) => {
+    const params = new URLSearchParams();
+    for (const [name, value] of Object.entries(fields)) params.set(name, value);
+    return `${app}#${params}`;
+  };
+
+  assert.equal(
+    parseHandoffUrl(hash({
+      url: "not-a-url",
+      text: "Check this https://from-text.example/a?fbclid=1 please"
+    })),
+    "https://from-text.example/a?fbclid=1"
+  );
+  assert.equal(
+    parseHandoffUrl(hash({
+      url: "javascript:alert(1)",
+      text: "no link here",
+      title: "https://from-title.example/ok"
+    })),
+    "https://from-title.example/ok"
+  );
+});
+
+test("failed share-target parse still flags handoff fields so the address bar can be cleared", () => {
+  const app = "https://andromeda-url-cleaner.vercel.app/";
+  const leftover = `${app}#url=not-a-url&text=shared%20secret%20words`;
+  assert.equal(parseHandoffUrl(leftover), "");
+  assert.equal(hasHandoffFields(leftover), true);
+  assert.equal(hasHandoffFields(`${app}?title=just%20words`), true);
+  assert.equal(hasHandoffFields(`${app}#unrelated`), false);
+  assert.equal(hasHandoffFields(app), false);
+});
+
+test("valid url field wins over an embedded &url= in text", () => {
+  const app = "https://andromeda-url-cleaner.vercel.app/";
+  const params = new URLSearchParams({
+    url: "https://good.example/page",
+    text: "notes &url=https://evil.example/phish"
+  });
+  assert.equal(parseHandoffUrl(`${app}#${params}`), "https://good.example/page");
+  assert.equal(
+    parseHandoffParams(params),
+    "https://good.example/page"
+  );
+});
+
 test("fragment handoff is read and preferred over the query string", () => {
   const encoded = encodeURIComponent("https://example.com/page?utm_source=x&id=1");
   const app = "https://andromeda-url-cleaner.vercel.app/";
@@ -42,7 +91,7 @@ test("fragment handoff is read and preferred over the query string", () => {
   );
 });
 
-test("query handoff still works for the share target and legacy ?url= links", () => {
+test("query handoff still works for legacy ?url= links", () => {
   const app = "https://andromeda-url-cleaner.vercel.app/";
 
   assert.equal(parseHandoffUrl(`${app}?url=${encodeURIComponent("https://example.com/a")}`), "https://example.com/a");

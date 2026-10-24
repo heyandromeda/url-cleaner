@@ -29,13 +29,17 @@ const MAX_BATCH = 100;
 const MAX_URL_LEN = 8192;
 const MAX_HTTP_BODY_BYTES = 1_000_000;
 const BATCH_ITEM_ERROR = "Every item must be a non-empty single-line string.";
+const BATCH_ITEM_TOO_LONG = `URL is longer than ${MAX_URL_LEN} characters.`;
 const OPAQUE_SHORTENER_WARNING =
   "Opaque shortener host: the real destination is hidden and URL Cleaner does not follow links, so it cannot be cleaned further.";
 
 const proof = (...fns) => ({ engineInvoked: { functions: fns, module: "url-cleaner/cleaner.js", sha: ENGINE_SHA } });
 const queryNames = (href) => [...new URL(href).searchParams.keys()];
 
-class InputError extends Error {}
+export function resolveInputError(engineModule) {
+  return engineModule?.InputError ?? class InputError extends Error {};
+}
+const InputError = resolveInputError(engine);
 function needUrl(args) {
   const url = args?.url;
   if (typeof url !== "string" || !url.trim()) throw new InputError("Missing required argument `url` (a string).");
@@ -95,6 +99,10 @@ const TOOLS = {
         const u = urls[index];
         if (typeof u !== "string" || /[\r\n]/.test(u) || !u.trim()) {
           results[index] = { index, ok: false, original: String(u ?? ""), error: BATCH_ITEM_ERROR };
+          continue;
+        }
+        if (u.length > MAX_URL_LEN) {
+          results[index] = { index, ok: false, original: u.slice(0, 64), error: BATCH_ITEM_TOO_LONG };
           continue;
         }
         validLines.push({ index, input: u.trim() });
@@ -266,12 +274,13 @@ function handle(msg) {
   if (method === "tools/list") return ok(msg.id, { tools: Object.entries(TOOLS).map(([name, t]) => ({ name, description: t.description, inputSchema: t.inputSchema,
     annotations: { readOnlyHint: true, openWorldHint: false, idempotentHint: true } })) });
   if (method === "tools/call") {
-    const name = params?.name; const tool = TOOLS[name];
-    if (!tool) return err(msg.id, -32602, `Unknown tool: ${String(name).slice(0, 64)}`);
+    const name = params?.name;
+    if (!Object.hasOwn(TOOLS, name)) return err(msg.id, -32602, `Unknown tool: ${String(name).slice(0, 64)}`);
+    const tool = TOOLS[name];
     const t0 = performance.now(); let status = "ok";
     try { return ok(msg.id, toolResult(tool.run(params.arguments || {}), false, name)); }
     catch (e) {
-      status = e instanceof InputError || e instanceof TypeError ? "input_error" : "error";
+      status = e instanceof InputError ? "input_error" : "error";
       const message = status === "error" ? "Internal error while running the URL Cleaner engine." : e.message;
       return ok(msg.id, toolResult({ error: message, tool: name, engine: { sha: ENGINE_SHA } }, true, name));
     } finally { log({ tool: name, ms: Math.round(performance.now() - t0), status }); }
@@ -340,6 +349,17 @@ function originHeaderAllowed(originHeader, explicitAllowedOrigins) {
   return explicitAllowedOrigins.has(originUrl.origin);
 }
 
+function addLoopbackHostHeaders(allowed, withPort) {
+  allowed.add(withPort("127.0.0.1").toLowerCase());
+  allowed.add(withPort("localhost").toLowerCase());
+  allowed.add("127.0.0.1");
+  allowed.add("localhost");
+  allowed.add(withPort("[::1]").toLowerCase());
+  allowed.add(withPort("::1").toLowerCase());
+  allowed.add("[::1]");
+  allowed.add("::1");
+}
+
 function defaultAllowedHostHeaders(bindHost, bindPort) {
   const allowed = new Set();
   const bind = bindHost.toLowerCase();
@@ -358,6 +378,9 @@ function defaultAllowedHostHeaders(bindHost, bindPort) {
     const name = bindHost.includes(":") ? `[${bindHost}]` : bindHost;
     allowed.add(withPort(name).toLowerCase());
     allowed.add(name.toLowerCase());
+    if (bind === "0.0.0.0" || bind === "::" || bind === "[::]") {
+      addLoopbackHostHeaders(allowed, withPort);
+    }
   }
   return allowed;
 }
@@ -393,7 +416,12 @@ function startHttp() {
   };
   const server = http.createServer((req, res) => {
     const pathname = (req.url || "").split("?")[0];
-    if (req.method === "GET" && pathname === "/healthz") return send(res, 200, { ok: true, engineSha: ENGINE_SHA });
+    if (req.method === "GET" && pathname === "/healthz") {
+      if (!hostHeaderAllowed(req.headers.host, HOST, PORT, allowedHostHeaders)) {
+        return rejectMcp(res, "Host not allowed");
+      }
+      return send(res, 200, { ok: true });
+    }
     if (pathname !== "/mcp") return send(res, 404, { error: "not found" });
     if (req.headers.origin && !originHeaderAllowed(req.headers.origin, explicitAllowedOrigins)) {
       return rejectMcp(res, "Origin not allowed");
@@ -444,5 +472,7 @@ export {
   loopbackOriginAllowed,
   loadExplicitAllowedOrigins,
   loadAllowedHostHeaders,
-  defaultAllowedHostHeaders
+  defaultAllowedHostHeaders,
+  InputError,
+  MAX_URL_LEN
 };
