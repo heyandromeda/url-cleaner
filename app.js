@@ -8,7 +8,7 @@ import {
   removedDuplicateIndicesForBeforeView
 } from "./cleaner.js";
 import { explainParameter, trackerOfTheDay } from "./explanations.js";
-import { canReadClipboard, parseHandoffUrl } from "./handoff.js";
+import { canReadClipboard, hasHandoffFields, parseHandoffUrl } from "./handoff.js";
 import { createIcon, wrapIconButton } from "./icons.js";
 import { breakableUrlMarkup } from "./url-break.js";
 import {
@@ -685,12 +685,16 @@ function clearHandoffFromAddressBar() {
 }
 
 function loadHandoff() {
-  const handedOff = parseHandoffUrl(window.location.href);
-  if (!handedOff) return false;
-  input.value = handedOff;
-  runClean({ allowAutoCopy: false });
-  clearHandoffFromAddressBar();
-  return true;
+  const href = window.location.href;
+  const handedOff = parseHandoffUrl(href);
+  if (handedOff) {
+    input.value = handedOff;
+    runClean({ allowAutoCopy: false });
+  }
+  if (handedOff || hasHandoffFields(href)) {
+    clearHandoffFromAddressBar();
+  }
+  return Boolean(handedOff);
 }
 
 initTheme();

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   canReadClipboard,
   extractHttpUrl,
+  hasHandoffFields,
   parseHandoffParams,
   parseHandoffUrl
 } from "../dist/handoff.js";
@@ -49,6 +50,29 @@ test("share-target hash falls back from an invalid url field to text, then title
       title: "https://from-title.example/ok"
     })),
     "https://from-title.example/ok"
+  );
+});
+
+test("failed share-target parse still flags handoff fields so the address bar can be cleared", () => {
+  const app = "https://andromeda-url-cleaner.vercel.app/";
+  const leftover = `${app}#url=not-a-url&text=shared%20secret%20words`;
+  assert.equal(parseHandoffUrl(leftover), "");
+  assert.equal(hasHandoffFields(leftover), true);
+  assert.equal(hasHandoffFields(`${app}?title=just%20words`), true);
+  assert.equal(hasHandoffFields(`${app}#unrelated`), false);
+  assert.equal(hasHandoffFields(app), false);
+});
+
+test("valid url field wins over an embedded &url= in text", () => {
+  const app = "https://andromeda-url-cleaner.vercel.app/";
+  const params = new URLSearchParams({
+    url: "https://good.example/page",
+    text: "notes &url=https://evil.example/phish"
+  });
+  assert.equal(parseHandoffUrl(`${app}#${params}`), "https://good.example/page");
+  assert.equal(
+    parseHandoffParams(params),
+    "https://good.example/page"
   );
 });
 

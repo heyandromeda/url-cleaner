@@ -64,6 +64,7 @@ test("index.html links the manifest and existing icons", () => {
   assert.match(app, /serviceWorker\.register\("\.\/sw\.js"\)/);
   assert.match(app, /canReadClipboard/);
   assert.match(app, /parseHandoffUrl/);
+  assert.match(app, /hasHandoffFields/);
 });
 
 test("Vercel middleware 303s share POST when the service worker is not active", () => {

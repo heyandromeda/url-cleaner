@@ -80,6 +80,12 @@ export function parseHandoffUrl(href) {
   return parseHandoffParams(url.hash.slice(1)) || parseHandoffParams(url.searchParams);
 }
 
+export function hasHandoffFields(href) {
+  const parsed = new URL(href);
+  const sources = [new URLSearchParams(parsed.hash.slice(1)), parsed.searchParams];
+  return sources.some((params) => ["url", "text", "title"].some((name) => params.has(name)));
+}
+
 export function canReadClipboard(permissionState) {
   return permissionState === "granted";
 }

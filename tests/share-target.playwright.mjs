@@ -90,6 +90,11 @@ try {
 
   assert.deepEqual(serverPosts, [], "share POST must be answered by the service worker, not the static server");
 
+  const leftoverPage = await context.newPage();
+  await leftoverPage.goto(`${baseUrl}#url=not-a-url&text=shared%20secret%20words`, { waitUntil: "networkidle" });
+  await leftoverPage.waitForFunction(() => !window.location.hash && !window.location.search);
+  assert.doesNotMatch(leftoverPage.url(), /shared|secret|url=|text=/);
+
   console.log("share-target playwright checks passed (POST intercepted, hash handoff, no server POST)");
 } finally {
   await browser.close();
