@@ -7,6 +7,8 @@ export function isShareTargetPost(method, pathname) {
   return pathname === "/" || pathname === "/index.html" || pathname === "";
 }
 
+// First-launch share POSTs must not be parsed here: reading the body would
+// put the shared link on the server. Drop it and 303 to `/` instead.
 export function shareTargetFallbackResponse() {
   return new Response(null, {
     status: 303,

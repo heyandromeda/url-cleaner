@@ -56,9 +56,9 @@ try {
 
   const response = await redirect;
   const location = response.headers().location || "";
-  assert.match(location, /#url=/, `share redirect Location was ${location || "(empty)"}`);
+  assert.match(location, /#/, `share redirect Location was ${location || "(empty)"}`);
   const redirected = new URL(location, baseUrl);
-  assert.equal(redirected.hash, `#url=${encodeURIComponent(SHARED)}`);
+  assert.equal(new URLSearchParams(redirected.hash.slice(1)).get("url"), SHARED);
 
   await sharePage.waitForFunction((expected) => {
     const input = document.querySelector("#url-input");
@@ -68,9 +68,29 @@ try {
   const inputValue = await sharePage.locator("#url-input").inputValue();
   assert.equal(inputValue, SHARED);
 
+  const fallbackPage = await context.newPage();
+  const fallbackRedirect = fallbackPage.waitForResponse((response) => (
+    response.request().method() === "POST" && [301, 302, 303, 307, 308].includes(response.status())
+  ));
+  await fallbackPage.setContent(`<!DOCTYPE html>
+<form id="share" method="POST" action="${baseUrl}" enctype="application/x-www-form-urlencoded">
+  <input type="hidden" name="url" value="not-a-url">
+  <input type="hidden" name="text" value="Check this https://from-text.example/a?fbclid=1 please">
+</form>
+<script>document.getElementById("share").submit();</script>`);
+  const fallbackResponse = await fallbackRedirect;
+  const fallbackLocation = new URL(fallbackResponse.headers().location || "", baseUrl);
+  const fallbackParams = new URLSearchParams(fallbackLocation.hash.slice(1));
+  assert.equal(fallbackParams.get("url"), "not-a-url");
+  assert.match(fallbackParams.get("text") || "", /from-text\.example/);
+  await fallbackPage.waitForFunction((expected) => {
+    const input = document.querySelector("#url-input");
+    return Boolean(input && input.value.includes(expected));
+  }, "from-text.example");
+
   assert.deepEqual(serverPosts, [], "share POST must be answered by the service worker, not the static server");
 
-  console.log("share-target playwright checks passed (POST intercepted, #url= handoff, no server POST)");
+  console.log("share-target playwright checks passed (POST intercepted, hash handoff, no server POST)");
 } finally {
   await browser.close();
   server.close();

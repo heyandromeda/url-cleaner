@@ -76,8 +76,10 @@ test("Vercel middleware 303s share POST when the service worker is not active", 
 test("service worker intercepts share POST locally and does not cache or fetch URLs", () => {
   const sw = readFileSync(join(root, "sw.js"), "utf8");
   assert.match(sw, /addEventListener\(\s*["']fetch["']/);
-  assert.match(sw, /#url=/);
+  assert.match(sw, /#\$\{hash\}|#url=/);
   assert.match(sw, /formData/);
+  assert.match(sw, /\["url", "text", "title"\]/);
+  assert.doesNotMatch(sw, /formData\.get\(["']url["']\)\s*\|\|/);
   assert.doesNotMatch(sw, /fetch\s*\(/);
   assert.doesNotMatch(sw, /caches/);
   assert.match(sw, /skipWaiting/);

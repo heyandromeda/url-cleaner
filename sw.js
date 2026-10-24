@@ -17,16 +17,27 @@ function isShareTargetPost(request) {
   return path === "/" || path === "/index.html";
 }
 
+function shareTargetHash(formData) {
+  const params = new URLSearchParams();
+  for (const name of ["url", "text", "title"]) {
+    const value = formData.get(name);
+    if (value == null) continue;
+    const text = String(value);
+    if (!text) continue;
+    params.set(name, text);
+  }
+  return params.toString();
+}
+
 async function shareTargetRedirect(request) {
   const origin = new URL(request.url).origin;
-  let shared = "";
+  let hash = "";
   try {
-    const formData = await request.formData();
-    shared = String(formData.get("url") || formData.get("text") || formData.get("title") || "");
+    hash = shareTargetHash(await request.formData());
   } catch {
-    shared = "";
+    hash = "";
   }
-  return Response.redirect(`${origin}/#url=${encodeURIComponent(shared)}`, 303);
+  return Response.redirect(hash ? `${origin}/#${hash}` : `${origin}/`, 303);
 }
 
 self.addEventListener("fetch", (event) => {

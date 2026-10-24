@@ -27,6 +27,31 @@ test("share-target and query handoff read url, then text, then title", () => {
   assert.equal(parseHandoffParams("text=no%20link%20here"), "");
 });
 
+test("share-target hash falls back from an invalid url field to text, then title", () => {
+  const app = "https://andromeda-url-cleaner.vercel.app/";
+  const hash = (fields) => {
+    const params = new URLSearchParams();
+    for (const [name, value] of Object.entries(fields)) params.set(name, value);
+    return `${app}#${params}`;
+  };
+
+  assert.equal(
+    parseHandoffUrl(hash({
+      url: "not-a-url",
+      text: "Check this https://from-text.example/a?fbclid=1 please"
+    })),
+    "https://from-text.example/a?fbclid=1"
+  );
+  assert.equal(
+    parseHandoffUrl(hash({
+      url: "javascript:alert(1)",
+      text: "no link here",
+      title: "https://from-title.example/ok"
+    })),
+    "https://from-title.example/ok"
+  );
+});
+
 test("fragment handoff is read and preferred over the query string", () => {
   const encoded = encodeURIComponent("https://example.com/page?utm_source=x&id=1");
   const app = "https://andromeda-url-cleaner.vercel.app/";
