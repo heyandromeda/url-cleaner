@@ -46,6 +46,16 @@ test("skips blank lines and records original line numbers", () => {
   assert.equal(results[1].line, 5);
 });
 
+test("cleanBatch hides non-InputError messages (DEV-22 F3)", () => {
+  const results = cleanBatch("https://example.com/", {}, () => {
+    throw new TypeError("internal detail");
+  });
+  assert.equal(results.length, 1);
+  assert.equal(results[0].ok, false);
+  assert.equal(results[0].error, "Internal error while cleaning this URL.");
+  assert.doesNotMatch(results[0].error, /internal detail/);
+});
+
 test("cleanBatch does not fetch or follow opaque shorteners", () => {
   const results = cleanBatch("https://bit.ly/abc?utm_source=x");
   assert.equal(results[0].ok, true);

@@ -3,10 +3,15 @@ import { dirname, extname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const WEB_EXTENSIONS = new Set([".js", ".html", ".css", ".webmanifest", ".png", ".ico"]);
+const SKIP_WEB_FILES = new Set(["middleware.js"]);
 
 export function listWebRootFiles(root) {
   return readdirSync(root, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && WEB_EXTENSIONS.has(extname(entry.name)))
+    .filter((entry) => (
+      entry.isFile()
+      && WEB_EXTENSIONS.has(extname(entry.name))
+      && !SKIP_WEB_FILES.has(entry.name)
+    ))
     .map((entry) => entry.name)
     .sort();
 }

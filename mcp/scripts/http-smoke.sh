@@ -2,10 +2,12 @@
 # Local-only smoke test: starts the server on 127.0.0.1 with a random throwaway token (never printed), runs curl calls, stops it.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+WORKDIR="$(mktemp -d)"
 export MCP_AUTH_TOKEN="$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')"
 export PORT="${PORT:-8799}" HOST=127.0.0.1
-node server.mjs --http 2> /tmp/ucmcp-http.log & PID=$!
-trap 'kill $PID 2>/dev/null' EXIT
+node server.mjs --http 2> "$WORKDIR/http.log" & PID=$!
+cleanup() { kill "$PID" 2>/dev/null || true; rm -rf "$WORKDIR"; }
+trap cleanup EXIT
 for i in $(seq 1 30); do curl -s "http://127.0.0.1:$PORT/healthz" >/dev/null && break; sleep 0.1; done
 U="http://127.0.0.1:$PORT/mcp"
 rpc() { curl -s -w '  [HTTP %{http_code}]\n' -H "Authorization: Bearer $MCP_AUTH_TOKEN" -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' -d "$1" "$U"; }
@@ -15,7 +17,7 @@ echo "### wrong token"; curl -s -o /dev/null -w '[HTTP %{http_code}]\n' -H 'Auth
 echo "### initialize"; rpc '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"1"}}}'
 echo "### initialized"; rpc '{"jsonrpc":"2.0","method":"notifications/initialized"}'
 echo "### ping"; rpc '{"jsonrpc":"2.0","id":2,"method":"ping"}'
-echo "### tools/list"; rpc '{"jsonrpc":"2.0","id":3,"method":"tools/list"}' > /tmp/ucmcp-list.json; cat /tmp/ucmcp-list.json | tail -c 40
+echo "### tools/list"; rpc '{"jsonrpc":"2.0","id":3,"method":"tools/list"}' > "$WORKDIR/list.json"; cat "$WORKDIR/list.json" | tail -c 40
 for spec in \
  '10|clean_url|{"url":"https://example.com/p?utm_source=x&utm_medium=y&id=5&fbclid=abc"}' \
  '11|clean_url|{"url":"https://www.google.com/url?q=https%3A%2F%2Fexample.com%2F%3Futm_source%3Dx"}' \
@@ -30,6 +32,6 @@ for spec in \
  '60|clean_url|{}' \
  '61|no_such_tool|{}' ; do
   IFS='|' read -r id name args <<< "$spec"
-  echo "### $id $name $args"; call "$id" "$name" "$args" > "/tmp/ucmcp-$id.json"; tail -c 20 "/tmp/ucmcp-$id.json"
+  echo "### $id $name $args"; call "$id" "$name" "$args" > "$WORKDIR/$id.json"; tail -c 20 "$WORKDIR/$id.json"
 done
-echo "### server log (stderr)"; cat /tmp/ucmcp-http.log
+echo "### server log (stderr)"; cat "$WORKDIR/http.log"

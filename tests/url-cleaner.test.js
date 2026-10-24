@@ -4,6 +4,7 @@ import {
   cleanBatch,
   cleanUrl,
   detectWeirdness,
+  InputError,
   inspectUrl,
   isOpaqueShortener,
   MAX_UNWRAP_DEPTH,
@@ -50,6 +51,8 @@ test("preserves a hash fragment", () => {
 
 test("rejects invalid input", () => {
   assert.throws(() => cleanUrl("not a URL"), /valid URL/);
+  assert.throws(() => cleanUrl("not a URL"), InputError);
+  assert.throws(() => cleanUrl(""), InputError);
 });
 
 test("matches tracker names case-insensitively", () => {
