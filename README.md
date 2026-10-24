@@ -168,7 +168,7 @@ Now share a URL from Safari or another app, choose the shortcut, and URL Cleaner
 
 ### Share Sheet limitations
 
-- The Shortcut passes the link after the `#`, which browsers never send to a server, so the link stays on your device. Older Shortcuts that use `?url=` still work, but that form sends the link to the web host in the page request; switch them to `/#url=`.
+- The Shortcut passes the link after the `#`, which browsers never send to a server, so the link stays on your device. The Android share target POSTs into the service worker, which redirects to `/#url=` without a network request. Older Shortcuts that use `?url=` still work, but that form sends the link to the web host in the page request; switch them to `/#url=`.
 - The **Share** button uses the browser's Web Share support. It appears only where that API is available; **Copy** remains the fallback.
 - iOS and macOS may block silent clipboard writes when a page opens without a direct user gesture. The app therefore always displays the cleaned URL, and the **Share** and **Copy** buttons remain reliable final steps.
 - The app removes the handoff value from the address bar after loading it.
@@ -213,7 +213,7 @@ The test suite covers:
 - Local tracker explanations, rich tracker-of-the-day profiles, and deterministic daily selection
 - Tracking fingerprint scoring, URL X-Ray categorization, encoded value decoding, and weirdness flags
 - Opt-in aggressive cleaning and identical-duplicate cleanup, including batch mode
-- Share-target, `#url=` and `?url=` handoff parsing
+- Share-target POST, `#url=` and `?url=` handoff parsing
 - Manifest, service worker, and CSP constraints for the installable app
 - Every root web file matching its `dist/` copy byte-for-byte, since Vercel serves `dist/`
 
@@ -231,7 +231,7 @@ GitHub Actions runs `npm test` on every push to `main` and on pull requests.
 | [handoff.js](./handoff.js) | Share-target, hash handoff, and clipboard-permission helpers |
 | [app.js](./app.js) | Form, clipboard, settings, and copy interactions |
 | [manifest.webmanifest](./manifest.webmanifest) | Web app manifest and share target |
-| [sw.js](./sw.js) | Minimal service worker for installability (no caching) |
+| [sw.js](./sw.js) | Service worker for installability and local share-target POST handoff (no caching, no network) |
 | [tests/](./tests) | Automated tests (cleaning, batch, explanations, handoff, PWA, favicon, production URL, `dist/` sync) |
 | [vercel.json](./vercel.json) | Vercel config: serves `dist/` and sets the security headers |
 | [.github/workflows/test.yml](./.github/workflows/test.yml) | Runs `npm test` in CI |
@@ -261,9 +261,10 @@ How a link reaches the app matters:
 
 - **Paste, Paste button, clipboard offer:** the link never leaves the page.
 - **Shortcut (`/#url=`):** the link is passed after the `#`. Browsers do not send that part to the server, so the host only sees a plain request for the page.
-- **Android share target and old `?url=` links:** the Web Share Target API can only pass the link as a query string, so the shared link is included in the page request to the static host (Vercel) before the app cleans it and removes it from the address bar. Use the Shortcut or paste if you want to avoid that.
+- **Android share target:** the installed PWA receives a POST. The service worker intercepts it and redirects to `/#url=`, so the shared link never leaves the device.
+- **Old `?url=` links:** still work, but that form sends the link to the web host in the page request. Use `/#url=` or paste if you want to avoid that.
 
-The hosted site enforces this with security headers set in [vercel.json](./vercel.json). The Content Security Policy uses `connect-src 'none'`, so the page cannot make network requests even if it tried, and only loads its own scripts and styles. It also sends `Referrer-Policy: no-referrer`, refuses to be framed, and disables camera, microphone, geolocation, payment, and USB access. The service worker exists only for installability and caches nothing.
+The hosted site enforces this with security headers set in [vercel.json](./vercel.json). The Content Security Policy uses `connect-src 'none'`, so the page cannot make network requests even if it tried, and only loads its own scripts and styles. It also sends `Referrer-Policy: no-referrer`, refuses to be framed, and disables camera, microphone, geolocation, payment, and USB access. The service worker exists for installability and to keep share-target POSTs on-device; it caches nothing and never fetches the shared URL.
 
 ## License
 

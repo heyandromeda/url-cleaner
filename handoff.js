@@ -72,7 +72,9 @@ export function parseHandoffParams(searchParams) {
 }
 
 // Links handed over after the "#" (#url=) are never sent to the server, so
-// they win. The ?url= form stays for the share target and legacy handoff links.
+// they win. The Android share target POSTs into the service worker, which
+// redirects to /#url= without a network request. The ?url= form stays for
+// legacy handoff links only.
 export function parseHandoffUrl(href) {
   const url = new URL(href);
   return parseHandoffParams(url.hash.slice(1)) || parseHandoffParams(url.searchParams);

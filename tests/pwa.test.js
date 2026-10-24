@@ -29,11 +29,12 @@ test("root static files match the dist copies used by Vercel", () => {
   }
 });
 
-test("web app manifest uses local UC icons and a GET share_target", () => {
+test("web app manifest uses local UC icons and a POST share_target", () => {
   const manifest = JSON.parse(readFileSync(join(root, "manifest.webmanifest"), "utf8"));
   assert.equal(manifest.display, "standalone");
   assert.equal(manifest.start_url, "./");
-  assert.equal(manifest.share_target.method, "GET");
+  assert.equal(manifest.share_target.method, "POST");
+  assert.equal(manifest.share_target.enctype, "application/x-www-form-urlencoded");
   assert.equal(manifest.share_target.action, "./");
   assert.equal(manifest.share_target.params.url, "url");
   assert.deepEqual(
@@ -65,8 +66,11 @@ test("index.html links the manifest and existing icons", () => {
   assert.match(app, /parseHandoffUrl/);
 });
 
-test("service worker does not cache or fetch URLs", () => {
+test("service worker intercepts share POST locally and does not cache or fetch URLs", () => {
   const sw = readFileSync(join(root, "sw.js"), "utf8");
+  assert.match(sw, /addEventListener\(\s*["']fetch["']/);
+  assert.match(sw, /#url=/);
+  assert.match(sw, /formData/);
   assert.doesNotMatch(sw, /fetch\s*\(/);
   assert.doesNotMatch(sw, /caches/);
   assert.match(sw, /skipWaiting/);

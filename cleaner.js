@@ -60,6 +60,13 @@ const REDIRECT_RELATED_PARAMETERS = new Set([
 
 export const MAX_UNWRAP_DEPTH = 5;
 
+export class InputError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "InputError";
+  }
+}
+
 // %30-%39 (0-9), %41-%5A (A-Z) and %61-%7A (a-z).
 const ENCODED_ALPHANUMERIC_PATTERN = /%(?:3[0-9]|4[1-9a-f]|5[0-9a]|6[1-9a-f]|7[0-9a])/i;
 
@@ -136,17 +143,17 @@ function getWrapperInfo(url) {
 
 function parseHttpUrl(input) {
   const value = String(input ?? "").trim();
-  if (!value) throw new TypeError("Enter a URL to clean.");
+  if (!value) throw new InputError("Enter a URL to clean.");
 
   let url;
   try {
     url = new URL(value);
   } catch {
-    throw new TypeError("Enter a valid URL, including https:// or http://.");
+    throw new InputError("Enter a valid URL, including https:// or http://.");
   }
 
   if (!isHttpUrl(url)) {
-    throw new TypeError("Enter a valid URL, including https:// or http://.");
+    throw new InputError("Enter a valid URL, including https:// or http://.");
   }
 
   return url;

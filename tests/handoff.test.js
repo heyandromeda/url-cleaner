@@ -42,7 +42,7 @@ test("fragment handoff is read and preferred over the query string", () => {
   );
 });
 
-test("query handoff still works for the share target and legacy ?url= links", () => {
+test("query handoff still works for legacy ?url= links", () => {
   const app = "https://andromeda-url-cleaner.vercel.app/";
 
   assert.equal(parseHandoffUrl(`${app}?url=${encodeURIComponent("https://example.com/a")}`), "https://example.com/a");

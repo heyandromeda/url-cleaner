@@ -105,6 +105,47 @@ test("http: /healthz ignores Origin checks", async () => {
   await withHttpServer(async ({ base }) => {
     const res = await fetch(`${base}/healthz`, { headers: { Origin: "http://evil.example" } });
     assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.ok, true);
+    assert.equal(body.engineSha, undefined);
+  });
+});
+
+function getHealthzWithHost(port, host) {
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        hostname: "127.0.0.1",
+        port,
+        path: "/healthz",
+        method: "GET",
+        headers: { host }
+      },
+      (res) => {
+        const bufs = [];
+        res.on("data", (c) => bufs.push(c));
+        res.on("end", () => resolve({
+          status: res.statusCode,
+          body: Buffer.concat(bufs).toString("utf8")
+        }));
+      }
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+test("http: /healthz applies Host check and omits engineSha (DEV-22 F7)", async () => {
+  await withHttpServer(async ({ port }) => {
+    const denied = await getHealthzWithHost(port, "evil.example");
+    assert.equal(denied.status, 403);
+    assert.doesNotMatch(denied.body, /engineSha/);
+
+    const allowed = await getHealthzWithHost(port, `127.0.0.1:${port}`);
+    assert.equal(allowed.status, 200);
+    const body = JSON.parse(allowed.body);
+    assert.equal(body.ok, true);
+    assert.equal(body.engineSha, undefined);
   });
 });
 

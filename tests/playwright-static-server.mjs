@@ -20,11 +20,12 @@ export function distSiteRoot() {
   return join(repoRoot, "dist");
 }
 
-export function startDistServer() {
+export function startDistServer({ onRequest } = {}) {
   const siteRoot = distSiteRoot();
 
   return new Promise((resolve) => {
     const server = createServer((request, response) => {
+      onRequest?.(request);
       const path = request.url === "/" ? "/index.html" : request.url.split("?")[0];
       const filePath = join(siteRoot, decodeURIComponent(path.slice(1)));
       if (!existsSync(filePath)) {
