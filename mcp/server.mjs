@@ -36,7 +36,10 @@ const OPAQUE_SHORTENER_WARNING =
 const proof = (...fns) => ({ engineInvoked: { functions: fns, module: "url-cleaner/cleaner.js", sha: ENGINE_SHA } });
 const queryNames = (href) => [...new URL(href).searchParams.keys()];
 
-const InputError = engine.InputError;
+export function resolveInputError(engineModule) {
+  return engineModule?.InputError ?? class InputError extends Error {};
+}
+const InputError = resolveInputError(engine);
 function needUrl(args) {
   const url = args?.url;
   if (typeof url !== "string" || !url.trim()) throw new InputError("Missing required argument `url` (a string).");

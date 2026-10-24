@@ -10,8 +10,10 @@ import {
   TOOLS,
   handle,
   defaultAllowedHostHeaders,
-  MAX_URL_LEN
+  MAX_URL_LEN,
+  resolveInputError
 } from "../server.mjs";
+import { InputError as EngineInputError } from "../../cleaner.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TRACKED = "https://example.com/?utm_source=x";
@@ -147,6 +149,36 @@ test("http: HOST=0.0.0.0 accepts loopback Host without MCP_ALLOWED_HOSTS (DEV-22
   } finally {
     child.kill();
   }
+});
+
+test("resolveInputError falls back when the engine omits InputError (DEV-22 N1)", () => {
+  const Fallback = resolveInputError({});
+  const err = new Fallback("missing url");
+  assert.equal(err.message, "missing url");
+  assert.ok(err instanceof Error);
+  assert.equal(resolveInputError({ InputError: EngineInputError }), EngineInputError);
+});
+
+test("legacy ENGINE_DIR without InputError still validates (DEV-22 N1)", () => {
+  const fixture = path.join(ROOT, "tests/fixtures/legacy-engine");
+  const serverHref = pathToFileURL(path.join(ROOT, "server.mjs")).href;
+  const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
+    const { handle } = await import(${JSON.stringify(serverHref)});
+    const res = handle({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: "clean_url", arguments: {} }
+    });
+    const text = res.result?.content?.[0]?.text ?? "";
+    if (res.result?.isError !== true) { console.error(JSON.stringify(res)); process.exit(1); }
+    if (!text.includes("Missing required argument")) { console.error(text); process.exit(1); }
+  `], {
+    cwd: ROOT,
+    env: { ...process.env, ENGINE_DIR: fixture },
+    encoding: "utf8"
+  });
+  assert.equal(child.status, 0, child.stderr || child.stdout);
 });
 
 test("http-smoke.sh uses mktemp and cleans up (DEV-22 F8)", () => {

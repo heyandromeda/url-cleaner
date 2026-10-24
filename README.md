@@ -232,6 +232,7 @@ GitHub Actions runs `npm test` on every push to `main` and on pull requests.
 | [app.js](./app.js) | Form, clipboard, settings, and copy interactions |
 | [manifest.webmanifest](./manifest.webmanifest) | Web app manifest and share target |
 | [sw.js](./sw.js) | Service worker for installability and local share-target POST handoff (no caching, no network) |
+| [middleware.js](./middleware.js) | Vercel Routing Middleware: 303 share-target POSTs to `/` without reading the body |
 | [tests/](./tests) | Automated tests (cleaning, batch, explanations, handoff, PWA, favicon, production URL, `dist/` sync) |
 | [vercel.json](./vercel.json) | Vercel config: serves `dist/` and sets the security headers |
 | [.github/workflows/test.yml](./.github/workflows/test.yml) | Runs `npm test` in CI |
@@ -261,7 +262,7 @@ How a link reaches the app matters:
 
 - **Paste, Paste button, clipboard offer:** the link never leaves the page.
 - **Shortcut (`/#url=`):** the link is passed after the `#`. Browsers do not send that part to the server, so the host only sees a plain request for the page.
-- **Android share target:** the installed PWA receives a POST. The service worker intercepts it and redirects to `/#url=`, so the shared link never leaves the device.
+- **Android share target:** the installed PWA receives a POST. When the service worker is controlling the page, it intercepts that POST and redirects to `/#url=`, so the shared link never leaves the device. If the worker is not yet active (first launch or cleared storage), Vercel Routing Middleware responds `303` to `/` without reading the POST body, so the host never logs the shared link; the URL is dropped and you can paste or share again after install.
 - **Old `?url=` links:** still work, but that form sends the link to the web host in the page request. Use `/#url=` or paste if you want to avoid that.
 
 The hosted site enforces this with security headers set in [vercel.json](./vercel.json). The Content Security Policy uses `connect-src 'none'`, so the page cannot make network requests even if it tried, and only loads its own scripts and styles. It also sends `Referrer-Policy: no-referrer`, refuses to be framed, and disables camera, microphone, geolocation, payment, and USB access. The service worker exists for installability and to keep share-target POSTs on-device; it caches nothing and never fetches the shared URL.

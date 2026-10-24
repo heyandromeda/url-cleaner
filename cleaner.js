@@ -439,7 +439,7 @@ export function cleanUrl(input, options = {}) {
   };
 }
 
-export function cleanBatch(text, options = {}) {
+export function cleanBatch(text, options = {}, clean = cleanUrl) {
   const lines = String(text ?? "").split(/\r?\n/);
   const results = [];
 
@@ -452,14 +452,16 @@ export function cleanBatch(text, options = {}) {
         line: index + 1,
         input,
         ok: true,
-        result: cleanUrl(input, options)
+        result: clean(input, options)
       });
     } catch (error) {
       results.push({
         line: index + 1,
         input,
         ok: false,
-        error: error.message
+        error: error instanceof InputError
+          ? error.message
+          : "Internal error while cleaning this URL."
       });
     }
   }

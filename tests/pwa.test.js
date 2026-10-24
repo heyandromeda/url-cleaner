@@ -66,6 +66,13 @@ test("index.html links the manifest and existing icons", () => {
   assert.match(app, /parseHandoffUrl/);
 });
 
+test("Vercel middleware 303s share POST when the service worker is not active", () => {
+  const source = readFileSync(join(root, "middleware.js"), "utf8");
+  assert.match(source, /status:\s*303/);
+  assert.match(source, /Location:\s*["']\//);
+  assert.doesNotMatch(source, /formData|request\.text|request\.json/);
+});
+
 test("service worker intercepts share POST locally and does not cache or fetch URLs", () => {
   const sw = readFileSync(join(root, "sw.js"), "utf8");
   assert.match(sw, /addEventListener\(\s*["']fetch["']/);
