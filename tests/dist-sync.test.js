@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildDist, listWebRootFiles } from "../scripts/build.mjs";
+import { listWebRootFiles } from "../scripts/build.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-buildDist(root);
+// pretest already ran `npm run build`. Rebuilding here deletes dist/ while
+// other files import from it and flakes `npm test` under parallel workers.
 const dist = join(root, "dist");
 
 const rootWebFiles = listWebRootFiles(root);
