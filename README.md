@@ -36,7 +36,7 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Optionally cleans automatically whenever you paste
 - If clipboard read is already permitted, offers to clean whatever is on the clipboard when the page opens
 - Cleans a batch of URLs pasted one per line, with per-line success or failure and one-click copy of cleaned results
-- Explains recognized removed tracking parameters from the results view; unknown names are not described
+- Explains recognized removed tracking parameters from the results view; tap a name to expand a short local note, and unknown names are not described
 - Shows a collapsible Tracker of the Day card with a richer local explanation, example URL, privacy notes, fun facts, and cited sources; expand/collapse preference is remembered in localStorage
 - Installable as a PWA with a share target so a phone can hand a link to the local cleaner
 - Optionally copies every successfully cleaned URL automatically
@@ -57,6 +57,13 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Loads a `#url=` handoff into a tab that is already open, without a page reload
 - Handles invalid URLs clearly
 - Runs entirely in the browser with no backend, accounts, analytics, database, or external API
+- **MCP server** (`mcp/`): zero-dependency stdio/HTTP adapter so Grok Bots, Cursor, Claude Code, Codex, and other MCP clients can call the same cleaning engine locally (URLs are never fetched)
+
+## MCP server
+
+The [`mcp/`](./mcp/) folder ships an official Model Context Protocol server that wraps the repo engine (`cleanUrl`, `inspectUrl`, batch clean, explanations, capabilities). Use **stdio** for local IDE and agent configs, or **HTTP** on `127.0.0.1` with a bearer token for tools that need a remote URL on your own machine.
+
+It is not deployed with the static site on Vercel. Setup, tools, auth, and client examples: **[mcp/README.md](./mcp/README.md)**.
 
 ## Why choose URL Cleaner
 
@@ -161,7 +168,7 @@ Now share a URL from Safari or another app, choose the shortcut, and URL Cleaner
 
 ### Share Sheet limitations
 
-- The Shortcut passes the link after the `#`, which browsers never send to a server, so the link stays on your device. Older Shortcuts that use `?url=` still work, but that form sends the link to the web host in the page request; switch them to `/#url=`.
+- The Shortcut passes the link after the `#`, which browsers never send to a server, so the link stays on your device. The Android share target POSTs into the service worker, which redirects to `/#url=` without a network request. Older Shortcuts that use `?url=` still work, but that form sends the link to the web host in the page request; switch them to `/#url=`.
 - The **Share** button uses the browser's Web Share support. It appears only where that API is available; **Copy** remains the fallback.
 - iOS and macOS may block silent clipboard writes when a page opens without a direct user gesture. The app therefore always displays the cleaned URL, and the **Share** and **Copy** buttons remain reliable final steps.
 - The app removes the handoff value from the address bar after loading it.
@@ -206,7 +213,7 @@ The test suite covers:
 - Local tracker explanations, rich tracker-of-the-day profiles, and deterministic daily selection
 - Tracking fingerprint scoring, URL X-Ray categorization, encoded value decoding, and weirdness flags
 - Opt-in aggressive cleaning and identical-duplicate cleanup, including batch mode
-- Share-target, `#url=` and `?url=` handoff parsing
+- Share-target POST, `#url=` and `?url=` handoff parsing
 - Manifest, service worker, and CSP constraints for the installable app
 - Every root web file matching its `dist/` copy byte-for-byte, since Vercel serves `dist/`
 
@@ -224,7 +231,8 @@ GitHub Actions runs `npm test` on every push to `main` and on pull requests.
 | [handoff.js](./handoff.js) | Share-target, hash handoff, and clipboard-permission helpers |
 | [app.js](./app.js) | Form, clipboard, settings, and copy interactions |
 | [manifest.webmanifest](./manifest.webmanifest) | Web app manifest and share target |
-| [sw.js](./sw.js) | Minimal service worker for installability (no caching) |
+| [sw.js](./sw.js) | Service worker for installability and local share-target POST handoff (no caching, no network) |
+| [middleware.js](./middleware.js) | Vercel Routing Middleware: 303 share-target POSTs to `/` without reading the body |
 | [tests/](./tests) | Automated tests (cleaning, batch, explanations, handoff, PWA, favicon, production URL, `dist/` sync) |
 | [vercel.json](./vercel.json) | Vercel config: serves `dist/` and sets the security headers |
 | [.github/workflows/test.yml](./.github/workflows/test.yml) | Runs `npm test` in CI |
@@ -255,9 +263,10 @@ How a link reaches the app matters:
 
 - **Paste, Paste button, clipboard offer:** the link never leaves the page.
 - **Shortcut (`/#url=`):** the link is passed after the `#`. Browsers do not send that part to the server, so the host only sees a plain request for the page.
-- **Android share target and old `?url=` links:** the Web Share Target API can only pass the link as a query string, so the shared link is included in the page request to the static host (Vercel) before the app cleans it and removes it from the address bar. Use the Shortcut or paste if you want to avoid that.
+- **Android share target:** the installed PWA receives a POST. When the service worker is controlling the page, it intercepts that POST and redirects to a `/#url=&text=&title=` hash, so the shared fields never leave the device and an invalid `url` field can still fall back to a link in `text` or `title`. If the worker is not yet active (first launch or cleared storage), Vercel Routing Middleware responds `303` to `/` without reading the POST body, so the host never logs the shared link; the URL is dropped and you can paste or share again after install.
+- **Old `?url=` links:** still work, but that form sends the link to the web host in the page request. Use `/#url=` or paste if you want to avoid that.
 
-The hosted site enforces this with security headers set in [vercel.json](./vercel.json). The Content Security Policy uses `connect-src 'none'`, so the page cannot make network requests even if it tried, and only loads its own scripts and styles. It also sends `Referrer-Policy: no-referrer`, refuses to be framed, and disables camera, microphone, geolocation, payment, and USB access. The service worker exists only for installability and caches nothing.
+The hosted site enforces this with security headers set in [vercel.json](./vercel.json). The Content Security Policy uses `connect-src 'none'`, so the page cannot make network requests even if it tried, and only loads its own scripts and styles. It also sends `Referrer-Policy: no-referrer`, refuses to be framed, and disables camera, microphone, geolocation, payment, and USB access. The service worker exists for installability and to keep share-target POSTs on-device; it caches nothing and never fetches the shared URL.
 
 ## License
 

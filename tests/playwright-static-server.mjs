@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildDist } from "../scripts/build.mjs";
+import { isShareTargetPost } from "../middleware.js";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -20,12 +21,20 @@ export function distSiteRoot() {
   return join(repoRoot, "dist");
 }
 
-export function startDistServer() {
+export function startDistServer({ onRequest } = {}) {
   const siteRoot = distSiteRoot();
 
   return new Promise((resolve) => {
     const server = createServer((request, response) => {
-      const path = request.url === "/" ? "/index.html" : request.url.split("?")[0];
+      onRequest?.(request);
+      const pathname = (request.url || "/").split("?")[0];
+      if (isShareTargetPost(request.method, pathname)) {
+        request.resume();
+        response.writeHead(303, { Location: "/" });
+        response.end();
+        return;
+      }
+      const path = request.url === "/" ? "/index.html" : pathname;
       const filePath = join(siteRoot, decodeURIComponent(path.slice(1)));
       if (!existsSync(filePath)) {
         response.writeHead(404);

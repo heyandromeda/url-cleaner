@@ -1,0 +1,7 @@
+[mcp_servers.url-cleaner]
+command = "node"
+args = ["/ABSOLUTE/PATH/url-cleaner/mcp/server.mjs", "--stdio"]
+
+[mcp_servers.url-cleaner-remote]
+url = "https://YOUR-HOST/mcp"
+bearer_token_env_var = "URL_CLEANER_MCP_TOKEN"

@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { TRACKING_PARAMETERS, TRACKING_PARAMETER_PREFIXES } from "../dist/cleaner.js";
+import { TRACKING_PARAMETERS, TRACKING_PARAMETER_PREFIXES, HOST_TRACKING_PARAMETERS } from "../dist/cleaner.js";
 import {
   PARAMETER_EXPLANATIONS,
+  PREFIX_EXPLANATIONS,
   TRACKER_PROFILES,
   explainParameter,
   getTrackerProfile,
@@ -10,6 +11,11 @@ import {
   utcDateStamp,
   estimateProfileWordCount
 } from "../dist/explanations.js";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 test("explains recognized trackers without inventing unknown ones", () => {
   assert.match(explainParameter("gclid"), /Google Ads/i);
@@ -33,6 +39,29 @@ test("every bundled tracker name has a local explanation", () => {
   for (const prefix of TRACKING_PARAMETER_PREFIXES) {
     assert.equal(typeof explainParameter(`${prefix}example`), "string", prefix);
   }
+  for (const names of HOST_TRACKING_PARAMETERS.values()) {
+    for (const name of names) {
+      assert.equal(typeof explainParameter(name), "string", name);
+      assert.ok(explainParameter(name).length > 10, name);
+    }
+  }
+  assert.deepEqual(
+    Object.keys(PREFIX_EXPLANATIONS).sort(),
+    [...TRACKING_PARAMETER_PREFIXES].sort()
+  );
+});
+
+test("removed-parameter result view can expand local explanations", () => {
+  const html = readFileSync(join(root, "index.html"), "utf8");
+  const app = readFileSync(join(root, "app.js"), "utf8");
+  const css = readFileSync(join(root, "styles.css"), "utf8");
+  assert.match(html, /id="removed-hint"/);
+  assert.match(html, /Tap a parameter to see what commonly uses it/i);
+  assert.match(app, /createElement\("details"\)/);
+  assert.match(app, /explainParameter\(parameter\)/);
+  assert.match(app, /if \(!explanation\)/);
+  assert.match(app, /removedHint\.hidden = parameters\.length === 0/);
+  assert.match(css, /\.removed-list li:has\(details\[open\]\)/);
 });
 
 test("explanations are bundled data, not fetched URLs", () => {

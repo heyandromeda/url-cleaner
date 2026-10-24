@@ -71,11 +71,19 @@ export function parseHandoffParams(searchParams) {
   return "";
 }
 
-// Links handed over after the "#" (#url=) are never sent to the server, so
-// they win. The ?url= form stays for the share target and legacy handoff links.
+// Links handed over after the "#" are never sent to the server, so they win.
+// The Android share target POSTs into the service worker, which redirects to
+// /#url=&text=&title= without a network request so parseHandoffParams can try
+// each field. The ?url= form stays for legacy handoff links only.
 export function parseHandoffUrl(href) {
   const url = new URL(href);
   return parseHandoffParams(url.hash.slice(1)) || parseHandoffParams(url.searchParams);
+}
+
+export function hasHandoffFields(href) {
+  const parsed = new URL(href);
+  const sources = [new URLSearchParams(parsed.hash.slice(1)), parsed.searchParams];
+  return sources.some((params) => ["url", "text", "title"].some((name) => params.has(name)));
 }
 
 export function canReadClipboard(permissionState) {

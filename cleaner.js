@@ -21,7 +21,13 @@ export const TRACKING_PARAMETERS = new Set([
   "rdt_cid", "ef_id", "ocid", "wt.mc_id",
   "__s", "_bhlid", "_kx", "ml_subscriber", "ml_subscriber_hash",
   "et_cid", "et_lid", "et_rid", "sfmc_id", "sfmc_activityid",
-  "vgo_ee", "wickedid", "itsct", "itscg", "bsft_clkid", "bsft_uid"
+  "vgo_ee", "wickedid", "itsct", "itscg", "bsft_clkid", "bsft_uid",
+  "adobe_mc", "adobe_mc_sdid", "icid", "tt_medium", "tt_content",
+  "adj_campaign", "adj_adgroup", "adj_creative",
+  "__hssrc",
+  "iterable_campaign", "iterable_template",
+  "__iterable_campaign_id", "__iterable_template_id",
+  "_iterable_campaign_id", "_iterable_template_id"
 ]);
 
 export const TRACKING_PARAMETER_PREFIXES = ["utm_", "hsa_", "mtm_", "piwik_", "_ga_"];
@@ -31,7 +37,8 @@ export const TRACKING_PARAMETER_PREFIXES = ["utm_", "hsa_", "mtm_", "piwik_", "_
 export const AGGRESSIVE_PARAMETERS = new Set([
   "affiliate", "affiliate_id", "affid", "aff_id", "campaign", "campaignid",
   "clickid", "click_id", "partner", "partner_id", "ref", "referrer",
-  "referral", "source", "src", "tracking", "tracking_id"
+  "referral", "source", "src", "tracking", "tracking_id",
+  "clickref", "zanpid"
 ]);
 
 export const YOUTUBE_HOSTS = new Set([
@@ -170,6 +177,13 @@ const REDIRECT_RELATED_PARAMETERS = new Set([
 
 export const MAX_UNWRAP_DEPTH = 5;
 
+export class InputError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "InputError";
+  }
+}
+
 // %30-%39 (0-9), %41-%5A (A-Z) and %61-%7A (a-z).
 const ENCODED_ALPHANUMERIC_PATTERN = /%(?:3[0-9]|4[1-9a-f]|5[0-9a]|6[1-9a-f]|7[0-9a])/i;
 
@@ -269,17 +283,17 @@ function getWrapperInfo(url) {
 
 function parseHttpUrl(input) {
   const value = String(input ?? "").trim();
-  if (!value) throw new TypeError("Enter a URL to clean.");
+  if (!value) throw new InputError("Enter a URL to clean.");
 
   let url;
   try {
     url = new URL(value);
   } catch {
-    throw new TypeError("Enter a valid URL, including https:// or http://.");
+    throw new InputError("Enter a valid URL, including https:// or http://.");
   }
 
   if (!isHttpUrl(url)) {
-    throw new TypeError("Enter a valid URL, including https:// or http://.");
+    throw new InputError("Enter a valid URL, including https:// or http://.");
   }
 
   return url;
@@ -565,7 +579,7 @@ export function cleanUrl(input, options = {}) {
   };
 }
 
-export function cleanBatch(text, options = {}) {
+export function cleanBatch(text, options = {}, clean = cleanUrl) {
   const lines = String(text ?? "").split(/\r?\n/);
   const results = [];
 
@@ -578,14 +592,16 @@ export function cleanBatch(text, options = {}) {
         line: index + 1,
         input,
         ok: true,
-        result: cleanUrl(input, options)
+        result: clean(input, options)
       });
     } catch (error) {
       results.push({
         line: index + 1,
         input,
         ok: false,
-        error: error.message
+        error: error instanceof InputError
+          ? error.message
+          : "Internal error while cleaning this URL."
       });
     }
   }

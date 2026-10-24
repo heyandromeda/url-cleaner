@@ -212,7 +212,24 @@ export const PARAMETER_EXPLANATIONS = {
   at: "Apple affiliate token. Removed only on Apple media links such as Apple Music.",
   ct: "Apple campaign text. Removed only on Apple media links. Song and album ids are kept.",
   t: "X (Twitter) share token. Removed only on X and Twitter links. YouTube timestamps use the same name and are kept.",
-  ref: "Referral parameter. Removed on Amazon and Etsy. On other sites it is removed only when aggressive cleaning is on."
+  ref: "Referral parameter. Removed on Amazon and Etsy. On other sites it is removed only when aggressive cleaning is on.",
+  adobe_mc: "Adobe Experience Cloud visitor ID (mid) passed between Experience Cloud solutions.",
+  adobe_mc_sdid: "Adobe Experience Cloud supplemental ID (SDID) for cross-domain identity.",
+  icid: "Adobe Analytics internal campaign identifier (ICID) on tracked marketing links.",
+  tt_medium: "TikTok marketing medium tag on shared or ads links (parallel to utm_medium).",
+  tt_content: "TikTok marketing content tag used to distinguish creatives on the same campaign.",
+  adj_campaign: "Adjust campaign label on destination URLs (not the adj.st link token).",
+  adj_adgroup: "Adjust ad group label on destination URLs.",
+  adj_creative: "Adjust creative label on destination URLs.",
+  __hssrc: "HubSpot session-reset flag appended when HubSpot rotates session cookies.",
+  iterable_campaign: "Iterable Shopify integration campaign id query parameter.",
+  iterable_template: "Iterable Shopify integration template id query parameter.",
+  __iterable_campaign_id: "Iterable cart-attribution campaign id (Shopify integration).",
+  __iterable_template_id: "Iterable cart-attribution template id (Shopify integration).",
+  _iterable_campaign_id: "Alternate Iterable cart-attribution campaign id key.",
+  _iterable_template_id: "Alternate Iterable cart-attribution template id key.",
+  clickref: "Partnerize affiliate click reference (removed only with aggressive mode).",
+  zanpid: "Awin / Zanox affiliate click identifier (removed only with aggressive mode)."
 };
 
 export const PREFIX_EXPLANATIONS = {
@@ -220,7 +237,12 @@ export const PREFIX_EXPLANATIONS = {
   hsa_: "HubSpot ads tracking parameter.",
   mtm_: "Matomo campaign tracking parameter.",
   piwik_: "Matomo (formerly Piwik) campaign tracking parameter.",
-  _ga_: "Google Analytics identifier parameter used with gtag.js / GA4.",
+  _ga_: "Google Analytics identifier parameter used with gtag.js / GA4."
+};
+
+// Host-only families. Kept out of PREFIX_EXPLANATIONS so that map stays locked
+// to the global TRACKING_PARAMETER_PREFIXES list.
+const HOST_PREFIX_EXPLANATIONS = {
   "pd_rd_": "Amazon product-discovery tracking parameter. Removed only on Amazon links.",
   "pf_rd_": "Amazon product-finding tracking parameter. Removed only on Amazon links."
 };
@@ -232,6 +254,11 @@ export function explainParameter(name) {
     return PARAMETER_EXPLANATIONS[normalized];
   }
   for (const [prefix, explanation] of Object.entries(PREFIX_EXPLANATIONS)) {
+    if (normalized.startsWith(prefix)) {
+      return explanation;
+    }
+  }
+  for (const [prefix, explanation] of Object.entries(HOST_PREFIX_EXPLANATIONS)) {
     if (normalized.startsWith(prefix)) {
       return explanation;
     }

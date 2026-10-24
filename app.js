@@ -8,7 +8,7 @@ import {
   removedDuplicateIndicesForBeforeView
 } from "./cleaner.js";
 import { explainParameter, trackerOfTheDay } from "./explanations.js";
-import { canReadClipboard, parseHandoffUrl } from "./handoff.js";
+import { canReadClipboard, hasHandoffFields, parseHandoffUrl } from "./handoff.js";
 import { createIcon, wrapIconButton } from "./icons.js";
 import { breakableUrlMarkup } from "./url-break.js";
 import {
@@ -48,6 +48,7 @@ const shareButton = document.querySelector("#share-button");
 const copyButton = document.querySelector("#copy-button");
 const message = document.querySelector("#message");
 const removedList = document.querySelector("#removed-list");
+const removedHint = document.querySelector("#removed-hint");
 const fingerprintDetail = document.querySelector("#fingerprint-detail");
 const fingerprintCount = document.querySelector("#fingerprint-count");
 const fingerprintCountValue = document.querySelector("#fingerprint-count-value");
@@ -231,6 +232,10 @@ function appendRemovedItem(list, parameter, aggressive = false) {
 function renderRemoved(parameters, list = removedList, aggressiveParameters = []) {
   list.replaceChildren();
   const aggressiveNames = new Set(aggressiveParameters);
+
+  if (list === removedList) {
+    removedHint.hidden = parameters.length === 0;
+  }
 
   if (parameters.length === 0) {
     const item = document.createElement("li");
@@ -680,12 +685,16 @@ function clearHandoffFromAddressBar() {
 }
 
 function loadHandoff() {
-  const handedOff = parseHandoffUrl(window.location.href);
-  if (!handedOff) return false;
-  input.value = handedOff;
-  runClean({ allowAutoCopy: false });
-  clearHandoffFromAddressBar();
-  return true;
+  const href = window.location.href;
+  const handedOff = parseHandoffUrl(href);
+  if (handedOff) {
+    input.value = handedOff;
+    runClean({ allowAutoCopy: false });
+  }
+  if (handedOff || hasHandoffFields(href)) {
+    clearHandoffFromAddressBar();
+  }
+  return Boolean(handedOff);
 }
 
 initTheme();
