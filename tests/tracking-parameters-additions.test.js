@@ -1,44 +1,137 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { cleanUrl } from "../cleaner.js";
+import { PARAMETER_EXPLANATIONS } from "../explanations.js";
 
-const NEW_TRACKERS = [
-  { name: "adobe_mc", source: "Adobe Experience Cloud MID parameter (Adobe docs)" },
-  { name: "adobe_mc_sdid", source: "Adobe Experience Cloud SDID (Adobe docs)" },
-  { name: "icid", source: "Adobe Analytics ICID campaign id (Adobe Analytics)" },
-  { name: "tt_medium", source: "TikTok marketing URL tags (TikTok Business / ClearURLs-style tt_ params)" },
-  { name: "tt_content", source: "TikTok marketing URL tags (TikTok Business)" },
-  { name: "clickref", source: "Partnerize affiliate clickref (Partnerize docs)" },
-  { name: "iterable_campaign_id", source: "Iterable link tracking (Iterable API/docs)" },
-  { name: "iterable_template_id", source: "Iterable link tracking (Iterable API/docs)" },
-  { name: "iterable_link_id", source: "Iterable link tracking (Iterable API/docs)" },
-  { name: "braze_c_id", source: "Braze campaign id on links (Braze docs)" },
-  { name: "twcamp", source: "X web intent share parameters (X developer docs)" },
-  { name: "twsrc", source: "X web intent share parameters (X developer docs)" },
-  { name: "adj_t", source: "Adjust attribution parameters (Adjust help center)" },
-  { name: "adj_campaign", source: "Adjust attribution parameters (Adjust help center)" },
-  { name: "adj_adgroup", source: "Adjust attribution parameters (Adjust help center)" },
-  { name: "adj_creative", source: "Adjust attribution parameters (Adjust help center)" },
-  { name: "zanpid", source: "AdGuard URL Tracking filter / Zanox affiliate (zanpid)" },
-  { name: "_hsq", source: "HubSpot _hsq tracking (HubSpot / AdGuard lists)" }
+const NEW_GLOBAL_TRACKERS = [
+  "adobe_mc",
+  "adobe_mc_sdid",
+  "icid",
+  "tt_medium",
+  "tt_content",
+  "adj_campaign",
+  "adj_adgroup",
+  "adj_creative",
+  "__hstc",
+  "__hssc",
+  "__hsfp",
+  "__hssrc",
+  "ref_src",
+  "ref_url",
+  "iterable_campaign",
+  "iterable_template",
+  "__iterable_campaign_id",
+  "__iterable_template_id",
+  "_iterable_campaign_id",
+  "_iterable_template_id"
 ];
 
-for (const { name } of NEW_TRACKERS) {
-  test(`removes new tracking parameter ${name}`, () => {
-    const url = `https://example.com/page?id=42&${name}=track123`;
-    const result = cleanUrl(url);
-    assert.equal(result.url, "https://example.com/page?id=42");
-    assert.ok(result.removedParameters.includes(name));
+const AGGRESSIVE_AFFILIATE = ["clickref", "zanpid"];
+
+const REALISTIC = [
+  {
+    name: "adobe_mc",
+    input: "https://www.adobe.com/products/photoshop.html?adobe_mc=TS%7C123&promoid=ABC",
+    expected: "https://www.adobe.com/products/photoshop.html?promoid=ABC"
+  },
+  {
+    name: "icid",
+    input: "https://www.adobe.com/creativecloud.html?icid=cc_teams_banner&promoid=XYZ",
+    expected: "https://www.adobe.com/creativecloud.html?promoid=XYZ"
+  },
+  {
+    name: "HubSpot cross-domain",
+    input: "https://www.example.com/pricing?__hstc=1.abc&__hssc=1.abc&__hsfp=999&plan=pro",
+    expected: "https://www.example.com/pricing?plan=pro"
+  },
+  {
+    name: "X embed ref tags",
+    input: "https://x.com/jack/status/20?ref_src=twsrc%5Etfw&ref_url=https%3A%2F%2Fexample.com",
+    expected: "https://x.com/jack/status/20"
+  },
+  {
+    name: "Iterable Shopify params",
+    input: "https://shop.example/products/hat?iterable_campaign=12345&iterable_template=67890&color=blue",
+    expected: "https://shop.example/products/hat?color=blue"
+  },
+  {
+    name: "Adjust destination labels",
+    input: "https://landing.example/app?adj_campaign=launch&adj_adgroup=search&adj_creative=hero&id=1",
+    expected: "https://landing.example/app?id=1"
+  },
+  {
+    name: "TikTok tt_ tags",
+    input: "https://www.tiktok.com/@user/video/1?tt_medium=share&tt_content=cta&lang=en",
+    expected: "https://www.tiktok.com/@user/video/1?lang=en"
+  }
+];
+
+for (const { name, input, expected } of REALISTIC) {
+  test(`realistic URL: strips ${name}`, () => {
+    const result = cleanUrl(input);
+    assert.equal(result.url, expected);
     assert.equal(result.changed, true);
   });
 }
 
-test("functional query params stay without aggressive mode", () => {
+test("Adjust universal link keeps adj_t (tracker token on *.adj.st)", () => {
+  const input = "https://abc.adj.st/path?adj_t=xyz&adj_campaign=ignored-on-link";
+  const result = cleanUrl(input);
+  assert.equal(result.url, "https://abc.adj.st/path?adj_t=xyz");
+  assert.ok(result.removedParameters.includes("adj_campaign"));
+  assert.ok(!result.removedParameters.includes("adj_t"));
+});
+
+test("Iterable camelCase campaignId is not stripped (custom key, not Iterable integration name)", () => {
+  const input = "https://shop.example/p?iterableCampaignId=12345&sku=hat";
+  const result = cleanUrl(input);
+  assert.equal(result.url, input);
+  assert.equal(result.changed, false);
+});
+
+test("case-insensitive match for ref_src on X", () => {
+  const result = cleanUrl("https://twitter.com/i/status/1?REF_SRC=twsrc%5Etfw");
+  assert.equal(result.url, "https://twitter.com/i/status/1");
+  assert.ok(result.removedParameters.some((p) => p.toLowerCase() === "ref_src"));
+});
+
+for (const name of NEW_GLOBAL_TRACKERS) {
+  test(`removes ${name} on generic site`, () => {
+    const url = `https://example.com/page?id=42&${name}=track123`;
+    const result = cleanUrl(url);
+    assert.equal(result.url, "https://example.com/page?id=42");
+    assert.ok(result.removedParameters.map((p) => p.toLowerCase()).includes(name));
+  });
+}
+
+for (const name of AGGRESSIVE_AFFILIATE) {
+  test(`${name} stays unless aggressive mode`, () => {
+    const url = `https://example.com/deals?${name}=abc&id=1`;
+    const plain = cleanUrl(url);
+    assert.equal(plain.url, url);
+    const aggressive = cleanUrl(url, { aggressive: true });
+    assert.equal(aggressive.url, "https://example.com/deals?id=1");
+    assert.ok(aggressive.removedParameters.includes(name));
+  });
+}
+
+test("every new global tracker has a PARAMETER_EXPLANATIONS entry", () => {
+  for (const name of NEW_GLOBAL_TRACKERS) {
+    assert.ok(Object.hasOwn(PARAMETER_EXPLANATIONS, name), `missing explanation for ${name}`);
+  }
+  for (const name of AGGRESSIVE_AFFILIATE) {
+    assert.ok(Object.hasOwn(PARAMETER_EXPLANATIONS, name), `missing explanation for ${name}`);
+  }
+});
+
+test("functional params stay (including ref vs ref_src)", () => {
   const cases = [
     "https://example.com/search?q=hello&lang=en&page=2&id=9",
     "https://shop.example/item?ref=homepage",
     "https://app.example/auth?session=abc123&token=def456",
-    "https://wiki.example/wiki/Topic?action=edit"
+    "https://wiki.example/wiki/Topic?action=edit",
+    "https://docs.example.com/guide?ref=navigation",
+    "https://abc.adj.st/deeplink?adj_t=token123"
   ];
   for (const input of cases) {
     const result = cleanUrl(input);
