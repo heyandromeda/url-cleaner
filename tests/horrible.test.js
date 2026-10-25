@@ -144,7 +144,8 @@ test("app stops horrible mode from the panic button and Escape", () => {
   assert.match(app, /source:\s*"keyboard"/);
   assert.match(app, /if \(horribleIsOn\(\)\) return;/);
   assert.match(app, /onSettingsRestored/);
-  assert.match(app, /cleaningChanged && input\.value\.trim\(\)/);
+  assert.match(app, /resultCleanOptions/);
+  assert.match(app, /cleaningOptionsChanged\(resultCleanOptions, restored\)/);
 });
 
 test("dodge helpers cycle a few classes then give up", () => {
@@ -265,4 +266,9 @@ test("playbook helpers stay local and never block the real URL", () => {
   assert.equal(cleaningOptionsChanged({ aggressive: false, duplicates: true }, { aggressive: false, duplicates: false }), true);
   assert.equal(cleaningOptionsChanged({ aggressive: false, duplicates: false }, { aggressive: false, duplicates: false }), false);
   assert.equal(cleaningOptionsChanged(null, { aggressive: true }), false);
+  const sunkCheckbox = { aggressive: false, duplicates: false };
+  const restored = { aggressive: false, duplicates: false };
+  const computedWhileOn = { aggressive: true, duplicates: false };
+  assert.equal(cleaningOptionsChanged(sunkCheckbox, restored), false);
+  assert.equal(cleaningOptionsChanged(computedWhileOn, restored), true);
 });
