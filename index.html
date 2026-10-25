@@ -17,6 +17,7 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./horrible.css" />
+    <link rel="stylesheet" href="./horrible/playbook.css" />
     <title>URL Cleaner</title>
   </head>
   <body>
@@ -89,6 +90,134 @@
             <p class="field-hint settings-hint" id="cleaning-options-hint">Aggressive cleaning also removes broader names such as <code>ref</code> and <code>source</code>, which some sites need. Leave duplicate cleanup off for signed links.</p>
           </fieldset>
         </form>
+
+        <div id="horrible-playbook" class="horrible-only">
+          <div class="horrible-input-toys">
+            <p class="horrible-joke-tag">it's a joke 🤡</p>
+            <div data-idea="1" class="horrible-marquee-input" aria-hidden="true">
+              <span class="horrible-marquee-text">type something. it will leave you.</span>
+            </div>
+            <p data-idea="3" class="horrible-australia-hint">Australia mode</p>
+            <div data-idea="2" class="horrible-phone-slider">
+              <p>Advanced input. Drag ASCII like a phone number.</p>
+              <label>Character <span class="horrible-phone-char">h</span></label>
+              <input type="range" min="32" max="126" value="104" data-phone="1" aria-label="ASCII character slider" />
+              <button type="button" data-act="add-char">Add char</button>
+              <p><button type="button" class="horrible-here" data-act="coward">Type it like a coward</button></p>
+            </div>
+            <ul data-idea="4" class="horrible-password-rules" aria-label="Joke URL password rules">
+              <li data-rule="vegetable">at least one vegetable</li>
+              <li data-rule="palindrome">a palindrome</li>
+              <li data-rule="vowels">fewer vowels than trackers</li>
+            </ul>
+          </div>
+
+          <div class="horrible-clean-toys">
+            <p data-idea="6" class="horrible-no-here">The big button says NO. If you meant clean, click <button type="button" class="horrible-here" id="horrible-here" data-act="here">here</button>.</p>
+            <div data-idea="7">
+              <p>Thumbwheel Clean. Drag up five times.</p>
+              <div class="horrible-wheel" role="slider" aria-label="Joke clean thumbwheel" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0"></div>
+              <p class="horrible-wheel-count">0 / 5 winds</p>
+            </div>
+            <div data-idea="10" class="horrible-hold">
+              <button type="button" data-act="hold">Hold to clean (do not move)</button>
+              <div class="horrible-hold-track"><span class="horrible-hold-bar"></span></div>
+            </div>
+            <div data-idea="8">
+              <p>Shell game. One cup is Clean.</p>
+              <div class="horrible-shell-stage">
+                <button type="button" class="horrible-cup" data-act="cup" data-index="0"><span class="horrible-cup-label">Clean?</span></button>
+                <button type="button" class="horrible-cup" data-act="cup" data-index="1"><span class="horrible-cup-label">That was the Unclean button</span></button>
+                <button type="button" class="horrible-cup" data-act="cup" data-index="2"><span class="horrible-cup-label">That was the Unclean button</span></button>
+              </div>
+            </div>
+            <div data-idea="9" class="horrible-begin">
+              <button type="button" data-act="begin-open">Begin</button>
+              <ul class="horrible-begin-menu">
+                <li class="horrible-begin-item">
+                  <button type="button">Programs</button>
+                  <ul class="horrible-begin-sub">
+                    <li class="horrible-begin-item">
+                      <button type="button">Accessories</button>
+                      <ul class="horrible-begin-sub">
+                        <li><button type="button" data-act="begin-clean">Clean</button></li>
+                      </ul>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="horrible-settings-toys">
+            <ul data-idea="15" class="horrible-missile">
+              <li><button type="button" data-act="missile" data-target="#clean-on-paste">CLEAN-PASTE (DEMO) LOCAL ONLY</button></li>
+              <li><button type="button" data-act="missile" data-target="#auto-copy">CLEAN-COPY (LIVE) LOCAL ONLY</button></li>
+              <li><button type="button" data-act="missile" data-target="#aggressive-mode">CLEAN-UTM (DEMO) LOCAL ONLY</button></li>
+              <li><button type="button" data-act="missile" data-target="#remove-duplicates">CLEAN-DEDUP (LIVE) LOCAL ONLY</button></li>
+              <li><button type="button" data-act="false-alarm" hidden>FALSE ALARM UNDO</button></li>
+            </ul>
+            <div data-idea="16" class="horrible-gravity">
+              <p>Gravity sliders sink to Off. Above 50% counts as On.</p>
+              <label>Auto-copy <input type="range" min="0" max="100" value="0" data-gravity="copy" /></label>
+              <label>Clean on paste <input type="range" min="0" max="100" value="100" data-gravity="paste" /></label>
+              <label>Aggressive <input type="range" min="0" max="100" value="0" data-gravity="aggressive" /></label>
+              <label>Duplicates <input type="range" min="0" max="100" value="0" data-gravity="duplicates" /></label>
+            </div>
+            <div data-idea="17" class="horrible-primes">
+              <p class="horrible-prime-product">product 1</p>
+              <button type="button" data-act="prime" data-prime="2">2</button>
+              <button type="button" data-act="prime" data-prime="3">3</button>
+              <button type="button" data-act="prime" data-prime="5">5</button>
+              <button type="button" data-act="prime" data-prime="7">7</button>
+              <button type="button" data-act="prime-reset">start over at 1</button>
+            </div>
+            <p data-idea="18">Theme: light</p>
+            <div data-idea="19" class="horrible-bob">
+              <button type="button" data-act="bob" data-target="#auto-copy">lamp: Auto-copy</button>
+              <button type="button" data-act="bob" data-target="#clean-on-paste">cat: Clean on paste</button>
+              <button type="button" data-act="bob" data-target="#remove-duplicates">trash: Remove duplicates</button>
+            </div>
+            <div data-idea="22">
+              <p>Terms of Cleaning</p>
+              <div class="horrible-terms">
+                <p class="horrible-terms-copy">By pretending to agree you agree that nothing is agreed. Cleaning happens locally. These terms scroll because 1999 said so. There is no payment. There is no account. There is only this box. I do not not agree is a joke checkbox and never gates a real action. If you can still read this, the scroll is doing its job too slowly, which is the point.</p>
+              </div>
+              <label><input type="checkbox" /> I do not not agree</label>
+            </div>
+          </div>
+
+          <div class="horrible-result-toys">
+            <div data-idea="13" class="horrible-find95">
+              <details><summary>File</summary><ul><li><button type="button" data-act="find95">Not available in this dialog</button></li></ul></details>
+              <details><summary>Edit</summary><ul><li><button type="button" data-act="find95">Not available in this dialog</button></li></ul></details>
+              <details><summary>View</summary><ul><li><button type="button" data-act="find95">Not available in this dialog</button></li></ul></details>
+              <details><summary>Trackers</summary><ul><li><button type="button" data-act="find95">Not available in this dialog</button></li></ul></details>
+            </div>
+            <span data-idea="14" class="horrible-lies" hidden>(lies)</span>
+            <div data-idea="11" class="horrible-slot" hidden></div>
+            <div data-idea="12" class="horrible-realcd">
+              <div class="horrible-case">
+                <p>Results arrive in this jewel case. Click the hinge.</p>
+                <button type="button" class="horrible-case-lid" data-act="hinge" aria-label="Open joke jewel case">hinge</button>
+              </div>
+            </div>
+          </div>
+
+          <p data-idea="20" class="horrible-visually-hidden">Programmerisms swap button labels only.</p>
+          <p data-idea="21" class="horrible-visually-hidden">Confirmshaming jokes never store a choice.</p>
+          <p data-idea="24" class="horrible-visually-hidden">Querry is an original question-mark mascot.</p>
+          <p data-idea="27" class="horrible-visually-hidden">Comic Sans uses local fonts only.</p>
+          <p data-idea="28" class="horrible-visually-hidden">Zoom roulette uses a local scale token.</p>
+          <p data-idea="30" class="horrible-visually-hidden">Hourglass cursor is a local data SVG.</p>
+
+          <div data-idea="31" class="horrible-midi horrible-play-panel">
+            <p>Now playing: tracker_theme.mid</p>
+            <div class="horrible-midi-track"><span class="horrible-midi-bar"></span></div>
+            <label>Volume <input type="range" min="32" max="126" value="80" data-act="midi-volume" aria-label="Silent volume slider" /></label>
+            <button type="button" data-act="mute">Mute</button>
+          </div>
+        </div>
 
         <p id="message" class="message" role="status" aria-live="polite"></p>
 
@@ -200,6 +329,45 @@
     </main>
     <div class="horrible-only horrible-confetti" aria-hidden="true">
       <span>🌟</span><span>🍕</span><span>💎</span><span>🌈</span><span>✨</span>
+    </div>
+    <div id="horrible-overlays" class="horrible-only">
+      <div data-idea="5" class="horrible-captcha" hidden>
+        <p class="horrible-joke-tag">it's a joke 🤡</p>
+        <p>Select all squares containing utm_source</p>
+        <div class="horrible-captcha-grid"></div>
+        <p><button type="button" class="horrible-skip" data-act="skip-captcha">Skip, I'm a robot</button></p>
+      </div>
+      <div data-idea="23" class="horrible-cookie" hidden>
+        <p class="horrible-joke-tag">it's a joke 🤡</p>
+        <p>This site uses no cookies, is that a problem for you?</p>
+        <button type="button" data-act="cookie">Not really, no</button>
+        <button type="button" data-act="cookie">Yes</button>
+      </div>
+      <div data-idea="26" class="horrible-splash" hidden>
+        <p class="horrible-joke-tag">it's a joke 🤡</p>
+        <p>Welcome to URL SPACE. Only Clean leads anywhere.</p>
+        <div class="horrible-planets">
+          <button type="button" class="horrible-planet horrible-planet-clean" data-act="splash-clean">Clean</button>
+          <button type="button" class="horrible-planet horrible-planet-inspect" data-act="splash-dead">Inspect</button>
+          <button type="button" class="horrible-planet horrible-planet-book" data-act="splash-dead">Guestbook</button>
+          <button type="button" class="horrible-planet horrible-planet-lunch" data-act="splash-dead">Lunch</button>
+        </div>
+      </div>
+      <div data-idea="25" class="horrible-tour" hidden>
+        <p class="horrible-tour-count">Step 3 of 2</p>
+        <p class="horrible-tour-text">First, paste a URL. This is step 3. Do not ask questions.</p>
+        <button type="button" class="horrible-tour-next" data-act="tour-next">Next</button>
+        <button type="button" data-act="tour-skip">Skip</button>
+      </div>
+      <p data-idea="29" class="horrible-narrator" aria-hidden="true"></p>
+      <p data-idea="32" class="horrible-subtitles" aria-hidden="true"></p>
+      <div data-idea="33" class="horrible-dialup" hidden>
+        <p class="horrible-joke-tag">it's a joke 🤡</p>
+        <p>EEEE-KRRRR-SHHHH</p>
+        <svg class="horrible-wave" viewBox="0 0 200 40" aria-hidden="true">
+          <path fill="none" stroke="#111" stroke-width="2" stroke-dasharray="120" d="M0 20 Q10 2 20 20 T40 20 T60 20 T80 20 T100 20 T120 20 T140 20 T160 20 T180 20 T200 20"></path>
+        </svg>
+      </div>
     </div>
     <script type="module" src="./app.js"></script>
   </body>

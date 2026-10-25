@@ -1,4 +1,6 @@
 import { STORAGE_KEYS, openAppStorage, readBooleanSetting, writeBooleanSetting } from "./storage.js";
+import { applyPopupDismissal, nextSpawnDelay } from "./horrible/logic.js";
+import { bindPlaybook } from "./horrible/playbook.js";
 
 export const HORRIBLE_STORAGE_KEY = STORAGE_KEYS.horrible;
 export const HORRIBLE_HITS_KEY = "url-cleaner.horrible-hits";
@@ -164,7 +166,8 @@ export function bindHorriblePage({
   popupHost,
   hitCounter,
   guestbook,
-  onStop
+  onStop,
+  onClean
 } = {}) {
   const root = rootDocument;
   if (!root) return { dispose() {}, setEnabled() {}, clearPopups() {} };
@@ -219,13 +222,13 @@ export function bindHorriblePage({
 
   const openCount = () => popupHost?.querySelectorAll(".horrible-popup").length || 0;
 
-  const spawnPopup = () => {
+  const spawnPopup = (override) => {
     if (!enabled || !isHorrible() || !popupHost) return null;
     if (openCount() >= cap()) return null;
     if (Date.now() < cleanWindowUntil) return null;
 
-    const copy = nextPopupCopy(copyIndex);
-    copyIndex += 1;
+    const copy = override && override.title ? override : nextPopupCopy(copyIndex);
+    if (!override) copyIndex += 1;
     const slot = pickPopupSlot(usedSlots());
     const skin = (slot % 4) + 1;
     const popup = root.createElement("aside");
@@ -265,14 +268,22 @@ export function bindHorriblePage({
 
   const dismissPopup = (popup) => {
     if (!popup?.isConnected) return;
-    const current = openCount();
-    const inWindow = Date.now() < cleanWindowUntil;
-    const extras = popupsToSpawnOnClose(current, cap(), HORRIBLE_POPUP_MULTIPLY, inWindow);
+    const now = Date.now();
+    const next = applyPopupDismissal({
+      openCount: openCount(),
+      closes,
+      now,
+      cap: cap(),
+      multiply: HORRIBLE_POPUP_MULTIPLY,
+      cleanWindowUntil,
+      every: HORRIBLE_CLEAN_WINDOW_EVERY,
+      windowMs: HORRIBLE_CLEAN_WINDOW_MS
+    });
     popup.remove();
-    closes += 1;
-    const nextWindow = nextCleanWindowUntil(closes, Date.now());
-    if (nextWindow) cleanWindowUntil = nextWindow;
-    for (let index = 0; index < extras; index += 1) spawnPopup();
+    closes = next.closes;
+    cleanWindowUntil = next.cleanWindowUntil;
+    if (next.inWindow) queueSpawn();
+    for (let index = 0; index < next.extras; index += 1) spawnPopup();
   };
 
   const clearPopups = () => {
@@ -281,11 +292,28 @@ export function bindHorriblePage({
   };
 
   const stopStorm = () => {
-    if (spawnTimer) view().clearInterval(spawnTimer);
+    if (spawnTimer) view().clearTimeout(spawnTimer);
     spawnTimer = 0;
     clearPopups();
     cleanWindowUntil = 0;
     closes = 0;
+  };
+
+  const queueSpawn = () => {
+    if (spawnTimer) view().clearTimeout(spawnTimer);
+    spawnTimer = 0;
+    if (!enabled || !isHorrible()) return;
+    const base = reduced() ? 5000 : 2800;
+    const delay = nextSpawnDelay(Date.now(), cleanWindowUntil, base);
+    spawnTimer = view().setTimeout(() => {
+      spawnTimer = 0;
+      if (Date.now() < cleanWindowUntil) {
+        queueSpawn();
+        return;
+      }
+      spawnPopup();
+      queueSpawn();
+    }, delay);
   };
 
   const startStorm = () => {
@@ -293,21 +321,31 @@ export function bindHorriblePage({
     enabled = true;
     spawnPopup();
     if (!reduced()) spawnPopup();
-    const interval = reduced() ? 5000 : 2800;
-    spawnTimer = view().setInterval(() => {
-      if (Date.now() >= cleanWindowUntil) spawnPopup();
-    }, interval);
+    queueSpawn();
+  };
+
+  let playbook = {
+    enable() {},
+    disable() {},
+    beforeClean() { return false; },
+    afterClean() {}
   };
 
   const setEnabled = (nextEnabled) => {
     enabled = Boolean(nextEnabled);
-    if (enabled && isHorrible()) startStorm();
-    else stopStorm();
+    if (enabled && isHorrible()) {
+      startStorm();
+      playbook.enable();
+    } else {
+      stopStorm();
+      playbook.disable();
+    }
   };
 
   const stopEverything = () => {
     enabled = false;
     stopStorm();
+    playbook.disable();
     onStop?.();
   };
 
@@ -327,6 +365,13 @@ export function bindHorriblePage({
   view().addEventListener?.("keydown", onEscape);
   guestbook?.addEventListener("click", () => {
     guestbook.textContent = "THANKS FOR SIGNING MY GUESTBOOK!!!1";
+  });
+
+  playbook = bindPlaybook({
+    document: root,
+    onClean,
+    spawnPopup,
+    prefersReduced: prefersReducedMotion
   });
 
   if (hitCounter) {
@@ -354,6 +399,8 @@ export function bindHorriblePage({
     },
     setEnabled,
     clearPopups,
-    spawnPopup
+    spawnPopup,
+    beforeClean: (...args) => playbook.beforeClean?.(...args),
+    afterClean: (...args) => playbook.afterClean?.(...args)
   };
 }

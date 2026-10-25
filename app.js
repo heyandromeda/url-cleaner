@@ -457,6 +457,7 @@ function showCleanResult(result, { allowAutoCopy = true, originalValue = "", rev
 
   showMessage(baseMessage, result.unwrapLimitReached ? "info" : "success");
   celebrateHorribleClean();
+  horribleEffects.afterClean?.({ url: result.url, source: "single" });
 
   if (allowAutoCopy && autoCopy.checked) {
     copyText(cleanedValue).then((copied) => {
@@ -520,6 +521,7 @@ function showBatchResults(entries, { allowAutoCopy = true } = {}) {
     : `${cleaned.length} cleaned, ${failed} failed.`;
   showMessage(baseMessage, cleaned.length > 0 ? "success" : "error");
   if (cleaned.length > 0) celebrateHorribleClean();
+  if (cleaned.length > 0) horribleEffects.afterClean?.({ url: batchCopyValue, source: "batch" });
 
   if (allowAutoCopy && autoCopy.checked && batchCopyValue) {
     copyText(batchCopyValue).then((copied) => {
@@ -746,6 +748,9 @@ form.addEventListener("submit", (event) => {
     showMessage("Paste or type a URL to clean.", "error");
     return;
   }
+  if (horribleEffects.beforeClean?.({ source: "form", proceed: () => runClean() })) {
+    return;
+  }
   runClean();
 });
 
@@ -838,6 +843,7 @@ horribleEffects = bindHorriblePage({
   popupHost: document.querySelector("#horrible-popups"),
   hitCounter: document.querySelector(".horrible-hit-counter"),
   guestbook: document.querySelector("#horrible-guestbook"),
+  onClean: () => runClean(),
   onStop: () => {
     saveSetting(STORAGE_KEYS.horrible, false);
     applyHorribleMode(false);
