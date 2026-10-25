@@ -8,11 +8,13 @@ html[data-horrible="on"] {
   --horrible-gold: #ffe600;
   --horrible-orange: #ff8c1a;
   --horrible-comic: "Comic Sans MS", "Comic Sans", "Chalkboard SE", cursive;
-  --horrible-papyrus: Papyrus, "Bradley Hand", "Segoe Print", fantasy;
-  --horrible-impact: Impact, Haettenschweiler, "Arial Black", fantasy;
   font-family: var(--horrible-comic);
   color: var(--horrible-ink);
   background: #ff4ecd;
+}
+
+html[data-horrible="on"] :is(body, button, input, textarea, label, legend, h1, h2, h3, p, li, span, output, code) {
+  font-family: var(--horrible-comic);
 }
 
 html[data-horrible="on"] body {
@@ -56,7 +58,7 @@ html[data-horrible="on"] .construction-banner {
     #ff4ecd 42px 56px
   );
   color: #fff;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
   font-size: 1.05rem;
   letter-spacing: 0.12em;
   text-align: center;
@@ -93,7 +95,7 @@ html[data-horrible="on"] .horrible-ticker-track {
 
 html[data-horrible="on"] .page-toolbar .eyebrow {
   color: #fff;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
   text-shadow: 2px 2px 0 #ff2d95, 4px 4px 0 #00e5ff;
 }
 
@@ -134,7 +136,7 @@ html[data-horrible="on"] h1::before {
   border: 2px solid #fff;
   background: #ff2d95;
   color: #ffe600;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
   font-size: 0.85rem;
   letter-spacing: 0.08em;
   transform: rotate(-18deg);
@@ -148,7 +150,7 @@ html[data-horrible="on"] h1::after {
   right: 0;
   bottom: -1.1rem;
   color: #1a0033;
-  font-family: var(--horrible-papyrus);
+  font-family: var(--horrible-comic);
   font-size: 0.65rem;
   letter-spacing: 0.04em;
   filter: none;
@@ -158,7 +160,7 @@ html[data-horrible="on"] h1::after {
 html[data-horrible="on"] .intro {
   margin-top: 1.6rem;
   color: #3b0066;
-  font-family: var(--horrible-papyrus);
+  font-family: var(--horrible-comic);
   font-size: 1.05rem;
 }
 
@@ -173,7 +175,7 @@ html[data-horrible="on"] .clean-form {
 
 html[data-horrible="on"] .clean-form label[for="url-input"] {
   color: #9b0870;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
   font-size: 1.15rem;
   letter-spacing: 0.06em;
 }
@@ -208,7 +210,7 @@ html[data-horrible="on"] .input-row .primary-button {
   border-radius: 50%;
   background: #ffe600;
   color: #ff2d95;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
   font-size: 1.2rem;
   line-height: 1.1;
   text-transform: uppercase;
@@ -241,7 +243,7 @@ html[data-horrible="on"] .input-row .primary-button.horrible-dodge-c {
 
 html[data-horrible="on"] .settings legend {
   color: #9b0870;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
 }
 
 html[data-horrible="on"] .setting {
@@ -270,7 +272,7 @@ html[data-horrible="on"] .message[data-kind="success"] {
   border: 3px ridge #39ff14;
   background: #39ff14;
   color: #062;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
   letter-spacing: 0.04em;
 }
 
@@ -308,7 +310,7 @@ html[data-horrible="on"] .fingerprint-score {
   background: #ffe600;
   color: #1a0033;
   box-shadow: 0 0 0 4px #ff2d95;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
 }
 
 html[data-horrible="on"] .fingerprint-count-value {
@@ -345,12 +347,12 @@ html[data-horrible="on"] .totd {
   background:
     linear-gradient(#f7e7c2, #f0d9a0);
   box-shadow: inset 0 0 24px #c4a574, 8px 8px 0 #6b4a1b;
-  font-family: var(--horrible-papyrus);
+  font-family: var(--horrible-comic);
 }
 
 html[data-horrible="on"] .totd-label {
   color: #6b4a1b;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
 }
 
 html[data-horrible="on"] .privacy-note {
@@ -371,7 +373,7 @@ html[data-horrible="on"] .horrible-footer {
 html[data-horrible="on"] .horrible-best-viewed {
   margin: 0;
   color: #1a0033;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
   letter-spacing: 0.04em;
 }
 
@@ -381,7 +383,7 @@ html[data-horrible="on"] .horrible-hit-counter {
   border: 4px double #39ff14;
   background: #111;
   color: #39ff14;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
   letter-spacing: 0.16em;
 }
 
@@ -413,7 +415,7 @@ html[data-horrible="on"] .horrible-seal {
   border-radius: 50%;
   background: #fff8dc;
   color: #c00;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   text-align: center;
@@ -424,7 +426,7 @@ html[data-horrible="on"] .horrible-stop {
   position: fixed;
   top: 0.7rem;
   right: 0.7rem;
-  z-index: 80;
+  z-index: 2147483000;
   align-items: center;
   justify-content: center;
   min-height: 44px;
@@ -433,11 +435,14 @@ html[data-horrible="on"] .horrible-stop {
   border-radius: 4px;
   background: #111;
   color: #ffe600;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
   font-size: 0.95rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   box-shadow: 4px 4px 0 #ffe600;
+  pointer-events: auto;
+  transform: none !important;
+  animation: none !important;
 }
 
 html[data-horrible="on"] .horrible-stop:focus-visible {
@@ -458,7 +463,7 @@ html[data-horrible="on"] .horrible-dvd {
   border: 3px solid #fff;
   background: #111;
   color: #39ff14;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
   letter-spacing: 0.08em;
   pointer-events: none;
 }
@@ -515,52 +520,134 @@ html[data-horrible="on"] .horrible-toasters span:nth-child(1) { top: 20%; left: 
 html[data-horrible="on"] .horrible-toasters span:nth-child(2) { top: 55%; left: -16%; }
 html[data-horrible="on"] .horrible-toasters span:nth-child(3) { top: 78%; left: -8%; }
 
-html[data-horrible="on"] .horrible-nag {
+html[data-horrible="on"] .horrible-popups {
+  display: block;
+}
+
+html[data-horrible="on"] .horrible-joke-tag {
+  display: inline-block;
+  margin: 0 0 0.4rem;
+  padding: 0.1rem 0.4rem;
+  border: 2px dashed #111;
+  border-radius: 999px;
+  background: #ffe600;
+  color: #1a0033;
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+}
+
+html[data-horrible="on"] .horrible-popup {
+  position: fixed;
+  z-index: 60;
+  width: min(16.5rem, calc(100vw - 2.4rem));
+  padding: 0.7rem 0.75rem 0.8rem;
+  border: 4px solid #111;
+  border-radius: 1.4rem 0.4rem 1.6rem 0.7rem;
+  color: #1a0033;
+  box-shadow: 8px 8px 0 #111;
+}
+
+html[data-horrible="on"] .horrible-popup h2 {
+  margin: 0 2.2rem 0.35rem 0;
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+html[data-horrible="on"] .horrible-popup p {
+  margin: 0 0 0.55rem;
+  font-size: 0.92rem;
+}
+
+html[data-horrible="on"] .horrible-popup-skin-1 { background: #ff90e8; }
+html[data-horrible="on"] .horrible-popup-skin-2 { background: #7cff3e; }
+html[data-horrible="on"] .horrible-popup-skin-3 { background: #00e5ff; }
+html[data-horrible="on"] .horrible-popup-skin-4 { background: #ffe600; }
+
+html[data-horrible="on"] .horrible-popup-slot-0 { top: 18%; left: 3%; }
+html[data-horrible="on"] .horrible-popup-slot-1 { top: 30%; left: 58%; }
+html[data-horrible="on"] .horrible-popup-slot-2 { top: 46%; left: 5%; }
+html[data-horrible="on"] .horrible-popup-slot-3 { top: 54%; left: 56%; }
+html[data-horrible="on"] .horrible-popup-slot-4 { top: 68%; left: 8%; }
+html[data-horrible="on"] .horrible-popup-slot-5 { top: 72%; left: 52%; }
+html[data-horrible="on"] .horrible-popup-slot-6 { top: auto; bottom: 6%; left: 18%; }
+html[data-horrible="on"] .horrible-popup-slot-7 { top: 38%; left: 28%; }
+
+html[data-horrible="on"] .horrible-popup-x {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.45rem;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 3px solid #111;
+  border-radius: 50%;
+  background: #fff;
+  color: #c00;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+html[data-horrible="on"] .horrible-popup-x.horrible-dodge-a { transform: translate(-2.4rem, 1.2rem); }
+html[data-horrible="on"] .horrible-popup-x.horrible-dodge-b { transform: translate(-3.2rem, 2rem); }
+html[data-horrible="on"] .horrible-popup-x.horrible-dodge-c { transform: translate(-1.4rem, 2.6rem); }
+
+html[data-horrible="on"] .horrible-popup-action {
+  border: 3px solid #111;
+  border-radius: 999px;
+  background: #fff;
+  color: #1a0033;
+  padding: 0.35rem 0.7rem;
+}
+
+html[data-horrible="on"] .horrible-loading {
   display: block;
   position: fixed;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 70;
-  width: min(18rem, calc(100vw - 2rem));
-  padding: 0.7rem 0.8rem 0.8rem;
-  border: 3px solid #111;
-  background: silver;
-  color: #111;
-  font-family: Tahoma, "MS Sans Serif", sans-serif;
-  box-shadow: 4px 4px 0 #111;
-}
-
-html[data-horrible="on"] .horrible-nag[hidden],
-html[data-horrible="on"] .horrible-nag.is-dismissed {
-  display: none;
-}
-
-html[data-horrible="on"] .horrible-nag h2 {
-  margin: 0 0 0.4rem;
-  padding: 0.15rem 0.35rem;
-  background: navy;
+  left: 0;
+  right: 22%;
+  bottom: 0;
+  z-index: 35;
+  padding: 0.55rem 0.8rem 0.7rem;
+  border-top: 4px solid #111;
+  background: #ff2d95;
   color: #fff;
-  font-family: Tahoma, sans-serif;
-  font-size: 0.85rem;
+  pointer-events: none;
 }
 
-html[data-horrible="on"] .horrible-nag p {
-  margin: 0 0 0.6rem;
-  font-size: 0.85rem;
+html[data-horrible="on"] .horrible-loading p {
+  margin: 0 0 0.35rem;
 }
 
-html[data-horrible="on"] .horrible-nag-actions {
+html[data-horrible="on"] .horrible-loading-track {
+  height: 1rem;
+  border: 3px solid #111;
+  background: #fff;
+}
+
+html[data-horrible="on"] .horrible-loading-bar {
+  display: block;
+  width: 99%;
+  height: 100%;
+  background: repeating-linear-gradient(45deg, #ffe600 0 10px, #39ff14 10px 20px);
+}
+
+html[data-horrible="on"] .horrible-spin-banner {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-html[data-horrible="on"] .horrible-nag button {
-  border: 2px outset #ddd;
-  background: #ddd;
-  color: #111;
-  font-family: Tahoma, sans-serif;
-  font-size: 0.75rem;
+  position: fixed;
+  left: 0.6rem;
+  bottom: 5.6rem;
+  z-index: 8;
+  width: 8.4rem;
+  height: 8.4rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem;
+  border: 5px dashed #ffe600;
+  border-radius: 50%;
+  background: #1a0033;
+  color: #39ff14;
+  text-align: center;
+  font-size: 0.72rem;
+  pointer-events: none;
 }
 
 html[data-horrible="on"] .horrible-pow {
@@ -574,7 +661,7 @@ html[data-horrible="on"] .horrible-pow {
   border: 4px solid #111;
   background: #ffe600;
   color: #c00;
-  font-family: var(--horrible-impact);
+  font-family: var(--horrible-comic);
   font-size: clamp(1.6rem, 6vw, 2.8rem);
   letter-spacing: 0.04em;
   pointer-events: none;
@@ -667,6 +754,28 @@ html[data-horrible="on"] .theme-toggle {
 
   html[data-horrible="on"] .clean-form {
     animation: horrible-card-pulse 3.6s ease-in-out infinite;
+  }
+
+  html[data-horrible="on"] #url-input {
+    animation: horrible-input-jiggle 4.8s ease-in-out infinite;
+  }
+
+  html[data-horrible="on"] .horrible-popup {
+    animation: horrible-popup-wiggle 1.6s ease-in-out infinite;
+  }
+
+  html[data-horrible="on"] .horrible-popup-slot-1,
+  html[data-horrible="on"] .horrible-popup-slot-3,
+  html[data-horrible="on"] .horrible-popup-slot-5 {
+    animation-direction: reverse;
+  }
+
+  html[data-horrible="on"] .horrible-loading-bar {
+    animation: horrible-loading-shimmer 1.2s linear infinite;
+  }
+
+  html[data-horrible="on"] .horrible-spin-banner {
+    animation: horrible-spin 8s linear infinite;
   }
 
   html[data-horrible="on"] .input-row .primary-button {
@@ -814,6 +923,25 @@ html[data-horrible="on"] .theme-toggle {
 @keyframes horrible-wobble {
   0%, 100% { transform: rotate(-2deg); }
   50% { transform: rotate(2deg); }
+}
+
+@keyframes horrible-popup-wiggle {
+  0%, 100% { transform: rotate(-2deg) translateY(0); }
+  50% { transform: rotate(2deg) translateY(-4px); }
+}
+
+@keyframes horrible-input-jiggle {
+  0%, 78%, 100% { transform: translateX(0); }
+  82% { transform: translateX(-5px) rotate(-0.5deg); }
+  86% { transform: translateX(5px) rotate(0.5deg); }
+  90% { transform: translateX(-3px); }
+  94% { transform: translateX(2px); }
+}
+
+@keyframes horrible-loading-shimmer {
+  from { filter: brightness(1); }
+  50% { filter: brightness(1.18); }
+  to { filter: brightness(1); }
 }
 
 @keyframes horrible-card-pulse {

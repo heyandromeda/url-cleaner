@@ -28,7 +28,6 @@ import {
   applyHorribleAttribute,
   bindHorriblePage,
   popHorribleStamp,
-  shouldShowHorribleNag,
   spawnHorribleConfetti
 } from "./horrible.js";
 
@@ -183,20 +182,17 @@ function setTotdToggleLabel(expanded) {
 function applyHorribleMode(enabled) {
   applyHorribleAttribute(document.documentElement, enabled);
   if (horribleMode) horribleMode.checked = enabled;
-  const nag = document.querySelector("#horrible-nag");
-  if (!nag) return;
-  if (enabled && shouldShowHorribleNag(sessionStorage)) {
-    nag.hidden = false;
-    nag.classList.remove("is-dismissed");
-  } else if (!enabled) {
-    nag.hidden = true;
-  }
+  horribleEffects.setEnabled(enabled);
 }
 
 function celebrateHorribleClean() {
   spawnHorribleConfetti(document);
   popHorribleStamp(document.querySelector(".horrible-pow"));
 }
+
+let horribleEffects = {
+  setEnabled() {}
+};
 
 function decorateHorribleToggle() {
   if (!horribleMode) return;
@@ -836,11 +832,10 @@ if (horribleMode) {
   });
 }
 
-bindHorriblePage({
+horribleEffects = bindHorriblePage({
   stopButton: document.querySelector("#horrible-stop"),
   cleanButton: document.querySelector("#clean-form button.primary-button[type='submit']"),
-  nag: document.querySelector("#horrible-nag"),
-  nagButtons: [...document.querySelectorAll("[data-horrible-nag-dismiss]")],
+  popupHost: document.querySelector("#horrible-popups"),
   hitCounter: document.querySelector(".horrible-hit-counter"),
   guestbook: document.querySelector("#horrible-guestbook"),
   onStop: () => {
@@ -848,6 +843,7 @@ bindHorriblePage({
     applyHorribleMode(false);
   }
 });
+horribleEffects.setEnabled(document.documentElement.dataset.horrible === "on");
 
 totdToggle.addEventListener("click", () => {
   totdCollapsed = !totdCollapsed;
