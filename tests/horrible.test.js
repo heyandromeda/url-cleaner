@@ -29,6 +29,7 @@ import {
   appendSliderChar,
   applyPopupDismissal,
   captchaCellHasUtm,
+  cleaningOptionsChanged,
   charFromSlider,
   clampZoom,
   dialupMs,
@@ -142,6 +143,8 @@ test("app stops horrible mode from the panic button and Escape", () => {
   assert.match(app, /__urlCleaner/);
   assert.match(app, /source:\s*"keyboard"/);
   assert.match(app, /if \(horribleIsOn\(\)\) return;/);
+  assert.match(app, /onSettingsRestored/);
+  assert.match(app, /cleaningChanged && input\.value\.trim\(\)/);
 });
 
 test("dodge helpers cycle a few classes then give up", () => {
@@ -225,6 +228,10 @@ test("playbook ships all 33 ideas behind the horrible toggle", () => {
   assert.match(js, /rememberSettings/);
   assert.match(js, /restoreSettings/);
   assert.match(js, /stopSlotReveal/);
+  assert.match(js, /cleaningOptionsChanged/);
+  const page = readFileSync(join(root, "horrible.js"), "utf8");
+  assert.match(page, /onSettingsRestored/);
+  assert.match(page, /flushRestore/);
   assert.match(js, /shouldCommitSlotReveal/);
   assert.match(js, /readHorribleSettingsSnapshot/);
 });
@@ -254,4 +261,8 @@ test("playbook helpers stay local and never block the real URL", () => {
   assert.equal(shouldCommitSlotReveal(1, 1, true), true);
   assert.equal(shouldCommitSlotReveal(1, 2, true), false);
   assert.equal(shouldCommitSlotReveal(3, 3, false), false);
+  assert.equal(cleaningOptionsChanged({ aggressive: true, duplicates: false }, { aggressive: false, duplicates: false }), true);
+  assert.equal(cleaningOptionsChanged({ aggressive: false, duplicates: true }, { aggressive: false, duplicates: false }), true);
+  assert.equal(cleaningOptionsChanged({ aggressive: false, duplicates: false }, { aggressive: false, duplicates: false }), false);
+  assert.equal(cleaningOptionsChanged(null, { aggressive: true }), false);
 });

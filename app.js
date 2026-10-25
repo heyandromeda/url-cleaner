@@ -873,6 +873,16 @@ horribleEffects = bindHorriblePage({
   onStop: () => {
     saveSetting(STORAGE_KEYS.horrible, false);
     applyHorribleMode(false);
+  },
+  onSettingsRestored: ({ snap, cleaningChanged } = {}) => {
+    if (!snap || horribleIsOn()) return;
+    saveSetting(STORAGE_KEYS.cleanOnPaste, snap.paste);
+    saveSetting(STORAGE_KEYS.autoCopy, snap.copy);
+    saveSetting(STORAGE_KEYS.aggressiveMode, snap.aggressive);
+    saveSetting(STORAGE_KEYS.removeDuplicates, snap.duplicates);
+    if (cleaningChanged && input.value.trim()) {
+      runClean({ allowAutoCopy: false });
+    }
   }
 });
 horribleEffects.setEnabled(document.documentElement.dataset.horrible === "on");
