@@ -7,14 +7,30 @@
     <link rel="stylesheet" href="./popup.css" />
   </head>
   <body>
-    <main class="popup">
-      <p class="eyebrow">LOCAL UTILITY</p>
-      <h1>URL Cleaner</h1>
-      <p id="status" class="status" role="status"></p>
+    <main class="popup-card">
+      <header class="brand">
+        <img src="./icons/icon32.png" alt="" width="24" height="24" />
+        <h1>URL Cleaner</h1>
+      </header>
+
+      <div id="headline" class="headline" hidden>
+        <span id="headline-icon" class="headline-icon"></span>
+        <p id="status" class="status" role="status"></p>
+      </div>
+
       <p id="cleaned" class="url" hidden></p>
-      <p id="summary" class="summary" hidden></p>
+
+      <div id="removed-row" class="removed-row" hidden>
+        <span id="removed-badge" class="removed-badge"></span>
+        <ul id="chips" class="removed-list"></ul>
+      </div>
+
       <p id="warning" class="notice" hidden></p>
-      <a id="open-site" class="open-site" hidden rel="noopener noreferrer" target="_blank">Open in URL Cleaner</a>
+
+      <div id="actions" class="actions" hidden>
+        <button id="copy-again" type="button" class="secondary-button">Copy again</button>
+        <a id="open-site" class="open-site" hidden rel="noopener noreferrer" target="_blank">Open in URL Cleaner</a>
+      </div>
     </main>
     <script type="module" src="./popup.js"></script>
   </body>

@@ -190,11 +190,10 @@ One tap opens URL Cleaner with the current page URL in the hash. No extra script
 
 ### Load the unpacked extension
 
-[`extension/`](./extension/) is a Manifest V3 add-on. It is not published to a store. Toolbar click cleans the current tab locally with `cleanUrl()`, copies the result, and shows one line about what was removed. Permissions are only `activeTab` and `clipboardWrite`. The page URL is never fetched.
+[`extension/`](./extension/) is a Manifest V3 add-on. It is not published to a store. Toolbar click cleans the current tab locally with `cleanUrl()`, copies the result, and shows what was removed. Permissions are only `activeTab` and `clipboardWrite`. The page URL is never fetched. `extension/vendor/` is committed so you can load it unpacked without a build; CI checks those files still match `extension/build.mjs`.
 
-1. From the repo root, run `npm run build` so `extension/vendor/` gets a copy of the engine.
-2. In Chrome, open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and choose the `extension/` folder.
-3. Pin the icon if you want, then click it on any `http(s)` page.
+1. In Chrome, open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and choose the `extension/` folder.
+2. Pin the icon if you want, then click it on any `http(s)` page.
 
 `chrome://`, `file:`, and `about:blank` pages show **Nothing to clean on this page.** Shortened links are cleaned in place and warned about; they are not followed.
 

@@ -1,11 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseHandoffParams, parseHandoffUrl } from "../dist/handoff.js";
 import { isOpaqueShortener } from "../extension/vendor/cleaner.js";
-import { ENGINE_FILES } from "../extension/build.mjs";
+import { ENGINE_FILES, buildExtensionVendor } from "../extension/build.mjs";
 import {
   CLEANER_ORIGIN,
   MAX_URL_LENGTH,
@@ -15,6 +16,13 @@ import {
   cleanTabUrl,
   handoffUrlFor
 } from "../extension/clean.js";
+import {
+  ALREADY_CLEAN,
+  COPIED,
+  COPY_FAILED,
+  headlineFor,
+  writeClipboard
+} from "../extension/popup-ui.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BOOKMARKLET = "javascript:(()=>{window.open('https://andromeda-url-cleaner.vercel.app/#url='+encodeURIComponent(location.href),'_blank')})()";
@@ -111,11 +119,41 @@ test("opaque shorteners are cleaned in place and warned about without being foll
   assert.match(result.handoffUrl, /#url=/);
 
   const clean = readFileSync(join(root, "extension", "clean.js"), "utf8");
-  const popup = readFileSync(join(root, "extension", "popup.js"), "utf8");
+  const ui = readFileSync(join(root, "extension", "popup-ui.js"), "utf8");
   assert.match(clean, /isOpaqueShortener\(/);
-  assert.match(popup, /show\(warning, result\.warning\)/);
+  assert.match(ui, /result\.warning/);
   assert.doesNotMatch(clean, /\bfetch\s*\(/);
-  assert.doesNotMatch(popup, /\bfetch\s*\(/);
+  assert.doesNotMatch(ui, /\bfetch\s*\(/);
+});
+
+test("Copied is only shown after clipboard writeText resolves", async () => {
+  let release;
+  const writeText = () => new Promise((resolve) => {
+    release = resolve;
+  });
+  let settled = false;
+  const pending = writeClipboard("https://youtu.be/_ARIGPnYYUk", { writeText }).then((outcome) => {
+    settled = true;
+    return outcome;
+  });
+
+  assert.equal(settled, false);
+  assert.equal(headlineFor({ error: "", removedParams: ["si"] }, null).text, "");
+  release();
+  const outcome = await pending;
+  assert.equal(outcome.ok, true);
+  assert.equal(headlineFor({ error: "", removedParams: ["si"] }, outcome).text, COPIED);
+});
+
+test("clipboard rejection shows an error instead of Copied", async () => {
+  const outcome = await writeClipboard("https://example.com/a", {
+    writeText: () => Promise.reject(new Error("denied"))
+  });
+  assert.equal(outcome.ok, false);
+  const headline = headlineFor({ error: "", removedParams: ["utm_source"] }, outcome);
+  assert.equal(headline.text, COPY_FAILED);
+  assert.notEqual(headline.text, COPIED);
+  assert.equal(headlineFor({ error: "", removedParams: [] }, { ok: true }).text, ALREADY_CLEAN);
 });
 
 test("non-http(s) pages show nothing to clean and do not copy or open the site", () => {
@@ -136,6 +174,22 @@ test("extension vendor copies match the repo engine", () => {
       readFileSync(join(root, "extension", "vendor", name), "utf8"),
       name
     );
+  }
+});
+
+test("committed vendor matches a fresh extension/build.mjs output", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "url-cleaner-vendor-"));
+  try {
+    buildExtensionVendor(root, tmp);
+    for (const name of ENGINE_FILES) {
+      assert.equal(
+        readFileSync(join(root, "extension", "vendor", name), "utf8"),
+        readFileSync(join(tmp, name), "utf8"),
+        name
+      );
+    }
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
   }
 });
 
@@ -172,9 +226,12 @@ test("extension sources do not fetch URLs or load remote scripts", () => {
 
 test("README documents the bookmarklet and unpacked extension", () => {
   const readme = readFileSync(join(root, "README.md"), "utf8");
+  const html = readFileSync(join(root, "extension", "popup.html"), "utf8");
   assert.match(readme, /## Browser extension \+ bookmarklet/);
   assert.ok(readme.includes(BOOKMARKLET));
   assert.match(readme, /Load unpacked/);
+  assert.doesNotMatch(readme, /run `npm run build` so `extension\/vendor/);
   assert.match(readme, /activeTab/);
   assert.match(readme, /clipboardWrite/);
+  assert.doesNotMatch(html, /LOCAL UTILITY/);
 });

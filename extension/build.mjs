@@ -4,8 +4,14 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const ENGINE_FILES = ["cleaner.js", "explanations.js", "tracker-profiles.js"];
 
-export function buildExtensionVendor(root = join(dirname(fileURLToPath(import.meta.url)), "..")) {
-  const dest = join(root, "extension", "vendor");
+export function extensionVendorDir(root = join(dirname(fileURLToPath(import.meta.url)), "..")) {
+  return join(root, "extension", "vendor");
+}
+
+export function buildExtensionVendor(
+  root = join(dirname(fileURLToPath(import.meta.url)), ".."),
+  dest = extensionVendorDir(root)
+) {
   if (existsSync(dest)) {
     rmSync(dest, { recursive: true, force: true });
   }

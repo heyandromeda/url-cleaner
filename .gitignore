@@ -1,5 +1,4 @@
 node_modules/
 dist/
-extension/vendor/
 .DS_Store
 .playwright-artifacts/
