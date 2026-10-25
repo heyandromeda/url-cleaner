@@ -50,6 +50,7 @@ html[data-horrible="on"] .construction-banner {
   margin: 0;
   padding: 0.45rem 0.75rem;
   border-bottom: 3px solid #111;
+  /* Static hazard stripes. They do not scroll or flash; wobble is 2.4s pose-only. */
   background: repeating-linear-gradient(
     -45deg,
     #111 0 14px,
@@ -522,6 +523,10 @@ html[data-horrible="on"] .horrible-toasters span:nth-child(3) { top: 78%; left: 
 
 html[data-horrible="on"] .horrible-popups {
   display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 2147482998;
+  pointer-events: none;
 }
 
 html[data-horrible="on"] .horrible-joke-tag {
@@ -538,13 +543,14 @@ html[data-horrible="on"] .horrible-joke-tag {
 
 html[data-horrible="on"] .horrible-popup {
   position: fixed;
-  z-index: 60;
+  z-index: 2147482998;
   width: min(16.5rem, calc(100vw - 2.4rem));
   padding: 0.7rem 0.75rem 0.8rem;
   border: 4px solid #111;
   border-radius: 1.4rem 0.4rem 1.6rem 0.7rem;
   color: #1a0033;
   box-shadow: 8px 8px 0 #111;
+  pointer-events: none;
 }
 
 html[data-horrible="on"] .horrible-popup h2 {
@@ -576,6 +582,7 @@ html[data-horrible="on"] .horrible-popup-x {
   position: absolute;
   top: 0.4rem;
   right: 0.45rem;
+  z-index: 2147482999;
   width: 2rem;
   height: 2rem;
   padding: 0;
@@ -585,11 +592,16 @@ html[data-horrible="on"] .horrible-popup-x {
   color: #c00;
   font-size: 1rem;
   line-height: 1;
+  transform: none !important;
+  animation: none !important;
+  pointer-events: auto;
 }
 
-html[data-horrible="on"] .horrible-popup-x.horrible-dodge-a { transform: translate(-2.4rem, 1.2rem); }
-html[data-horrible="on"] .horrible-popup-x.horrible-dodge-b { transform: translate(-3.2rem, 2rem); }
-html[data-horrible="on"] .horrible-popup-x.horrible-dodge-c { transform: translate(-1.4rem, 2.6rem); }
+html[data-horrible="on"] .horrible-popup:hover,
+html[data-horrible="on"] .horrible-popup:focus-within {
+  animation: none !important;
+  transform: none;
+}
 
 html[data-horrible="on"] .horrible-popup-action {
   border: 3px solid #111;
@@ -597,6 +609,7 @@ html[data-horrible="on"] .horrible-popup-action {
   background: #fff;
   color: #1a0033;
   padding: 0.35rem 0.7rem;
+  pointer-events: auto;
 }
 
 html[data-horrible="on"] .horrible-loading {
@@ -725,6 +738,7 @@ html[data-horrible="on"] .theme-toggle {
 
 @media (prefers-reduced-motion: no-preference) {
   html[data-horrible="on"]::before {
+    /* Luminance cycle ~0.04 Hz (28s). Stay well under the 2 Hz cap. */
     animation: horrible-bg-shift 28s linear infinite, horrible-hue 40s linear infinite;
   }
 
@@ -760,18 +774,8 @@ html[data-horrible="on"] .theme-toggle {
     animation: horrible-input-jiggle 4.8s ease-in-out infinite;
   }
 
-  html[data-horrible="on"] .horrible-popup {
-    animation: horrible-popup-wiggle 1.6s ease-in-out infinite;
-  }
-
-  html[data-horrible="on"] .horrible-popup-slot-1,
-  html[data-horrible="on"] .horrible-popup-slot-3,
-  html[data-horrible="on"] .horrible-popup-slot-5 {
-    animation-direction: reverse;
-  }
-
   html[data-horrible="on"] .horrible-loading-bar {
-    animation: horrible-loading-shimmer 1.2s linear infinite;
+    animation: horrible-loading-shimmer 2.4s linear infinite;
   }
 
   html[data-horrible="on"] .horrible-spin-banner {
@@ -779,7 +783,7 @@ html[data-horrible="on"] .theme-toggle {
   }
 
   html[data-horrible="on"] .input-row .primary-button {
-    animation: horrible-blink 1s step-end infinite;
+    animation: horrible-blink 1.6s step-end infinite;
     transition: transform 0.22s ease;
   }
 
@@ -818,7 +822,7 @@ html[data-horrible="on"] .theme-toggle {
   }
 
   html[data-horrible="on"] .horrible-stars span {
-    animation: horrible-twinkle 1.2s step-end infinite;
+    animation: horrible-twinkle 2s step-end infinite;
   }
 
   html[data-horrible="on"] .horrible-stars span:nth-child(odd) {

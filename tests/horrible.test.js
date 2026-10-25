@@ -35,6 +35,7 @@ import {
   evaluatePasswordRules,
   extrasAfterClose,
   gravityIsOn,
+  isCleanWindow,
   multiplyPrime,
   nextHorribleTheme,
   nextSpawnDelay,
@@ -112,9 +113,12 @@ test("horrible.css keeps motion optional and blinks at or under 2Hz", () => {
   assert.match(css, /prefers-reduced-motion:\s*no-preference/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(css, /animation:\s*none\s*!important/);
-  assert.match(css, /horrible-blink 1s/);
-  assert.match(css, /horrible-twinkle 1\.2s/);
+  assert.match(css, /horrible-blink 1\.6s/);
+  assert.match(css, /horrible-twinkle 2s/);
+  assert.match(css, /horrible-bg-shift 28s/);
+  assert.match(css, /horrible-loading-shimmer 2\.4s/);
   assert.match(css, /z-index:\s*2147483000/);
+  assert.match(css, /z-index:\s*2147482998/);
   assert.doesNotMatch(css, /@import/);
   assert.doesNotMatch(css, /https?:\/\//);
   assert.doesNotMatch(css, /Tahoma|MS Sans Serif|navy|silver/);
@@ -132,6 +136,10 @@ test("app stops horrible mode from the panic button and Escape", () => {
   assert.match(js, /stopEverything/);
   assert.match(js, /applyPopupDismissal/);
   assert.match(js, /nextSpawnDelay/);
+  assert.match(app, /ctrlKey/);
+  assert.match(app, /metaKey/);
+  assert.match(app, /__urlCleaner/);
+  assert.match(app, /source:\s*"keyboard"/);
 });
 
 test("dodge helpers cycle a few classes then give up", () => {
@@ -170,6 +178,8 @@ test("parody popups multiply until the cap, then leave a clean window", () => {
   assert.equal(nextSpawnDelay(4000, third.cleanWindowUntil, 2800), 6000);
   assert.equal(nextSpawnDelay(11000, third.cleanWindowUntil, 2800), 2800);
   assert.equal(extrasAfterClose(4, 8, 2, true), 0);
+  assert.equal(isCleanWindow(4000, 10000), true);
+  assert.equal(isCleanWindow(10000, 10000), false);
 });
 
 test("applyHorribleAttribute toggles data-horrible without touching theme", () => {
@@ -210,6 +220,8 @@ test("playbook ships all 33 ideas behind the horrible toggle", () => {
   assert.doesNotMatch(css, /@import/);
   assert.doesNotMatch(css, /https?:\/\//);
   assert.match(js, /Skip, I'm a robot|skip-captcha/);
+  assert.match(js, /snapshotSettings/);
+  assert.match(js, /restoreSettings/);
 });
 
 test("playbook helpers stay local and never block the real URL", () => {

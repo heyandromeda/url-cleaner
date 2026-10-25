@@ -533,6 +533,17 @@ function showBatchResults(entries, { allowAutoCopy = true } = {}) {
   }
 }
 
+function requestClean(options = {}) {
+  if (!input.value.trim()) {
+    showMessage("Paste or type a URL to clean.", "error");
+    return;
+  }
+  if (horribleEffects.beforeClean?.({ source: options.source || "form", proceed: () => runClean(options) })) {
+    return;
+  }
+  runClean(options);
+}
+
 function runClean(options = {}) {
   hideResults();
 
@@ -744,14 +755,22 @@ renderTrackerOfTheDay();
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (!input.value.trim()) {
-    showMessage("Paste or type a URL to clean.", "error");
+  requestClean({ source: "form" });
+});
+
+input.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  const chord = event.ctrlKey || event.metaKey;
+  const horribleOn = document.documentElement.dataset.horrible === "on";
+  if (chord) {
+    event.preventDefault();
+    requestClean({ source: "keyboard" });
     return;
   }
-  if (horribleEffects.beforeClean?.({ source: "form", proceed: () => runClean() })) {
-    return;
+  if (horribleOn && !event.shiftKey) {
+    event.preventDefault();
+    requestClean({ source: "keyboard" });
   }
-  runClean();
 });
 
 input.addEventListener("input", () => {
@@ -867,6 +886,14 @@ clipboardOfferDismiss.addEventListener("click", () => {
   clipboardOffer.hidden = true;
   clipboardOfferValue = "";
 });
+
+window.__urlCleaner = {
+  cleanCurrentInput: () => requestClean({ source: "keyboard" }),
+  setHorribleMode: (enabled) => {
+    saveSetting(STORAGE_KEYS.horrible, Boolean(enabled));
+    applyHorribleMode(Boolean(enabled));
+  }
+};
 
 if (!loadHandoff()) {
   offerClipboardIfPermitted();

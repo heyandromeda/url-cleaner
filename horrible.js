@@ -1,5 +1,5 @@
 import { STORAGE_KEYS, openAppStorage, readBooleanSetting, writeBooleanSetting } from "./storage.js";
-import { applyPopupDismissal, nextSpawnDelay } from "./horrible/logic.js";
+import { applyPopupDismissal, isCleanWindow, nextSpawnDelay } from "./horrible/logic.js";
 import { bindPlaybook } from "./horrible/playbook.js";
 
 export const HORRIBLE_STORAGE_KEY = STORAGE_KEYS.horrible;
@@ -142,23 +142,6 @@ export function popHorribleStamp(stamp) {
   globalThis.setTimeout(() => stamp.classList.remove("is-popping"), 1600);
 }
 
-function bindRunawayClose(button, root) {
-  if (!button) return;
-  let dodges = 0;
-  let tiredUntil = 0;
-  button.addEventListener("mouseenter", () => {
-    if (prefersReducedMotion(root.defaultView || globalThis)) return;
-    const now = Date.now();
-    const next = resolveCleanDodge(dodges, tiredUntil, now);
-    dodges = next.dodges;
-    tiredUntil = next.tiredUntil;
-    button.classList.remove(...HORRIBLE_DODGE_CLASSES);
-    if (next.action === "dodge") {
-      button.classList.add(nextDodgeClass(dodges - 1));
-    }
-  });
-}
-
 export function bindHorriblePage({
   document: rootDocument = globalThis.document,
   stopButton,
@@ -222,10 +205,35 @@ export function bindHorriblePage({
 
   const openCount = () => popupHost?.querySelectorAll(".horrible-popup").length || 0;
 
+  const quietNow = () => isCleanWindow(Date.now(), cleanWindowUntil);
+
+  const recordDismissal = (openBeforeRemove) => {
+    const next = applyPopupDismissal({
+      openCount: openBeforeRemove,
+      closes,
+      now: Date.now(),
+      cap: cap(),
+      multiply: HORRIBLE_POPUP_MULTIPLY,
+      cleanWindowUntil,
+      every: HORRIBLE_CLEAN_WINDOW_EVERY,
+      windowMs: HORRIBLE_CLEAN_WINDOW_MS
+    });
+    closes = next.closes;
+    cleanWindowUntil = next.cleanWindowUntil;
+    if (next.inWindow || quietNow()) {
+      queueSpawn();
+      return;
+    }
+    for (let index = 0; index < next.extras; index += 1) {
+      if (quietNow()) break;
+      spawnPopup();
+    }
+  };
+
   const spawnPopup = (override) => {
     if (!enabled || !isHorrible() || !popupHost) return null;
+    if (quietNow()) return null;
     if (openCount() >= cap()) return null;
-    if (Date.now() < cleanWindowUntil) return null;
 
     const copy = override && override.title ? override : nextPopupCopy(copyIndex);
     if (!override) copyIndex += 1;
@@ -236,6 +244,7 @@ export function bindHorriblePage({
     popup.dataset.slot = String(slot);
     popup.setAttribute("role", "dialog");
     popup.setAttribute("aria-label", "Joke popup");
+    popup.tabIndex = -1;
 
     const tag = root.createElement("p");
     tag.className = "horrible-joke-tag";
@@ -260,35 +269,44 @@ export function bindHorriblePage({
 
     popup.append(tag, close, title, body, action);
     popupHost.append(popup);
-    bindRunawayClose(close, root);
-    close.addEventListener("click", () => dismissPopup(popup));
-    action.addEventListener("click", () => dismissPopup(popup));
     return popup;
   };
 
   const dismissPopup = (popup) => {
     if (!popup?.isConnected) return;
-    const now = Date.now();
-    const next = applyPopupDismissal({
-      openCount: openCount(),
-      closes,
-      now,
-      cap: cap(),
-      multiply: HORRIBLE_POPUP_MULTIPLY,
-      cleanWindowUntil,
-      every: HORRIBLE_CLEAN_WINDOW_EVERY,
-      windowMs: HORRIBLE_CLEAN_WINDOW_MS
-    });
     popup.remove();
-    closes = next.closes;
-    cleanWindowUntil = next.cleanWindowUntil;
-    if (next.inWindow) queueSpawn();
-    for (let index = 0; index < next.extras; index += 1) spawnPopup();
   };
+
+  const onPopupHostClick = (event) => {
+    const button = event.target.closest?.(".horrible-popup-x, .horrible-popup-action");
+    if (!button || !popupHost?.contains(button)) return;
+    const popup = button.closest(".horrible-popup");
+    if (!popup) return;
+    event.preventDefault();
+    dismissPopup(popup);
+  };
+
+  const onPopupHostMutate = (records) => {
+    if (!enabled) return;
+    for (const record of records) {
+      for (const node of record.removedNodes) {
+        if (node?.classList?.contains("horrible-popup")) {
+          recordDismissal(openCount() + 1);
+        }
+      }
+    }
+  };
+
+  const popupObserver = popupHost && typeof view().MutationObserver === "function"
+    ? new (view().MutationObserver)(onPopupHostMutate)
+    : null;
+  popupObserver?.observe(popupHost, { childList: true });
 
   const clearPopups = () => {
     if (!popupHost) return;
+    popupObserver?.disconnect();
     popupHost.replaceChildren();
+    popupObserver?.observe(popupHost, { childList: true });
   };
 
   const stopStorm = () => {
@@ -307,7 +325,7 @@ export function bindHorriblePage({
     const delay = nextSpawnDelay(Date.now(), cleanWindowUntil, base);
     spawnTimer = view().setTimeout(() => {
       spawnTimer = 0;
-      if (Date.now() < cleanWindowUntil) {
+      if (quietNow()) {
         queueSpawn();
         return;
       }
@@ -352,6 +370,13 @@ export function bindHorriblePage({
   const onEscape = (event) => {
     if (event.key !== "Escape") return;
     if (!isHorrible() && !enabled) return;
+    const popup = event.target.closest?.(".horrible-popup");
+    if (popup && popupHost?.contains(popup) && enabled) {
+      event.preventDefault();
+      event.stopPropagation();
+      dismissPopup(popup);
+      return;
+    }
     event.preventDefault();
     stopEverything();
   };
@@ -361,6 +386,7 @@ export function bindHorriblePage({
     cleanButton.addEventListener("focus", clearDodges);
   }
   root.addEventListener("pointermove", onPointerMove, { passive: true });
+  popupHost?.addEventListener("click", onPopupHostClick);
   stopButton?.addEventListener("click", stopEverything);
   view().addEventListener?.("keydown", onEscape);
   guestbook?.addEventListener("click", () => {
@@ -392,9 +418,11 @@ export function bindHorriblePage({
   return {
     dispose() {
       stopStorm();
+      popupObserver?.disconnect();
       cleanButton?.removeEventListener("mouseenter", onCleanEnter);
       cleanButton?.removeEventListener("focus", clearDodges);
       root.removeEventListener("pointermove", onPointerMove);
+      popupHost?.removeEventListener("click", onPopupHostClick);
       view().removeEventListener?.("keydown", onEscape);
     },
     setEnabled,

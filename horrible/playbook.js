@@ -165,6 +165,7 @@ export function bindPlaybook({
   };
 
   const syncGravityUi = () => {
+    if (!enabled || !isOn()) return;
     const map = {
       paste: cleanOnPaste,
       copy: autoCopy,
@@ -176,6 +177,23 @@ export function bindPlaybook({
       if (slider) slider.value = String(Math.round(gravity[key]));
       setCheckbox(box, gravityIsOn(gravity[key]));
     }
+  };
+
+  const snapshotSettings = () => ({
+    paste: Boolean(cleanOnPaste?.checked),
+    copy: Boolean(autoCopy?.checked),
+    aggressive: Boolean(aggressiveMode?.checked),
+    duplicates: Boolean(removeDuplicates?.checked)
+  });
+
+  const restoreSettings = () => {
+    if (!savedSettings) return;
+    const snap = savedSettings;
+    savedSettings = null;
+    setCheckbox(cleanOnPaste, snap.paste);
+    setCheckbox(autoCopy, snap.copy);
+    setCheckbox(aggressiveMode, snap.aggressive);
+    setCheckbox(removeDuplicates, snap.duplicates);
   };
 
   const tickGravity = (now) => {
@@ -599,7 +617,7 @@ export function bindPlaybook({
 
   const beforeClean = ({ source, proceed } = {}) => {
     if (!enabled || !isOn()) return false;
-    if (source === "form") {
+    if (source === "form" || source === "keyboard") {
       captchaDone = true;
       setCaptchaOpen(false);
       proceed?.();
@@ -661,12 +679,7 @@ export function bindPlaybook({
   const enable = () => {
     enabled = true;
     bindOnce();
-    savedSettings = {
-      paste: Boolean(cleanOnPaste?.checked),
-      copy: Boolean(autoCopy?.checked),
-      aggressive: Boolean(aggressiveMode?.checked),
-      duplicates: Boolean(removeDuplicates?.checked)
-    };
+    savedSettings = snapshotSettings();
     applyLabels();
     applyTheme();
     applyZoom();
@@ -714,13 +727,7 @@ export function bindPlaybook({
     view().clearTimeout(holdTimer);
     holdTimer = 0;
     restoreLabels();
-    if (savedSettings) {
-      setCheckbox(cleanOnPaste, savedSettings.paste);
-      setCheckbox(autoCopy, savedSettings.copy);
-      setCheckbox(aggressiveMode, savedSettings.aggressive);
-      setCheckbox(removeDuplicates, savedSettings.duplicates);
-      savedSettings = null;
-    }
+    restoreSettings();
     setCaptchaOpen(true);
     const captcha = q("[data-idea='5']");
     if (captcha) captcha.hidden = true;

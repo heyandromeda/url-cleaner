@@ -245,6 +245,10 @@ export function slotCharsForTick(finalText, tick, alphabet = "abcdefghijklmnopqr
   }).join("");
 }
 
+export function isCleanWindow(now, cleanWindowUntil) {
+  return Number(cleanWindowUntil) > Number(now);
+}
+
 export function applyPopupDismissal({
   openCount,
   closes,
@@ -258,7 +262,7 @@ export function applyPopupDismissal({
   const nextCloses = (Number(closes) || 0) + 1;
   const started = nextCleanWindow(nextCloses, now, every, windowMs);
   const windowUntil = started || cleanWindowUntil || 0;
-  const inWindow = now < windowUntil;
+  const inWindow = Boolean(started) || isCleanWindow(now, windowUntil);
   const extras = extrasAfterClose(openCount, cap, multiply, inWindow);
   return {
     closes: nextCloses,
