@@ -4,7 +4,8 @@ export const STORAGE_KEYS = {
   totdCollapsed: "url-cleaner.totd-collapsed",
   aggressiveMode: "url-cleaner.aggressive-mode",
   removeDuplicates: "url-cleaner.remove-duplicates",
-  theme: "url-cleaner.theme"
+  theme: "url-cleaner.theme",
+  horrible: "url-cleaner.horrible"
 };
 
 /** @param {Pick<Storage, "getItem" | "setItem"> | null | undefined} storage */

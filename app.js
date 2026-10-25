@@ -24,6 +24,12 @@ import {
   readBooleanSetting,
   writeBooleanSetting
 } from "./storage.js";
+import {
+  applyHorribleAttribute,
+  bindHorriblePage,
+  popHorribleStamp,
+  spawnHorribleConfetti
+} from "./horrible.js";
 
 const form = document.querySelector("#clean-form");
 const input = document.querySelector("#url-input");
@@ -69,6 +75,7 @@ const totdDetails = document.querySelector("#totd-details");
 const totdToggle = document.querySelector("#totd-toggle");
 const themeToggle = document.querySelector("#theme-toggle");
 const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+const horribleMode = document.querySelector("#horrible-mode");
 
 let cleanedValue = "";
 let batchCopyValue = "";
@@ -172,8 +179,32 @@ function setTotdToggleLabel(expanded) {
   totdToggle.append(wrap);
 }
 
+function applyHorribleMode(enabled) {
+  applyHorribleAttribute(document.documentElement, enabled);
+  if (horribleMode) horribleMode.checked = enabled;
+  horribleEffects.setEnabled(enabled);
+}
+
+function celebrateHorribleClean() {
+  spawnHorribleConfetti(document);
+  popHorribleStamp(document.querySelector(".horrible-pow"));
+}
+
+let horribleEffects = {
+  setEnabled() {}
+};
+
+function decorateHorribleToggle() {
+  if (!horribleMode) return;
+  const label = horribleMode.closest("label");
+  if (!label || label.querySelector(".icon")) return;
+  horribleMode.after(createIcon("flame", { size: 16 }));
+}
+
 function initTheme() {
   applyTheme(activeTheme());
+  applyHorribleMode(readSetting(STORAGE_KEYS.horrible, false));
+  decorateHorribleToggle();
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
     const storage = openThemeStorage(globalThis);
     if (!storage || readStoredThemePreference(storage) === null) {
@@ -425,6 +456,7 @@ function showCleanResult(result, { allowAutoCopy = true, originalValue = "", rev
         : "Already clean — no tracking parameters found.";
 
   showMessage(baseMessage, result.unwrapLimitReached ? "info" : "success");
+  celebrateHorribleClean();
 
   if (allowAutoCopy && autoCopy.checked) {
     copyText(cleanedValue).then((copied) => {
@@ -487,6 +519,7 @@ function showBatchResults(entries, { allowAutoCopy = true } = {}) {
     ? `${cleaned.length} URL${cleaned.length === 1 ? "" : "s"} cleaned.`
     : `${cleaned.length} cleaned, ${failed} failed.`;
   showMessage(baseMessage, cleaned.length > 0 ? "success" : "error");
+  if (cleaned.length > 0) celebrateHorribleClean();
 
   if (allowAutoCopy && autoCopy.checked && batchCopyValue) {
     copyText(batchCopyValue).then((copied) => {
@@ -791,6 +824,26 @@ themeToggle.addEventListener("click", () => {
   const next = toggleAppliedTheme(appliedTheme(), storage);
   applyTheme(next);
 });
+
+if (horribleMode) {
+  horribleMode.addEventListener("change", () => {
+    saveSetting(STORAGE_KEYS.horrible, horribleMode.checked);
+    applyHorribleMode(horribleMode.checked);
+  });
+}
+
+horribleEffects = bindHorriblePage({
+  stopButton: document.querySelector("#horrible-stop"),
+  cleanButton: document.querySelector("#clean-form button.primary-button[type='submit']"),
+  popupHost: document.querySelector("#horrible-popups"),
+  hitCounter: document.querySelector(".horrible-hit-counter"),
+  guestbook: document.querySelector("#horrible-guestbook"),
+  onStop: () => {
+    saveSetting(STORAGE_KEYS.horrible, false);
+    applyHorribleMode(false);
+  }
+});
+horribleEffects.setEnabled(document.documentElement.dataset.horrible === "on");
 
 totdToggle.addEventListener("click", () => {
   totdCollapsed = !totdCollapsed;
