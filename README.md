@@ -58,6 +58,7 @@ That means search terms, product IDs, page numbers, language settings, invite co
 - Handles invalid URLs clearly
 - Runs entirely in the browser with no backend, accounts, analytics, database, or external API
 - **MCP server** (`mcp/`): zero-dependency stdio/HTTP adapter so Grok Bots, Cursor, Claude Code, Codex, and other MCP clients can call the same cleaning engine locally (URLs are never fetched)
+- Optional unpacked Chrome extension and a one-line bookmarklet that reuse the same local cleaner and `#url=` handoff
 
 ## MCP server
 
@@ -173,6 +174,30 @@ Now share a URL from Safari or another app, choose the shortcut, and URL Cleaner
 - iOS and macOS may block silent clipboard writes when a page opens without a direct user gesture. The app therefore always displays the cleaned URL, and the **Share** and **Copy** buttons remain reliable final steps.
 - The app removes the handoff value from the address bar after loading it.
 
+## Browser extension + bookmarklet
+
+The site already accepts `/#url=` handoffs. These two extras send the current page there, or clean it in the browser, without a store listing.
+
+### Bookmarklet
+
+Create a bookmark whose URL is this code. On a desktop browser you can also drag that bookmark onto the bookmarks bar. On iPhone Safari, add any bookmark, then edit its address to the code:
+
+```
+javascript:(()=>{window.open('https://andromeda-url-cleaner.vercel.app/#url='+encodeURIComponent(location.href),'_blank')})()
+```
+
+One tap opens URL Cleaner with the current page URL in the hash. No extra scripts and no tracking. The link is never sent as `?url=`.
+
+### Load the unpacked extension
+
+[`extension/`](./extension/) is a Manifest V3 add-on. It is not published to a store. Toolbar click cleans the current tab locally with `cleanUrl()`, copies the result, and shows one line about what was removed. Permissions are only `activeTab` and `clipboardWrite`. The page URL is never fetched.
+
+1. From the repo root, run `npm run build` so `extension/vendor/` gets a copy of the engine.
+2. In Chrome, open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and choose the `extension/` folder.
+3. Pin the icon if you want, then click it on any `http(s)` page.
+
+`chrome://`, `file:`, and `about:blank` pages show **Nothing to clean on this page.** Shortened links are cleaned in place and warned about; they are not followed.
+
 ## Run locally
 
 The app needs no build step and no package installation.
@@ -216,6 +241,7 @@ The test suite covers:
 - Share-target POST, `#url=` and `?url=` handoff parsing
 - Manifest, service worker, and CSP constraints for the installable app
 - Every root web file matching its `dist/` copy byte-for-byte, since Vercel serves `dist/`
+- The unpacked extension popup: YouTube `si` cleanup, invalid input, long URLs, opaque shorteners, and non-http(s) pages
 
 GitHub Actions runs `npm test` on every push to `main` and on pull requests.
 
@@ -233,7 +259,8 @@ GitHub Actions runs `npm test` on every push to `main` and on pull requests.
 | [manifest.webmanifest](./manifest.webmanifest) | Web app manifest and share target |
 | [sw.js](./sw.js) | Service worker for installability and local share-target POST handoff (no caching, no network) |
 | [middleware.js](./middleware.js) | Vercel Routing Middleware: 303 share-target POSTs to `/` without reading the body |
-| [tests/](./tests) | Automated tests (cleaning, batch, explanations, handoff, PWA, favicon, production URL, `dist/` sync) |
+| [tests/](./tests) | Automated tests (cleaning, batch, explanations, handoff, PWA, favicon, production URL, `dist/` sync, extension popup) |
+| [extension/](./extension/) | Unpacked MV3 add-on; imports `cleanUrl()` via a vendor copy of the engine |
 | [vercel.json](./vercel.json) | Vercel config: serves `dist/` and sets the security headers |
 | [.github/workflows/test.yml](./.github/workflows/test.yml) | Runs `npm test` in CI |
 | [LICENSE](./LICENSE) | MIT License |
@@ -263,6 +290,7 @@ How a link reaches the app matters:
 - **Paste, Paste button, clipboard offer:** the link never leaves the page.
 - **Shortcut (`/#url=`):** the link is passed after the `#`. Browsers do not send that part to the server, so the host only sees a plain request for the page.
 - **Android share target:** the installed PWA receives a POST. When the service worker is controlling the page, it intercepts that POST and redirects to a `/#url=&text=&title=` hash, so the shared fields never leave the device and an invalid `url` field can still fall back to a link in `text` or `title`. If the worker is not yet active (first launch or cleared storage), Vercel Routing Middleware responds `303` to `/` without reading the POST body, so the host never logs the shared link; the URL is dropped and you can paste or share again after install.
+- **Bookmarklet and extension (`/#url=`):** same hash handoff as the Shortcut. The extension also cleans in the toolbar popup and never requests the page URL; it only asks for `activeTab` and `clipboardWrite`.
 - **Old `?url=` links:** still work, but that form sends the link to the web host in the page request. Use `/#url=` or paste if you want to avoid that.
 
 The hosted site enforces this with security headers set in [vercel.json](./vercel.json). The Content Security Policy uses `connect-src 'none'`, so the page cannot make network requests even if it tried, and only loads its own scripts and styles. It also sends `Referrer-Policy: no-referrer`, refuses to be framed, and disables camera, microphone, geolocation, payment, and USB access. The service worker exists for installability and to keep share-target POSTs on-device; it caches nothing and never fetches the shared URL.
