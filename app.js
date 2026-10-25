@@ -30,6 +30,7 @@ import {
   popHorribleStamp,
   spawnHorribleConfetti
 } from "./horrible.js";
+import { cleaningOptionsChanged } from "./horrible/logic.js";
 
 const form = document.querySelector("#clean-form");
 const input = document.querySelector("#url-input");
@@ -79,6 +80,7 @@ const horribleMode = document.querySelector("#horrible-mode");
 
 let cleanedValue = "";
 let batchCopyValue = "";
+let resultCleanOptions = null;
 let clipboardOfferValue = "";
 let totdCollapsed = false;
 
@@ -421,6 +423,17 @@ function hideResults() {
   batchCopyValue = "";
 }
 
+function hasVisibleResult() {
+  return resultPanel.hidden === false || batchPanel.hidden === false;
+}
+
+function currentCleanOptions() {
+  return {
+    aggressive: aggressiveMode.checked,
+    duplicates: removeDuplicates.checked
+  };
+}
+
 function showCleanResult(result, { allowAutoCopy = true, originalValue = "", revealInspection = false } = {}) {
   cleanedValue = result.url;
   renderOriginalUrl(
@@ -550,15 +563,17 @@ function requestClean(options = {}) {
 
 function runClean(options = {}) {
   hideResults();
+  const computedWith = currentCleanOptions();
 
   const entries = cleanBatch(input.value, {
-    aggressive: aggressiveMode.checked,
-    removeDuplicateParameters: removeDuplicates.checked
+    aggressive: computedWith.aggressive,
+    removeDuplicateParameters: computedWith.duplicates
   });
   if (entries.length === 0) {
     showMessage("Paste or type a URL to clean.", "error");
     return;
   }
+  resultCleanOptions = computedWith;
 
   if (entries.length === 1) {
     const [entry] = entries;
@@ -782,6 +797,7 @@ input.addEventListener("input", () => {
     message.textContent = "";
     delete message.dataset.kind;
     hideResults();
+    resultCleanOptions = null;
   }
 });
 
@@ -873,6 +889,17 @@ horribleEffects = bindHorriblePage({
   onStop: () => {
     saveSetting(STORAGE_KEYS.horrible, false);
     applyHorribleMode(false);
+  },
+  onSettingsRestored: ({ snap } = {}) => {
+    if (!snap || horribleIsOn()) return;
+    saveSetting(STORAGE_KEYS.cleanOnPaste, snap.paste);
+    saveSetting(STORAGE_KEYS.autoCopy, snap.copy);
+    saveSetting(STORAGE_KEYS.aggressiveMode, snap.aggressive);
+    saveSetting(STORAGE_KEYS.removeDuplicates, snap.duplicates);
+    const restored = { aggressive: snap.aggressive, duplicates: snap.duplicates };
+    if (hasVisibleResult() && input.value.trim() && cleaningOptionsChanged(resultCleanOptions, restored)) {
+      runClean({ allowAutoCopy: false });
+    }
   }
 });
 horribleEffects.setEnabled(document.documentElement.dataset.horrible === "on");

@@ -150,7 +150,8 @@ export function bindHorriblePage({
   hitCounter,
   guestbook,
   onStop,
-  onClean
+  onClean,
+  onSettingsRestored
 } = {}) {
   const root = rootDocument;
   if (!root) return { dispose() {}, setEnabled() {}, clearPopups() {} };
@@ -164,6 +165,7 @@ export function bindHorriblePage({
   let cleanWindowUntil = 0;
   let spawnTimer = 0;
   let enabled = false;
+  let pendingRestore = null;
 
   const isHorrible = () => root.documentElement.dataset.horrible === "on";
   const view = () => root.defaultView || globalThis;
@@ -349,6 +351,17 @@ export function bindHorriblePage({
     afterClean() {}
   };
 
+  const noteRestore = (restored) => {
+    if (restored?.snap) pendingRestore = restored;
+  };
+
+  const flushRestore = () => {
+    if (isHorrible() || !pendingRestore) return;
+    const pending = pendingRestore;
+    pendingRestore = null;
+    onSettingsRestored?.(pending);
+  };
+
   const setEnabled = (nextEnabled) => {
     enabled = Boolean(nextEnabled);
     if (enabled && isHorrible()) {
@@ -356,15 +369,17 @@ export function bindHorriblePage({
       playbook.enable();
     } else {
       stopStorm();
-      playbook.disable();
+      noteRestore(playbook.disable());
+      flushRestore();
     }
   };
 
   const stopEverything = () => {
     enabled = false;
     stopStorm();
-    playbook.disable();
+    noteRestore(playbook.disable());
     onStop?.();
+    flushRestore();
   };
 
   const onEscape = (event) => {

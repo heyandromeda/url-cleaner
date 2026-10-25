@@ -160,6 +160,50 @@ try {
   assert.notEqual(await page.evaluate(() => localStorage.getItem("url-cleaner.clean-on-paste")), "false");
   assert.equal(await page.evaluate(() => localStorage.getItem("url-cleaner.horrible-settings")), null);
 
+  await page.fill("#url-input", "https://example.com/?ref=important");
+  await page.locator("#url-input").focus();
+  await page.keyboard.press("Control+Enter");
+  await page.waitForFunction(() => document.querySelector("#cleaned-url")?.textContent.trim() === "https://example.com/?ref=important", null, { timeout: 5000 });
+  await page.check("#horrible-mode");
+  await page.waitForSelector('[data-idea="26"]:not([hidden])', { timeout: 3000 });
+  await page.click('[data-act="splash-clean"]', { force: true });
+  if (await page.locator('[data-idea="23"]:not([hidden])').count()) {
+    await page.locator('[data-act="cookie"]').first().click({ force: true });
+  }
+  if (await page.locator('[data-idea="25"]:not([hidden])').count()) {
+    await page.click('[data-act="tour-skip"]', { force: true });
+  }
+  await page.locator("[data-gravity='aggressive']").fill("100");
+  assert.equal(await page.locator("#aggressive-mode").isChecked(), true);
+  await page.locator("#url-input").focus();
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(() => document.querySelector("#cleaned-url")?.textContent.trim() === "https://example.com/", null, { timeout: 5000 });
+  await page.waitForFunction(() => !document.querySelector("#aggressive-mode").checked, null, { timeout: 8000 });
+  await page.click("#horrible-stop");
+  await page.waitForFunction(() => !document.documentElement.dataset.horrible, null, { timeout: 3000 });
+  assert.equal(await page.locator("#aggressive-mode").isChecked(), false);
+  assert.equal((await page.locator("#cleaned-url").textContent()).trim(), "https://example.com/?ref=important", "Make it stop must recompute after gravity sinks Aggressive");
+  assert.doesNotMatch(await page.locator("#message").textContent(), /Tracking parameters removed/);
+
+  await page.check("#horrible-mode");
+  await page.click('[data-act="splash-clean"]', { force: true });
+  if (await page.locator('[data-idea="25"]:not([hidden])').count()) {
+    await page.click('[data-act="tour-skip"]', { force: true });
+  }
+  await page.locator("[data-gravity='duplicates']").fill("100");
+  assert.equal(await page.locator("#remove-duplicates").isChecked(), true);
+  await page.fill("#url-input", "https://example.com/keep?id=1&id=1");
+  await page.locator("#url-input").focus();
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(() => document.querySelector("#cleaned-url")?.textContent.trim() === "https://example.com/keep?id=1", null, { timeout: 5000 });
+  const duplicatesOn = (await page.locator("#cleaned-url").textContent()).trim();
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => !document.documentElement.dataset.horrible, null, { timeout: 3000 });
+  assert.equal(await page.locator("#remove-duplicates").isChecked(), false);
+  const duplicatesOff = (await page.locator("#cleaned-url").textContent()).trim();
+  assert.equal(duplicatesOff, "https://example.com/keep?id=1&id=1");
+  assert.notEqual(duplicatesOff, duplicatesOn, "Escape must change the result when Duplicates is restored");
+
   const faviconCspNoise = consoleErrors.filter((text) => /favicon|apple-touch-icon/i.test(text) && /Content-Security-Policy|connect-src/i.test(text));
   const realErrors = consoleErrors.filter((text) => !faviconCspNoise.includes(text));
   assert.equal(realErrors.length, 0, `Console/page errors:\n${realErrors.join("\n")}`);

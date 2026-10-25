@@ -239,6 +239,12 @@ export function shouldCommitSlotReveal(generation, activeGeneration, enabled) {
   return Boolean(enabled) && generation === activeGeneration;
 }
 
+export function cleaningOptionsChanged(before, after) {
+  if (!before || !after) return false;
+  return Boolean(before.aggressive) !== Boolean(after.aggressive)
+    || Boolean(before.duplicates) !== Boolean(after.duplicates);
+}
+
 export function slotCharsForTick(finalText, tick, alphabet = "abcdefghijklmnopqrstuvwxyz0123456789:/?&=._-%") {
   const text = String(finalText ?? "");
   if (tick >= SLOT_TICKS) return text;

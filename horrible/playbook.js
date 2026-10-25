@@ -16,6 +16,7 @@ import {
   TOUR_STEPS,
   appendSliderChar,
   captchaCellHasUtm,
+  cleaningOptionsChanged,
   charFromSlider,
   clampAsciiCode,
   dialupMs,
@@ -208,11 +209,13 @@ export function bindPlaybook({
     const snap = savedSettings || readHorribleSettingsSnapshot(settingsStorage());
     savedSettings = null;
     clearHorribleSettingsSnapshot(settingsStorage());
-    if (!snap) return;
-    setCheckbox(cleanOnPaste, snap.paste, { persist: true });
-    setCheckbox(autoCopy, snap.copy, { persist: true });
-    setCheckbox(aggressiveMode, snap.aggressive, { persist: true });
-    setCheckbox(removeDuplicates, snap.duplicates, { persist: true });
+    if (!snap) return null;
+    const before = snapshotSettings();
+    setCheckbox(cleanOnPaste, snap.paste);
+    setCheckbox(autoCopy, snap.copy);
+    setCheckbox(aggressiveMode, snap.aggressive);
+    setCheckbox(removeDuplicates, snap.duplicates);
+    return { snap, cleaningChanged: cleaningOptionsChanged(before, snap) };
   };
 
   const stopSlotReveal = () => {
@@ -770,7 +773,7 @@ export function bindPlaybook({
     view().clearTimeout(holdTimer);
     holdTimer = 0;
     restoreLabels();
-    restoreSettings();
+    const restored = restoreSettings();
     setCaptchaOpen(true);
     const captcha = q("[data-idea='5']");
     if (captcha) captcha.hidden = true;
@@ -804,6 +807,7 @@ export function bindPlaybook({
       message.textContent = message.dataset.original;
       delete message.dataset.original;
     }
+    return restored;
   };
 
   cleanButton?.addEventListener("click", onCleanClick);
