@@ -5,6 +5,9 @@ export const CLEANER_ORIGIN = "https://andromeda-url-cleaner.vercel.app";
 export const MAX_URL_LENGTH = 8192;
 export const NOTHING_TO_CLEAN = "Nothing to clean on this page.";
 export const URL_TOO_LONG = "This URL is longer than 8192 characters.";
+export const INVALID_URL = "Enter a valid URL, including https:// or http://.";
+export const UNWRAP_LIMIT_WARNING =
+  "URL Cleaner stopped after five redirect layers. The copied link may still be wrapped.";
 export const SHORTENER_WARNING =
   "Its destination cannot be inspected locally without following the redirect. The visible URL was cleaned, but the hidden destination was not opened or checked.";
 
@@ -25,6 +28,17 @@ function emptyResult(original, error) {
     copy: false,
     openSite: false
   };
+}
+
+export function hasInvalidHostnameWhitespace(value) {
+  const text = String(value ?? "").trim();
+  if (/\s/.test(text)) return true;
+  try {
+    const { hostname } = new URL(text);
+    return /\s|%20/i.test(hostname);
+  } catch {
+    return false;
+  }
 }
 
 export function isRestrictedPageUrl(value) {
@@ -69,12 +83,19 @@ export function cleanTabUrl(input) {
     return emptyResult(original, URL_TOO_LONG);
   }
 
+  if (hasInvalidHostnameWhitespace(original)) {
+    return emptyResult(original, INVALID_URL);
+  }
+
   try {
     const result = cleanUrl(original);
     const removedParams = result.removedParameters;
-    const warning = isOpaqueShortener(original) || isOpaqueShortener(result.url)
-      ? SHORTENER_WARNING
-      : "";
+    const warnings = [];
+    if (result.unwrapLimitReached) warnings.push(UNWRAP_LIMIT_WARNING);
+    if (isOpaqueShortener(original) || isOpaqueShortener(result.url)) {
+      warnings.push(SHORTENER_WARNING);
+    }
+    const warning = warnings.join(" ");
     return {
       original,
       cleaned: result.url,

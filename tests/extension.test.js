@@ -12,20 +12,26 @@ import {
   findExtensionVendorDrift,
   formatExtensionVendorDriftMessage
 } from "../extension/build.mjs";
+import { MAX_UNWRAP_DEPTH } from "../cleaner.js";
 import {
   CLEANER_ORIGIN,
+  INVALID_URL,
   MAX_URL_LENGTH,
   NOTHING_TO_CLEAN,
   SHORTENER_WARNING,
+  UNWRAP_LIMIT_WARNING,
   URL_TOO_LONG,
   cleanTabUrl,
-  handoffUrlFor
+  handoffUrlFor,
+  hasInvalidHostnameWhitespace
 } from "../extension/clean.js";
 import {
   ALREADY_CLEAN,
   COPIED,
+  COPIED_STILL_WRAPPED,
   COPY_FAILED,
   FOCUS_WAIT_MS,
+  copyWithExecCommand,
   headlineFor,
   waitForDocumentFocus,
   writeClipboard
@@ -35,6 +41,14 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BOOKMARKLET = "javascript:(()=>{window.open('https://andromeda-url-cleaner.vercel.app/#url='+encodeURIComponent(location.href),'_blank')})()";
 const YOUTUBE = "https://youtu.be/_ARIGPnYYUk?si=BNwFs4FDXQAIIDYb";
 const YOUTUBE_CLEAN = "https://youtu.be/_ARIGPnYYUk";
+
+function nestGoogleWrappers(destination, layers) {
+  let url = destination;
+  for (let index = 0; index < layers; index += 1) {
+    url = `https://www.google.com/url?q=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
 
 function sourceFiles() {
   return readdirSync(join(root, "extension"))
@@ -66,6 +80,65 @@ test("google /url unwrap is treated as changed and shows Copied after copy", () 
   const headline = headlineFor(result, { ok: true });
   assert.equal(headline.text, COPIED);
   assert.equal(headline.kind, "success");
+});
+
+test("URLs with whitespace in the host are rejected and are not copied", () => {
+  assert.equal(hasInvalidHostnameWhitespace("https://exa mple.com/"), true);
+  const spaced = cleanTabUrl("https://exa mple.com/");
+  assert.equal(spaced.error, INVALID_URL);
+  assert.equal(spaced.cleaned, "");
+  assert.equal(spaced.copy, false);
+  assert.equal(headlineFor(spaced, { ok: true }).text, INVALID_URL);
+
+  const encoded = cleanTabUrl("https://exa%20mple.com/");
+  assert.equal(encoded.error, INVALID_URL);
+  assert.equal(encoded.cleaned, "");
+  assert.equal(encoded.copy, false);
+});
+
+test("nothing to clean uses neutral headline styling, not error", () => {
+  const result = cleanTabUrl("chrome://settings");
+  assert.equal(result.error, NOTHING_TO_CLEAN);
+  const headline = headlineFor(result, null);
+  assert.equal(headline.kind, "neutral");
+  assert.equal(headline.text, NOTHING_TO_CLEAN);
+});
+
+test("unwrap limit reached shows a warning headline instead of plain Copied", () => {
+  const wrapped = nestGoogleWrappers("https://example.com/?utm_source=deep", MAX_UNWRAP_DEPTH + 1);
+  const result = cleanTabUrl(wrapped);
+  assert.equal(result.unwrapLimitReached, true);
+  assert.match(result.warning, /five redirect layers/i);
+  assert.equal(result.warning, UNWRAP_LIMIT_WARNING);
+  const headline = headlineFor(result, { ok: true });
+  assert.equal(headline.text, COPIED_STILL_WRAPPED);
+  assert.equal(headline.kind, "neutral");
+  assert.notEqual(headline.text, COPIED);
+});
+
+test("execCommand copy fallback restores focus to the previous element", () => {
+  const button = { focus() { this.focused = true; } };
+  const doc = {
+    body: { append() {} },
+    activeElement: button,
+    createElement() {
+      return {
+        value: "",
+        style: {},
+        setAttribute() {},
+        focus() {},
+        select() {},
+        setSelectionRange() {},
+        remove() {}
+      };
+    },
+    execCommand() {
+      return true;
+    }
+  };
+  button.focused = false;
+  assert.equal(copyWithExecCommand("https://example.com/", doc), true);
+  assert.equal(button.focused, true);
 });
 
 test("popup clean reports an error for 'not a url' instead of throwing", () => {
@@ -238,7 +311,7 @@ test("committed vendor matches a fresh extension/build.mjs output in a temp dir"
   try {
     buildExtensionVendor(root, tmp);
     const drifted = findExtensionVendorDrift(root, tmp);
-    assert.deepEqual(drifted, []);
+    assert.deepEqual(drifted, [], formatExtensionVendorDriftMessage(drifted));
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }

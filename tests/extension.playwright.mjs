@@ -6,9 +6,11 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const extensionPath = join(root, "extension");
-const artifactsDir = "/opt/cursor/artifacts";
+const artifactsDir = process.env.URL_CLEANER_ARTIFACTS_DIR
+  ?? mkdtempSync(join(tmpdir(), "url-cleaner-artifacts-"));
 const DEMO = "https://www.youtube.com/watch?v=abc123&si=SHAREID&utm_source=share";
 const GOOGLE_WRAP = "https://www.google.com/url?q=https%3A%2F%2Fexample.com%2F";
+const SPACED_HOST = "https://exa mple.com/";
 
 mkdirSync(artifactsDir, { recursive: true });
 
@@ -61,7 +63,7 @@ try {
     });
   }, DEMO);
 
-  await page.waitForSelector("#status:text('Copied!')");
+  await page.waitForSelector("#status:text('Copied.')");
   assert.equal(await page.locator("#cleaned").getAttribute("title"), "https://www.youtube.com/watch?v=abc123");
   assert.match(await page.locator("#removed-badge").textContent(), /2 removed/);
   assert.equal(await page.locator("#copy-again").isVisible(), true);
@@ -74,9 +76,21 @@ try {
     });
   }, GOOGLE_WRAP);
 
-  await page.waitForSelector("#status:text('Copied!')");
+  await page.waitForSelector("#status:text('Copied.')");
   assert.equal(await page.locator("#cleaned").textContent(), "https://example.com/");
-  assert.equal(await page.locator(".chip-unwrap").textContent(), "Unwrapped redirect");
+  assert.equal(await page.locator("#removed-badge").textContent(), "1 removed");
+  assert.equal(await page.locator(".chip-unwrap").textContent(), "www.google.com redirect");
+
+  await page.evaluate(async (tabUrl) => {
+    await globalThis.urlCleanerPopup.bootPopup({
+      tabUrl,
+      clipboard: { writeText: async () => {} }
+    });
+  }, SPACED_HOST);
+
+  await page.waitForSelector("#status:text('Enter a valid URL, including https:// or http://.')");
+  assert.equal(await page.locator("#cleaned").isHidden(), true);
+  assert.equal(await page.locator("#copy-again").isHidden(), true);
 
   for (let i = 0; i < 5; i += 1) {
     const popup = await context.newPage();
@@ -94,7 +108,7 @@ try {
       });
     }, DEMO);
     const status = (await popup.locator("#status").textContent())?.trim();
-    assert.match(status, /^Copied!$/, `popup open ${i + 1} status was ${status}`);
+    assert.match(status, /^Copied\.$/, `popup open ${i + 1} status was ${status}`);
     assert.equal(await popup.locator("#copy-again").isVisible(), true);
     await popup.close();
   }

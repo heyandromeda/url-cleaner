@@ -1,8 +1,9 @@
 import { explainParameter } from "./vendor/explanations.js";
-import { cleanTabUrl } from "./clean.js";
+import { cleanTabUrl, NOTHING_TO_CLEAN } from "./clean.js";
 
-export const COPIED = "Copied!";
-export const ALREADY_CLEAN = "Already clean, copied";
+export const COPIED = "Copied.";
+export const COPIED_STILL_WRAPPED = "Copied, but still wrapped.";
+export const ALREADY_CLEAN = "Already clean, copied.";
 export const COPY_FAILED = "Copy failed.";
 export const FOCUS_WAIT_MS = 150;
 
@@ -26,13 +27,17 @@ export function popupElements(doc = document) {
 
 export function headlineFor(result, copyOutcome) {
   if (result.error) {
-    return { kind: "error", text: result.error, check: false };
+    const kind = result.error === NOTHING_TO_CLEAN ? "neutral" : "error";
+    return { kind, text: result.error, check: false };
   }
   if (!copyOutcome) {
     return { kind: "", text: "", check: false };
   }
   if (!copyOutcome.ok) {
     return { kind: "error", text: COPY_FAILED, check: false };
+  }
+  if (result.unwrapLimitReached) {
+    return { kind: "neutral", text: COPIED_STILL_WRAPPED, check: false };
   }
   if (!result.changed) {
     return { kind: "neutral", text: ALREADY_CLEAN, check: false };
@@ -64,6 +69,7 @@ export async function waitForDocumentFocus({
 
 export function copyWithExecCommand(text, doc = globalThis.document) {
   if (!text || !doc?.body || typeof doc.execCommand !== "function") return false;
+  const previousFocus = doc.activeElement;
   const textarea = doc.createElement("textarea");
   textarea.value = text;
   textarea.setAttribute("readonly", "");
@@ -81,6 +87,13 @@ export function copyWithExecCommand(text, doc = globalThis.document) {
     ok = false;
   }
   textarea.remove();
+  if (previousFocus && typeof previousFocus.focus === "function") {
+    try {
+      previousFocus.focus();
+    } catch {
+      // Popup may not allow restoring focus to the prior control.
+    }
+  }
   return ok;
 }
 
@@ -151,23 +164,17 @@ export function renderResult(result, elements = popupElements()) {
 
   const unique = [...new Set(result.removedParams)];
   const unwrapHosts = [...new Set(result.unwrappedFrom ?? [])];
+  const removedCount = unique.length + (unwrapHosts.length ? 1 : 0);
   if (elements.removedRow && elements.removedBadge && elements.chips) {
-    if (unique.length || unwrapHosts.length) {
+    if (removedCount) {
       elements.removedRow.hidden = false;
-      const parts = [];
-      if (unwrapHosts.length) parts.push("Unwrapped redirect");
-      if (unique.length) {
-        parts.push(unique.length === 1 ? "1 removed" : `${unique.length} removed`);
-      }
-      elements.removedBadge.textContent = parts.join(" · ");
+      elements.removedBadge.textContent = removedCount === 1 ? "1 removed" : `${removedCount} removed`;
       elements.chips.replaceChildren();
-      if (unwrapHosts.length) {
+      for (const host of unwrapHosts) {
         const chip = document.createElement("li");
         chip.className = "chip-unwrap";
-        chip.textContent = "Unwrapped redirect";
-        chip.title = unwrapHosts.length === 1
-          ? `Redirect wrapper on ${unwrapHosts[0]}`
-          : `Redirect wrappers on ${unwrapHosts.join(", ")}`;
+        chip.textContent = `${host} redirect`;
+        chip.title = `Redirect wrapper on ${host}`;
         elements.chips.append(chip);
       }
       for (const name of unique) {
