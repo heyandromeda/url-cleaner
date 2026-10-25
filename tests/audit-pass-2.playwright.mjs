@@ -35,8 +35,12 @@ try {
         failures.push(`${width}px ${theme}: horizontal scroll`);
       }
 
-      for (const label of ["Paste", "Inspect URL", "Clean URL"]) {
-        const button = page.locator("button", { hasText: label });
+      const actionButtons = {
+        Paste: page.locator("#paste-button"),
+        "Inspect URL": page.locator("#inspect-button"),
+        "Clean URL": page.locator('button.primary-button[type="submit"]')
+      };
+      for (const [label, button] of Object.entries(actionButtons)) {
         const metrics = await button.evaluate((node) => ({
           truncated: node.scrollWidth > node.clientWidth + 1,
           wrapped: node.scrollHeight > node.clientHeight + 1
