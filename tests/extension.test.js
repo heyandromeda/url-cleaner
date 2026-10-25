@@ -20,7 +20,9 @@ import {
   ALREADY_CLEAN,
   COPIED,
   COPY_FAILED,
+  FOCUS_WAIT_MS,
   headlineFor,
+  waitForDocumentFocus,
   writeClipboard
 } from "../extension/popup-ui.js";
 
@@ -128,15 +130,25 @@ test("opaque shorteners are cleaned in place and warned about without being foll
 
 test("Copied is only shown after clipboard writeText resolves", async () => {
   let release;
-  const writeText = () => new Promise((resolve) => {
-    release = resolve;
-  });
+  let entered = false;
+  const writeText = () => {
+    entered = true;
+    return new Promise((resolve) => {
+      release = resolve;
+    });
+  };
   let settled = false;
-  const pending = writeClipboard("https://youtu.be/_ARIGPnYYUk", { writeText }).then((outcome) => {
+  const pending = writeClipboard("https://youtu.be/_ARIGPnYYUk", {
+    clipboard: { writeText },
+    win: { focus() {} },
+    doc: { hasFocus: () => true }
+  }).then((outcome) => {
     settled = true;
     return outcome;
   });
 
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(entered, true);
   assert.equal(settled, false);
   assert.equal(headlineFor({ error: "", removedParams: ["si"] }, null).text, "");
   release();
@@ -145,15 +157,41 @@ test("Copied is only shown after clipboard writeText resolves", async () => {
   assert.equal(headlineFor({ error: "", removedParams: ["si"] }, outcome).text, COPIED);
 });
 
-test("clipboard rejection shows an error instead of Copied", async () => {
+test("writeText reject plus working fallback still shows Copied", async () => {
   const outcome = await writeClipboard("https://example.com/a", {
-    writeText: () => Promise.reject(new Error("denied"))
+    clipboard: { writeText: () => Promise.reject(new Error("Document is not focused")) },
+    win: { focus() {} },
+    doc: { hasFocus: () => false },
+    timeoutMs: 0,
+    copyFallback: (text) => text === "https://example.com/a"
+  });
+  assert.equal(outcome.ok, true);
+  assert.equal(headlineFor({ error: "", removedParams: ["utm_source"] }, outcome).text, COPIED);
+  assert.equal(headlineFor({ error: "", removedParams: [] }, outcome).text, ALREADY_CLEAN);
+});
+
+test("Copied is an error only when writeText and the fallback both fail", async () => {
+  const outcome = await writeClipboard("https://example.com/a", {
+    clipboard: { writeText: () => Promise.reject(new Error("Document is not focused")) },
+    win: { focus() {} },
+    doc: { hasFocus: () => false },
+    timeoutMs: 0,
+    copyFallback: () => false
   });
   assert.equal(outcome.ok, false);
   const headline = headlineFor({ error: "", removedParams: ["utm_source"] }, outcome);
   assert.equal(headline.text, COPY_FAILED);
   assert.notEqual(headline.text, COPIED);
-  assert.equal(headlineFor({ error: "", removedParams: [] }, { ok: true }).text, ALREADY_CLEAN);
+});
+
+test("focus wait is bounded at about 150ms when the document stays unfocused", async () => {
+  const started = Date.now();
+  await waitForDocumentFocus({
+    win: { focus() {} },
+    doc: { hasFocus: () => false },
+    timeoutMs: FOCUS_WAIT_MS
+  });
+  assert.ok(Date.now() - started < 400, "focus wait must stay bounded");
 });
 
 test("non-http(s) pages show nothing to clean and do not copy or open the site", () => {

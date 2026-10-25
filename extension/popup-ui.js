@@ -4,6 +4,7 @@ import { cleanTabUrl } from "./clean.js";
 export const COPIED = "Copied!";
 export const ALREADY_CLEAN = "Already clean, copied";
 export const COPY_FAILED = "Copy failed.";
+export const FOCUS_WAIT_MS = 150;
 
 const CHECK_SVG = `<svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
@@ -39,14 +40,74 @@ export function headlineFor(result, copyOutcome) {
   return { kind: "success", text: COPIED, check: true };
 }
 
-export async function writeClipboard(text, clipboard = globalThis.navigator?.clipboard) {
-  if (!text || !clipboard?.writeText) return { ok: false };
+export async function waitForDocumentFocus({
+  win = globalThis,
+  doc = globalThis.document,
+  now = Date.now,
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  timeoutMs = FOCUS_WAIT_MS
+} = {}) {
   try {
-    await clipboard.writeText(text);
-    return { ok: true };
+    win.focus?.();
   } catch {
-    return { ok: false };
+    // Popup may not allow focus; the execCommand fallback still runs.
   }
+  if (typeof doc?.hasFocus !== "function") return true;
+  if (doc.hasFocus()) return true;
+
+  const deadline = now() + timeoutMs;
+  while (!doc.hasFocus() && now() < deadline) {
+    await sleep(Math.min(16, Math.max(0, deadline - now())));
+  }
+  return doc.hasFocus();
+}
+
+export function copyWithExecCommand(text, doc = globalThis.document) {
+  if (!text || !doc?.body || typeof doc.execCommand !== "function") return false;
+  const textarea = doc.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.setAttribute("aria-hidden", "true");
+  textarea.tabIndex = -1;
+  textarea.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:0;opacity:0;";
+  doc.body.append(textarea);
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+  let ok = false;
+  try {
+    ok = Boolean(doc.execCommand("copy"));
+  } catch {
+    ok = false;
+  }
+  textarea.remove();
+  return ok;
+}
+
+export async function writeClipboard(text, {
+  clipboard = globalThis.navigator?.clipboard,
+  win = globalThis,
+  doc = globalThis.document,
+  now,
+  sleep,
+  timeoutMs,
+  copyFallback = copyWithExecCommand
+} = {}) {
+  if (!text) return { ok: false };
+
+  await waitForDocumentFocus({ win, doc, now, sleep, timeoutMs });
+
+  try {
+    if (clipboard?.writeText) {
+      await clipboard.writeText(text);
+      return { ok: true };
+    }
+  } catch {
+    // MV3 popups often reject with "Document is not focused".
+  }
+
+  const fallbackOk = typeof copyFallback === "function" ? copyFallback(text, doc) : false;
+  return { ok: Boolean(fallbackOk) };
 }
 
 function showText(element, text) {
@@ -126,13 +187,16 @@ export function renderResult(result, elements = popupElements()) {
 
 export async function settleCopy(result, {
   clipboard = globalThis.navigator?.clipboard,
-  elements = popupElements()
+  elements = popupElements(),
+  win,
+  doc,
+  copyFallback
 } = {}) {
   if (!result.copy || !result.cleaned) {
     applyHeadline(elements, headlineFor(result, null));
     return { ok: false };
   }
-  const outcome = await writeClipboard(result.cleaned, clipboard);
+  const outcome = await writeClipboard(result.cleaned, { clipboard, win, doc, copyFallback });
   applyHeadline(elements, headlineFor(result, outcome));
   return outcome;
 }
@@ -151,10 +215,13 @@ export function applySystemTheme(doc = document, media = globalThis.matchMedia?.
 export async function bootPopup({
   tabUrl,
   clipboard = globalThis.navigator?.clipboard,
-  elements = popupElements()
+  elements = popupElements(),
+  win,
+  doc,
+  copyFallback
 } = {}) {
   const result = cleanTabUrl(tabUrl ?? await currentTabUrl());
   renderResult(result, elements);
-  await settleCopy(result, { clipboard, elements });
+  await settleCopy(result, { clipboard, elements, win, doc, copyFallback });
   return result;
 }

@@ -69,6 +69,27 @@ try {
   assert.equal(await page.locator("#copy-again").isVisible(), true);
   assert.match(await page.locator("#open-site").getAttribute("href") || "", /#url=/);
 
+  for (let i = 0; i < 5; i += 1) {
+    const popup = await context.newPage();
+    popup.on("pageerror", (error) => errors.push(String(error)));
+    await popup.goto(`chrome-extension://${extensionId}/popup.html`, { waitUntil: "domcontentloaded" });
+    await popup.waitForFunction(() => Boolean(globalThis.urlCleanerPopup));
+    await popup.evaluate(async (tabUrl) => {
+      await globalThis.urlCleanerPopup.bootPopup({
+        tabUrl,
+        clipboard: {
+          writeText: async () => {
+            throw new Error("Document is not focused");
+          }
+        }
+      });
+    }, DEMO);
+    const status = (await popup.locator("#status").textContent())?.trim();
+    assert.match(status, /^Copied!$/, `popup open ${i + 1} status was ${status}`);
+    assert.equal(await popup.locator("#copy-again").isVisible(), true);
+    await popup.close();
+  }
+
   const card = await page.locator(".popup-card").boundingBox();
   const clip = {
     x: 0,
