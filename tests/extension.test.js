@@ -1,0 +1,374 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { parseHandoffParams, parseHandoffUrl } from "../dist/handoff.js";
+import { isOpaqueShortener } from "../extension/vendor/cleaner.js";
+import {
+  ENGINE_FILES,
+  buildExtensionVendor,
+  findExtensionVendorDrift,
+  formatExtensionVendorDriftMessage
+} from "../extension/build.mjs";
+import { MAX_UNWRAP_DEPTH } from "../cleaner.js";
+import {
+  CLEANER_ORIGIN,
+  INVALID_URL,
+  MAX_URL_LENGTH,
+  NOTHING_TO_CLEAN,
+  SHORTENER_WARNING,
+  UNWRAP_LIMIT_WARNING,
+  URL_TOO_LONG,
+  cleanTabUrl,
+  handoffUrlFor,
+  hasInvalidHostnameWhitespace
+} from "../extension/clean.js";
+import {
+  ALREADY_CLEAN,
+  COPIED,
+  COPIED_STILL_WRAPPED,
+  COPY_FAILED,
+  FOCUS_WAIT_MS,
+  copyWithExecCommand,
+  headlineFor,
+  waitForDocumentFocus,
+  writeClipboard
+} from "../extension/popup-ui.js";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const BOOKMARKLET = "javascript:(()=>{window.open('https://andromeda-url-cleaner.vercel.app/#url='+encodeURIComponent(location.href),'_blank')})()";
+const YOUTUBE = "https://youtu.be/_ARIGPnYYUk?si=BNwFs4FDXQAIIDYb";
+const YOUTUBE_CLEAN = "https://youtu.be/_ARIGPnYYUk";
+
+function nestGoogleWrappers(destination, layers) {
+  let url = destination;
+  for (let index = 0; index < layers; index += 1) {
+    url = `https://www.google.com/url?q=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
+function sourceFiles() {
+  return readdirSync(join(root, "extension"))
+    .filter((name) => name.endsWith(".js") || name.endsWith(".html") || name.endsWith(".json"))
+    .map((name) => ({ name, text: readFileSync(join(root, "extension", name), "utf8") }));
+}
+
+test("popup clean removes YouTube si and returns the shared result shape", () => {
+  const result = cleanTabUrl(YOUTUBE);
+
+  assert.equal(result.original, YOUTUBE);
+  assert.equal(result.cleaned, YOUTUBE_CLEAN);
+  assert.deepEqual(result.removedParams, ["si"]);
+  assert.equal(result.changed, true);
+  assert.equal(result.error, "");
+  assert.equal(result.copy, true);
+  assert.equal(result.openSite, true);
+  assert.match(result.summary, /Removed si\./);
+  assert.match(result.summary, /Share identifier/i);
+});
+
+test("google /url unwrap is treated as changed and shows Copied after copy", () => {
+  const wrapped = "https://www.google.com/url?q=https%3A%2F%2Fexample.com%2F";
+  const result = cleanTabUrl(wrapped);
+  assert.equal(result.cleaned, "https://example.com/");
+  assert.equal(result.changed, true);
+  assert.deepEqual(result.unwrappedFrom, ["www.google.com"]);
+  assert.deepEqual(result.removedParams, []);
+  const headline = headlineFor(result, { ok: true });
+  assert.equal(headline.text, COPIED);
+  assert.equal(headline.kind, "success");
+});
+
+test("URLs with whitespace in the host are rejected and are not copied", () => {
+  assert.equal(hasInvalidHostnameWhitespace("https://exa mple.com/"), true);
+  const spaced = cleanTabUrl("https://exa mple.com/");
+  assert.equal(spaced.error, INVALID_URL);
+  assert.equal(spaced.cleaned, "");
+  assert.equal(spaced.copy, false);
+  assert.equal(headlineFor(spaced, { ok: true }).text, INVALID_URL);
+
+  const encoded = cleanTabUrl("https://exa%20mple.com/");
+  assert.equal(encoded.error, INVALID_URL);
+  assert.equal(encoded.cleaned, "");
+  assert.equal(encoded.copy, false);
+});
+
+test("nothing to clean uses neutral headline styling, not error", () => {
+  const result = cleanTabUrl("chrome://settings");
+  assert.equal(result.error, NOTHING_TO_CLEAN);
+  const headline = headlineFor(result, null);
+  assert.equal(headline.kind, "neutral");
+  assert.equal(headline.text, NOTHING_TO_CLEAN);
+});
+
+test("unwrap limit reached shows a warning headline instead of plain Copied", () => {
+  const wrapped = nestGoogleWrappers("https://example.com/?utm_source=deep", MAX_UNWRAP_DEPTH + 1);
+  const result = cleanTabUrl(wrapped);
+  assert.equal(result.unwrapLimitReached, true);
+  assert.match(result.warning, /five redirect layers/i);
+  assert.equal(result.warning, UNWRAP_LIMIT_WARNING);
+  const headline = headlineFor(result, { ok: true });
+  assert.equal(headline.text, COPIED_STILL_WRAPPED);
+  assert.equal(headline.kind, "neutral");
+  assert.notEqual(headline.text, COPIED);
+});
+
+test("execCommand copy fallback restores focus to the previous element", () => {
+  const button = { focus() { this.focused = true; } };
+  const doc = {
+    body: { append() {} },
+    activeElement: button,
+    createElement() {
+      return {
+        value: "",
+        style: {},
+        setAttribute() {},
+        focus() {},
+        select() {},
+        setSelectionRange() {},
+        remove() {}
+      };
+    },
+    execCommand() {
+      return true;
+    }
+  };
+  button.focused = false;
+  assert.equal(copyWithExecCommand("https://example.com/", doc), true);
+  assert.equal(button.focused, true);
+});
+
+test("popup clean reports an error for 'not a url' instead of throwing", () => {
+  assert.doesNotThrow(() => cleanTabUrl("not a url"));
+  const result = cleanTabUrl("not a url");
+  assert.equal(result.original, "not a url");
+  assert.equal(result.cleaned, "");
+  assert.deepEqual(result.removedParams, []);
+  assert.match(result.error, /valid URL/i);
+  assert.equal(result.copy, false);
+  assert.equal(result.openSite, false);
+  assert.equal(result.handoffUrl, "");
+});
+
+test("handoff link uses #url= only, never ?url=", () => {
+  const result = cleanTabUrl(YOUTUBE);
+  const parsed = new URL(result.handoffUrl);
+
+  assert.equal(parsed.origin, CLEANER_ORIGIN);
+  assert.equal(parsed.pathname, "/");
+  assert.equal(parsed.search, "");
+  assert.doesNotMatch(result.handoffUrl, /\?url=/);
+  assert.match(result.handoffUrl, /#url=/);
+  assert.equal(parseHandoffParams(parsed.hash.slice(1)), YOUTUBE);
+  assert.equal(parseHandoffUrl(result.handoffUrl), YOUTUBE);
+  assert.equal(handoffUrlFor(YOUTUBE), result.handoffUrl);
+});
+
+test("long URLs are never truncated and past 8192 characters show a short error", () => {
+  const base = "https://example.com/?q=";
+  const allowed = `${base}${"a".repeat(MAX_URL_LENGTH - base.length)}`;
+  const tooLong = `${allowed}x`;
+
+  assert.equal(allowed.length, MAX_URL_LENGTH);
+  assert.ok(tooLong.length > MAX_URL_LENGTH);
+
+  const ok = cleanTabUrl(allowed);
+  assert.equal(ok.error, "");
+  assert.equal(ok.original, allowed);
+  assert.equal(ok.original.length, MAX_URL_LENGTH);
+  assert.equal(ok.cleaned, allowed);
+
+  const result = cleanTabUrl(tooLong);
+  assert.equal(result.original, tooLong);
+  assert.equal(result.original.length, tooLong.length);
+  assert.doesNotMatch(result.original, /\.\.\./);
+  assert.equal(result.cleaned, "");
+  assert.equal(result.error, URL_TOO_LONG);
+  assert.equal(result.copy, false);
+  assert.equal(result.openSite, false);
+  assert.equal(result.handoffUrl, "");
+});
+
+test("opaque shorteners are cleaned in place and warned about without being followed", () => {
+  const short = "https://bit.ly/abc";
+  const dirty = "https://bit.ly/abc?utm_source=x";
+  assert.equal(isOpaqueShortener(short), true);
+  assert.equal(isOpaqueShortener(dirty), true);
+
+  const plain = cleanTabUrl(short);
+  assert.equal(plain.cleaned, short);
+  assert.equal(plain.warning, SHORTENER_WARNING);
+  assert.equal(plain.error, "");
+
+  const result = cleanTabUrl(dirty);
+  assert.equal(result.cleaned, short);
+  assert.deepEqual(result.removedParams, ["utm_source"]);
+  assert.equal(result.warning, SHORTENER_WARNING);
+  assert.equal(result.error, "");
+  assert.equal(result.copy, true);
+  assert.match(result.handoffUrl, /#url=/);
+
+  const clean = readFileSync(join(root, "extension", "clean.js"), "utf8");
+  const ui = readFileSync(join(root, "extension", "popup-ui.js"), "utf8");
+  assert.match(clean, /isOpaqueShortener\(/);
+  assert.match(ui, /result\.warning/);
+  assert.doesNotMatch(clean, /\bfetch\s*\(/);
+  assert.doesNotMatch(ui, /\bfetch\s*\(/);
+});
+
+test("Copied is only shown after clipboard writeText resolves", async () => {
+  let release;
+  let entered = false;
+  const writeText = () => {
+    entered = true;
+    return new Promise((resolve) => {
+      release = resolve;
+    });
+  };
+  let settled = false;
+  const pending = writeClipboard("https://youtu.be/_ARIGPnYYUk", {
+    clipboard: { writeText },
+    win: { focus() {} },
+    doc: { hasFocus: () => true }
+  }).then((outcome) => {
+    settled = true;
+    return outcome;
+  });
+
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(entered, true);
+  assert.equal(settled, false);
+  assert.equal(headlineFor({ error: "", changed: true }, null).text, "");
+  release();
+  const outcome = await pending;
+  assert.equal(outcome.ok, true);
+  assert.equal(headlineFor({ error: "", changed: true }, outcome).text, COPIED);
+});
+
+test("writeText reject plus working fallback still shows Copied", async () => {
+  const outcome = await writeClipboard("https://example.com/a", {
+    clipboard: { writeText: () => Promise.reject(new Error("Document is not focused")) },
+    win: { focus() {} },
+    doc: { hasFocus: () => false },
+    timeoutMs: 0,
+    copyFallback: (text) => text === "https://example.com/a"
+  });
+  assert.equal(outcome.ok, true);
+  assert.equal(headlineFor({ error: "", changed: true }, outcome).text, COPIED);
+  assert.equal(headlineFor({ error: "", changed: false }, outcome).text, ALREADY_CLEAN);
+});
+
+test("Copied is an error only when writeText and the fallback both fail", async () => {
+  const outcome = await writeClipboard("https://example.com/a", {
+    clipboard: { writeText: () => Promise.reject(new Error("Document is not focused")) },
+    win: { focus() {} },
+    doc: { hasFocus: () => false },
+    timeoutMs: 0,
+    copyFallback: () => false
+  });
+  assert.equal(outcome.ok, false);
+  const headline = headlineFor({ error: "", changed: true }, outcome);
+  assert.equal(headline.text, COPY_FAILED);
+  assert.notEqual(headline.text, COPIED);
+});
+
+test("focus wait is bounded at about 150ms when the document stays unfocused", async () => {
+  const started = Date.now();
+  await waitForDocumentFocus({
+    win: { focus() {} },
+    doc: { hasFocus: () => false },
+    timeoutMs: FOCUS_WAIT_MS
+  });
+  assert.ok(Date.now() - started < 400, "focus wait must stay bounded");
+});
+
+test("non-http(s) pages show nothing to clean and do not copy or open the site", () => {
+  for (const page of ["chrome://settings", "file:///tmp/page.html", "about:blank", "", "edge://flags"]) {
+    const result = cleanTabUrl(page);
+    assert.equal(result.error, NOTHING_TO_CLEAN, page);
+    assert.equal(result.cleaned, "");
+    assert.equal(result.copy, false);
+    assert.equal(result.openSite, false);
+    assert.equal(result.handoffUrl, "");
+  }
+});
+
+test("extension vendor copies match the repo engine", () => {
+  for (const name of ENGINE_FILES) {
+    assert.equal(
+      readFileSync(join(root, name), "utf8"),
+      readFileSync(join(root, "extension", "vendor", name), "utf8"),
+      name
+    );
+  }
+});
+
+test("committed vendor matches a fresh extension/build.mjs output in a temp dir", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "url-cleaner-vendor-"));
+  try {
+    buildExtensionVendor(root, tmp);
+    const drifted = findExtensionVendorDrift(root, tmp);
+    assert.deepEqual(drifted, [], formatExtensionVendorDriftMessage(drifted));
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("vendor drift check reports a deliberately stale committed copy", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "url-cleaner-vendor-"));
+  try {
+    buildExtensionVendor(root, tmp);
+    writeFileSync(join(tmp, "cleaner.js"), `${readFileSync(join(tmp, "cleaner.js"), "utf8")}\n// stale\n`);
+    const drifted = findExtensionVendorDrift(root, tmp);
+    assert.deepEqual(drifted, ["cleaner.js"]);
+    assert.match(formatExtensionVendorDriftMessage(drifted), /extension\/vendor\/cleaner\.js/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("extension imports cleanUrl instead of copying the engine", () => {
+  const clean = readFileSync(join(root, "extension", "clean.js"), "utf8");
+  assert.match(clean, /from ["']\.\/vendor\/cleaner\.js["']/);
+  assert.match(clean, /from ["']\.\/vendor\/explanations\.js["']/);
+  assert.match(clean, /cleanUrl/);
+  assert.match(clean, /explainParameter/);
+  assert.match(clean, /isOpaqueShortener/);
+  assert.doesNotMatch(clean, /TRACKING_PARAMETERS/);
+});
+
+test("MV3 manifest only asks for activeTab and clipboardWrite", () => {
+  const manifest = JSON.parse(readFileSync(join(root, "extension", "manifest.json"), "utf8"));
+  assert.equal(manifest.manifest_version, 3);
+  assert.deepEqual([...manifest.permissions].sort(), ["activeTab", "clipboardWrite"]);
+  assert.equal(manifest.host_permissions, undefined);
+  assert.equal(manifest.content_scripts, undefined);
+  assert.equal(manifest.optional_permissions, undefined);
+  assert.equal(manifest.action.default_popup, "popup.html");
+  assert.equal(manifest.background.service_worker, "background.js");
+  assert.equal(manifest.background.type, "module");
+});
+
+test("extension sources do not fetch URLs or load remote scripts", () => {
+  for (const { name, text } of sourceFiles()) {
+    assert.doesNotMatch(text, /\bfetch\s*\(/, name);
+    assert.doesNotMatch(text, /XMLHttpRequest/, name);
+    assert.doesNotMatch(text, /navigator\.sendBeacon/, name);
+    assert.doesNotMatch(text, /https:\/\/cdn\.|unpkg\.com|jsdelivr/, name);
+  }
+});
+
+test("README documents the bookmarklet and unpacked extension", () => {
+  const readme = readFileSync(join(root, "README.md"), "utf8");
+  const html = readFileSync(join(root, "extension", "popup.html"), "utf8");
+  assert.match(readme, /## Browser extension \+ bookmarklet/);
+  assert.ok(readme.includes(BOOKMARKLET));
+  assert.match(readme, /Load unpacked/);
+  assert.doesNotMatch(readme, /run `npm run build` so `extension\/vendor/);
+  assert.match(readme, /activeTab/);
+  assert.match(readme, /clipboardWrite/);
+  assert.doesNotMatch(html, /LOCAL UTILITY/);
+});

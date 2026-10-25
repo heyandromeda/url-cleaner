@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "URL Cleaner",
+  "version": "1.0.0",
+  "description": "Clean tracking parameters from the current tab's URL locally. The page is never fetched.",
+  "permissions": ["activeTab", "clipboardWrite"],
+  "action": {
+    "default_title": "Clean this URL",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "32": "icons/icon32.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "32": "icons/icon32.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}

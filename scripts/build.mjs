@@ -1,7 +1,6 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { dirname, extname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-
 const WEB_EXTENSIONS = new Set([".js", ".html", ".css", ".webmanifest", ".png", ".ico"]);
 const SKIP_WEB_FILES = new Set(["middleware.js"]);
 
