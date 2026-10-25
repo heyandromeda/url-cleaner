@@ -1,0 +1,601 @@
+/* Playbook ideas #1–#33. Off unless html[data-horrible="on"]. */
+
+html[data-horrible="on"] {
+  --horrible-scale: 1;
+}
+
+html[data-horrible="on"] body {
+  zoom: var(--horrible-scale, 1);
+}
+
+html[data-horrible="on"] .horrible-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+html[data-horrible="on"] #horrible-playbook,
+html[data-horrible="on"] #horrible-overlays {
+  display: block;
+}
+
+html[data-horrible="on"] #horrible-playbook [hidden],
+html[data-horrible="on"] #horrible-overlays [hidden] {
+  display: none !important;
+}
+
+html[data-horrible="on"] .horrible-stop {
+  z-index: 2147483000 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  display: inline-flex !important;
+  transform: none !important;
+}
+
+html[data-horrible="on"] {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http%3A//www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffe600' stroke='%23111111' stroke-width='1' d='M3 1.5h10v3.2L8.2 8 13 11.3V14.5H3v-3.2L7.8 8 3 4.7z'/%3E%3C/svg%3E") 8 8, wait;
+}
+
+html[data-horrible="on"] .horrible-play-panel,
+html[data-horrible="on"] .horrible-input-toys,
+html[data-horrible="on"] .horrible-clean-toys,
+html[data-horrible="on"] .horrible-settings-toys,
+html[data-horrible="on"] .horrible-result-toys {
+  display: block;
+  margin: 0.75rem 0;
+  padding: 0.65rem 0.75rem;
+  border: 3px dashed #111;
+  background: #fff7c2;
+  color: #1a0033;
+}
+
+html[data-horrible="on"] .horrible-input-wrap {
+  position: relative;
+}
+
+html[data-horrible="on"] #url-input {
+  transform: rotate(180deg);
+  color: transparent;
+  caret-color: #111;
+}
+
+html[data-horrible="on"] .horrible-australia-hint {
+  margin: 0.2rem 0 0.4rem;
+  text-align: right;
+}
+
+html[data-horrible="on"] .horrible-marquee-input {
+  display: block;
+  overflow: hidden;
+  pointer-events: none;
+  margin: 0 0 0.4rem;
+  min-height: 1.4rem;
+  color: #9b0870;
+}
+
+html[data-horrible="on"] .horrible-marquee-text {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+html[data-horrible="on"] .horrible-phone-slider label,
+html[data-horrible="on"] .horrible-phone-char {
+  display: inline-block;
+  margin-right: 0.4rem;
+}
+
+html[data-horrible="on"] .horrible-phone-char {
+  min-width: 1.4rem;
+  border: 2px solid #111;
+  background: #fff;
+  text-align: center;
+}
+
+html[data-horrible="on"] .horrible-password-rules {
+  margin: 0.4rem 0 0;
+  padding-left: 1.2rem;
+}
+
+html[data-horrible="on"] .horrible-password-rules li.is-ok {
+  color: #176b36;
+}
+
+html[data-horrible="on"] .horrible-no-here {
+  margin: 0 0 0.5rem;
+}
+
+html[data-horrible="on"] .horrible-here {
+  border: 0;
+  background: none;
+  color: blue;
+  text-decoration: underline;
+  font: inherit;
+  cursor: inherit;
+}
+
+html[data-horrible="on"] .horrible-wheel {
+  width: 7rem;
+  height: 7rem;
+  border: 4px solid #111;
+  border-radius: 50%;
+  background: repeating-linear-gradient(
+    180deg,
+    #333 0 8px,
+    #999 8px 16px
+  );
+  background-position: 0 var(--wheel-y, 0px);
+  touch-action: none;
+}
+
+html[data-horrible="on"] .horrible-hold {
+  margin: 0.6rem 0;
+}
+
+html[data-horrible="on"] .horrible-hold-track {
+  height: 0.9rem;
+  margin-top: 0.35rem;
+  border: 2px solid #111;
+  background: #fff;
+}
+
+html[data-horrible="on"] .horrible-hold-bar {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: #39ff14;
+}
+
+html[data-horrible="on"] .horrible-hold-bar.is-filling {
+  width: 100%;
+}
+
+html[data-horrible="on"] .horrible-shell-stage {
+  position: relative;
+  height: 6.2rem;
+}
+
+html[data-horrible="on"] .horrible-cup {
+  position: absolute;
+  top: 0;
+  left: var(--cup-x, 0);
+  width: 30%;
+  height: 5.6rem;
+  border: 3px solid #111;
+  border-radius: 0 0 2rem 2rem;
+  background: #c47b3a;
+}
+
+html[data-horrible="on"] .horrible-begin {
+  position: relative;
+  margin-top: 0.6rem;
+  background: #c3c3c3;
+  border: 2px solid #111;
+  color: #111;
+  font-family: sans-serif;
+}
+
+html[data-horrible="on"] .horrible-begin summary,
+html[data-horrible="on"] .horrible-begin button {
+  font-family: sans-serif;
+  background: #c3c3c3;
+  color: #111;
+  border: 1px solid #111;
+}
+
+html[data-horrible="on"] .horrible-begin-menu {
+  display: none;
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  min-width: 10rem;
+  margin: 0;
+  padding: 0.2rem 0;
+  list-style: none;
+  background: #c3c3c3;
+  border: 2px solid #111;
+}
+
+html[data-horrible="on"] .horrible-begin:focus-within .horrible-begin-menu,
+html[data-horrible="on"] .horrible-begin:hover .horrible-begin-menu,
+html[data-horrible="on"] .horrible-begin.is-open .horrible-begin-menu {
+  display: block;
+}
+
+html[data-horrible="on"] .horrible-begin-sub {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  min-width: 9rem;
+  margin: 0;
+  padding: 0.2rem 0;
+  list-style: none;
+  background: #c3c3c3;
+  border: 2px solid #111;
+}
+
+html[data-horrible="on"] .horrible-begin-item:focus-within > .horrible-begin-sub,
+html[data-horrible="on"] .horrible-begin-item:hover > .horrible-begin-sub {
+  display: block;
+}
+
+html[data-horrible="on"] .horrible-captcha,
+html[data-horrible="on"] .horrible-dialup,
+html[data-horrible="on"] .horrible-splash,
+html[data-horrible="on"] .horrible-cookie,
+html[data-horrible="on"] .horrible-tour {
+  position: fixed;
+  z-index: 120;
+  border: 4px solid #111;
+  background: #fff8dc;
+  color: #1a0033;
+}
+
+html[data-horrible="on"] .horrible-captcha,
+html[data-horrible="on"] .horrible-dialup {
+  top: 18%;
+  left: 50%;
+  width: min(22rem, calc(100vw - 2rem));
+  padding: 0.8rem;
+  transform: translateX(-50%);
+}
+
+html[data-horrible="on"] .horrible-captcha-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+}
+
+html[data-horrible="on"] .horrible-captcha-cell {
+  min-height: 3.2rem;
+  border: 2px solid #111;
+  background: #eee;
+  font-size: 0.72rem;
+  word-break: break-all;
+}
+
+html[data-horrible="on"] .horrible-skip,
+html[data-horrible="on"] .horrible-splash button,
+html[data-horrible="on"] .horrible-cookie button,
+html[data-horrible="on"] .horrible-tour button {
+  border: 2px solid #111;
+  background: #ffe600;
+  color: #111;
+}
+
+html[data-horrible="on"] .horrible-find95 {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0 0 0.5rem;
+  padding: 0.15rem 0.3rem;
+  background: #c3c3c3;
+  border: 2px solid #111;
+  font-family: sans-serif;
+}
+
+html[data-horrible="on"] .horrible-find95 details {
+  position: relative;
+}
+
+html[data-horrible="on"] .horrible-find95 ul {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin: 0;
+  padding: 0.2rem 0.4rem;
+  list-style: none;
+  background: #c3c3c3;
+  border: 2px solid #111;
+  white-space: nowrap;
+  z-index: 4;
+}
+
+html[data-horrible="on"] .horrible-find95 details:focus-within ul,
+html[data-horrible="on"] .horrible-find95 details:hover ul {
+  display: block;
+}
+
+html[data-horrible="on"] .horrible-lies {
+  display: none;
+  margin-left: 0.4rem;
+  padding: 0 0.3rem;
+  border: 1px dashed #111;
+  background: #ffe600;
+  font-size: 0.75rem;
+}
+
+html[data-horrible-swap-labels] .horrible-lies,
+html.horrible-swap-labels[data-horrible="on"] .horrible-lies {
+  display: inline-block;
+}
+
+html.horrible-swap-labels[data-horrible="on"] #result-panel .url-block:first-of-type h3,
+html.horrible-swap-labels[data-horrible="on"] #result-panel .result-heading h3 {
+  font-size: 0;
+}
+
+html.horrible-swap-labels[data-horrible="on"] #result-panel .url-block:first-of-type h3::after {
+  content: "After (lies)";
+  font-size: 1.125rem;
+}
+
+html.horrible-swap-labels[data-horrible="on"] #result-panel .result-heading h3::after {
+  content: "Before (lies)";
+  font-size: 1.125rem;
+}
+
+html[data-horrible="on"] .horrible-realcd {
+  display: block;
+  position: relative;
+  min-height: 7rem;
+  margin: 0.5rem 0;
+  perspective: 800px;
+}
+
+html[data-horrible="on"] .horrible-case {
+  position: relative;
+  min-height: 7rem;
+  border: 4px solid #1d3557;
+  background: #457b9d;
+  color: #fff;
+}
+
+html[data-horrible="on"] .horrible-case-lid {
+  position: absolute;
+  inset: 0;
+  background: #1d3557;
+  transform-origin: left center;
+}
+
+html[data-horrible="on"] .horrible-realcd.is-open .horrible-case-lid {
+  transform: rotateY(-118deg);
+}
+
+html[data-horrible="on"] .horrible-slot {
+  display: block;
+  margin: 0.4rem 0;
+  min-height: 1.5rem;
+  overflow: hidden;
+  font-family: ui-monospace, monospace;
+}
+
+html[data-horrible="on"] .horrible-missile {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+html[data-horrible="on"] .horrible-missile button {
+  display: block;
+  width: 100%;
+  margin: 0.15rem 0;
+  border: 0;
+  background: none;
+  color: #003;
+  text-align: left;
+  text-decoration: underline;
+  font: inherit;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+html[data-horrible="on"] .horrible-gravity label {
+  display: block;
+  margin: 0.35rem 0;
+}
+
+html[data-horrible="on"] .horrible-primes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+html[data-horrible="on"] .horrible-bob {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  border: 3px solid #6b4a1b;
+  background: #f7e7c2;
+}
+
+html[data-horrible="on"] .horrible-bob button {
+  min-height: 4.2rem;
+  border: 2px solid #6b4a1b;
+  background: #fff8dc;
+}
+
+html[data-horrible="on"] .horrible-terms {
+  height: 4.5rem;
+  overflow: hidden;
+  border: 2px inset #111;
+  background: #fff;
+}
+
+html[data-horrible="on"] .horrible-terms-copy {
+  display: block;
+  padding: 0.4rem;
+}
+
+html[data-horrible="on"] .horrible-cookie {
+  right: 0.8rem;
+  bottom: 5.4rem;
+  left: auto;
+  width: min(18rem, calc(100vw - 1.6rem));
+  padding: 0.7rem;
+}
+
+html[data-horrible="on"] .horrible-splash {
+  inset: 8% 6%;
+  z-index: 110;
+  background:
+    radial-gradient(circle at 20% 30%, #ffe600 0 8%, transparent 9%),
+    radial-gradient(circle at 70% 60%, #00e5ff 0 6%, transparent 7%),
+    #050018;
+  color: #fff;
+}
+
+html[data-horrible="on"] .horrible-planets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  align-items: center;
+  min-height: 14rem;
+}
+
+html[data-horrible="on"] .horrible-planet {
+  width: 6.2rem;
+  height: 6.2rem;
+  border: 0;
+  border-radius: 50%;
+  color: #111;
+  font-weight: 700;
+}
+
+html[data-horrible="on"] .horrible-planet-clean { background: radial-gradient(circle at 30% 30%, #fff, #39ff14 40%, #0a6); }
+html[data-horrible="on"] .horrible-planet-inspect { background: radial-gradient(circle at 30% 30%, #fff, #00e5ff 40%, #046); }
+html[data-horrible="on"] .horrible-planet-book { background: radial-gradient(circle at 30% 30%, #fff, #ff8c1a 40%, #832); }
+html[data-horrible="on"] .horrible-planet-lunch { background: radial-gradient(circle at 30% 30%, #fff, #ff2d95 40%, #604); }
+
+html[data-horrible="on"] .horrible-tour {
+  top: 22%;
+  left: 1rem;
+  width: min(16rem, calc(100vw - 2rem));
+  padding: 0.6rem;
+}
+
+html[data-horrible="on"] .horrible-tour-next.horrible-tour-slot-0 { margin-left: 0; }
+html[data-horrible="on"] .horrible-tour-next.horrible-tour-slot-1 { margin-left: 4rem; }
+html[data-horrible="on"] .horrible-tour-next.horrible-tour-slot-2 { margin-left: 1.5rem; }
+
+html[data-horrible="on"] .horrible-midi {
+  margin-top: 0.7rem;
+}
+
+html[data-horrible="on"] .horrible-midi-track {
+  height: 0.7rem;
+  border: 2px solid #111;
+  background: #111;
+}
+
+html[data-horrible="on"] .horrible-midi-bar {
+  display: block;
+  width: 8%;
+  height: 100%;
+  background: #39ff14;
+}
+
+html[data-horrible="on"] .horrible-subtitles,
+html[data-horrible="on"] .horrible-narrator {
+  display: block;
+  position: fixed;
+  left: 50%;
+  z-index: 55;
+  transform: translateX(-50%);
+  max-width: min(28rem, calc(100vw - 2rem));
+  padding: 0.25rem 0.55rem;
+  background: #111;
+  color: #ffe600;
+  text-align: center;
+  pointer-events: none;
+}
+
+html[data-horrible="on"] .horrible-narrator { bottom: 7.2rem; }
+html[data-horrible="on"] .horrible-subtitles { bottom: 5.2rem; opacity: 0; }
+html[data-horrible="on"] .horrible-subtitles.is-on { opacity: 1; }
+
+html[data-horrible="on"] .horrible-wave {
+  width: 100%;
+  height: 3rem;
+}
+
+html[data-horrible="on"] .horrible-querry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  margin-bottom: 0.3rem;
+  border: 3px solid #111;
+  border-radius: 50%;
+  background: #ffe600;
+  font-size: 1.4rem;
+}
+
+html[data-horrible="on"][data-horrible-theme="light"] { --horrible-ink: #222; }
+html[data-horrible="on"][data-horrible-theme="dark"] body { filter: none; }
+html[data-horrible="on"][data-horrible-theme="darker"] .app-shell { background: #111; color: #eee; }
+html[data-horrible="on"][data-horrible-theme="beige"] .app-shell { background: #e6d3b3; }
+html[data-horrible="on"][data-horrible-theme="fax"] .app-shell { background: #d8d8d8; filter: grayscale(0.8); }
+html[data-horrible="on"][data-horrible-theme="night-vision"] .app-shell { background: #031a03; color: #39ff14; }
+html[data-horrible="on"][data-horrible-theme="wet-paper"] .app-shell { background: #cfd8dc; }
+html[data-horrible="on"][data-horrible-theme="y1997"] .app-shell { background: #008080; }
+html[data-horrible="on"][data-horrible-theme="back-to-light"] .app-shell { background: #fff; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-horrible="on"] .horrible-marquee-text {
+    animation: horrible-marquee 16s linear infinite;
+  }
+
+  html[data-horrible="on"] .horrible-hold-bar.is-filling {
+    transition: width 3s linear;
+  }
+
+  html[data-horrible="on"] .horrible-cup {
+    transition: left 1.2s ease;
+  }
+
+  html[data-horrible="on"] .horrible-case-lid {
+    transition: transform 0.8s ease;
+  }
+
+  html[data-horrible="on"] .horrible-terms-copy {
+    animation: horrible-terms 28s linear infinite;
+  }
+
+  html[data-horrible="on"] .horrible-midi-bar.is-playing {
+    animation: horrible-midi 18s linear infinite;
+  }
+
+  html[data-horrible="on"] .horrible-subtitles {
+    transition: opacity 0.8s ease;
+  }
+
+  html[data-horrible="on"] .horrible-wave path {
+    animation: horrible-wave 1.5s linear;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-horrible="on"] #horrible-playbook *,
+  html[data-horrible="on"] #horrible-playbook *::before,
+  html[data-horrible="on"] #horrible-playbook *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@keyframes horrible-terms {
+  from { transform: translateY(0); }
+  to { transform: translateY(-70%); }
+}
+
+@keyframes horrible-midi {
+  from { width: 4%; }
+  to { width: 96%; }
+}
+
+@keyframes horrible-wave {
+  from { stroke-dashoffset: 120; }
+  to { stroke-dashoffset: 0; }
+}

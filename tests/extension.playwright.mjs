@@ -4,14 +4,12 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
-import { buildExtensionVendor } from "../extension/build.mjs";
-
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const extensionPath = join(root, "extension");
 const artifactsDir = "/opt/cursor/artifacts";
 const DEMO = "https://www.youtube.com/watch?v=abc123&si=SHAREID&utm_source=share";
+const GOOGLE_WRAP = "https://www.google.com/url?q=https%3A%2F%2Fexample.com%2F";
 
-buildExtensionVendor(root);
 mkdirSync(artifactsDir, { recursive: true });
 
 const userDataDir = mkdtempSync(join(tmpdir(), "url-cleaner-ext-"));
@@ -68,6 +66,17 @@ try {
   assert.match(await page.locator("#removed-badge").textContent(), /2 removed/);
   assert.equal(await page.locator("#copy-again").isVisible(), true);
   assert.match(await page.locator("#open-site").getAttribute("href") || "", /#url=/);
+
+  await page.evaluate(async (tabUrl) => {
+    await globalThis.urlCleanerPopup.bootPopup({
+      tabUrl,
+      clipboard: { writeText: async () => {} }
+    });
+  }, GOOGLE_WRAP);
+
+  await page.waitForSelector("#status:text('Copied!')");
+  assert.equal(await page.locator("#cleaned").textContent(), "https://example.com/");
+  assert.equal(await page.locator(".chip-unwrap").textContent(), "Unwrapped redirect");
 
   for (let i = 0; i < 5; i += 1) {
     const popup = await context.newPage();

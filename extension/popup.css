@@ -221,6 +221,14 @@ body {
   line-height: var(--font-lh-mono);
 }
 
+.removed-list li.chip-unwrap {
+  color: var(--chip-removed-fg);
+  background: var(--chip-removed-bg);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-secondary);
+  line-height: var(--font-lh-secondary);
+}
+
 .notice {
   margin: 0 0 var(--space-3);
   padding: var(--space-2) var(--space-3);

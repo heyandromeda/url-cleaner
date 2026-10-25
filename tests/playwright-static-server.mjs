@@ -21,7 +21,7 @@ export function distSiteRoot() {
   return join(repoRoot, "dist");
 }
 
-export function startDistServer({ onRequest } = {}) {
+export function startDistServer({ onRequest, extraHeaders = {} } = {}) {
   const siteRoot = distSiteRoot();
 
   return new Promise((resolve) => {
@@ -30,7 +30,7 @@ export function startDistServer({ onRequest } = {}) {
       const pathname = (request.url || "/").split("?")[0];
       if (isShareTargetPost(request.method, pathname)) {
         request.resume();
-        response.writeHead(303, { Location: "/" });
+        response.writeHead(303, { Location: "/", ...extraHeaders });
         response.end();
         return;
       }
@@ -42,7 +42,10 @@ export function startDistServer({ onRequest } = {}) {
         return;
       }
       const ext = filePath.slice(filePath.lastIndexOf("."));
-      response.writeHead(200, { "Content-Type": MIME[ext] ?? "application/octet-stream" });
+      response.writeHead(200, {
+        "Content-Type": MIME[ext] ?? "application/octet-stream",
+        ...extraHeaders
+      });
       response.end(readFileSync(filePath));
     });
     server.listen(0, "127.0.0.1", () => resolve(server));

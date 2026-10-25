@@ -24,6 +24,13 @@ import {
   readBooleanSetting,
   writeBooleanSetting
 } from "./storage.js";
+import {
+  applyHorribleAttribute,
+  bindHorriblePage,
+  popHorribleStamp,
+  spawnHorribleConfetti
+} from "./horrible.js";
+import { cleaningOptionsChanged } from "./horrible/logic.js";
 
 const form = document.querySelector("#clean-form");
 const input = document.querySelector("#url-input");
@@ -69,9 +76,11 @@ const totdDetails = document.querySelector("#totd-details");
 const totdToggle = document.querySelector("#totd-toggle");
 const themeToggle = document.querySelector("#theme-toggle");
 const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+const horribleMode = document.querySelector("#horrible-mode");
 
 let cleanedValue = "";
 let batchCopyValue = "";
+let resultCleanOptions = null;
 let clipboardOfferValue = "";
 let totdCollapsed = false;
 
@@ -85,6 +94,10 @@ function readSetting(key, fallback) {
 
 function saveSetting(key, value) {
   writeBooleanSetting(appStorage(), key, value);
+}
+
+function horribleIsOn() {
+  return document.documentElement.dataset.horrible === "on";
 }
 
 function systemPrefersDark() {
@@ -172,8 +185,32 @@ function setTotdToggleLabel(expanded) {
   totdToggle.append(wrap);
 }
 
+function applyHorribleMode(enabled) {
+  applyHorribleAttribute(document.documentElement, enabled);
+  if (horribleMode) horribleMode.checked = enabled;
+  horribleEffects.setEnabled(enabled);
+}
+
+function celebrateHorribleClean() {
+  spawnHorribleConfetti(document);
+  popHorribleStamp(document.querySelector(".horrible-pow"));
+}
+
+let horribleEffects = {
+  setEnabled() {}
+};
+
+function decorateHorribleToggle() {
+  if (!horribleMode) return;
+  const label = horribleMode.closest("label");
+  if (!label || label.querySelector(".icon")) return;
+  horribleMode.after(createIcon("flame", { size: 16 }));
+}
+
 function initTheme() {
   applyTheme(activeTheme());
+  applyHorribleMode(readSetting(STORAGE_KEYS.horrible, false));
+  decorateHorribleToggle();
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
     const storage = openThemeStorage(globalThis);
     if (!storage || readStoredThemePreference(storage) === null) {
@@ -386,6 +423,17 @@ function hideResults() {
   batchCopyValue = "";
 }
 
+function hasVisibleResult() {
+  return resultPanel.hidden === false || batchPanel.hidden === false;
+}
+
+function currentCleanOptions() {
+  return {
+    aggressive: aggressiveMode.checked,
+    duplicates: removeDuplicates.checked
+  };
+}
+
 function showCleanResult(result, { allowAutoCopy = true, originalValue = "", revealInspection = false } = {}) {
   cleanedValue = result.url;
   renderOriginalUrl(
@@ -425,6 +473,8 @@ function showCleanResult(result, { allowAutoCopy = true, originalValue = "", rev
         : "Already clean — no tracking parameters found.";
 
   showMessage(baseMessage, result.unwrapLimitReached ? "info" : "success");
+  celebrateHorribleClean();
+  horribleEffects.afterClean?.({ url: result.url, source: "single" });
 
   if (allowAutoCopy && autoCopy.checked) {
     copyText(cleanedValue).then((copied) => {
@@ -487,6 +537,8 @@ function showBatchResults(entries, { allowAutoCopy = true } = {}) {
     ? `${cleaned.length} URL${cleaned.length === 1 ? "" : "s"} cleaned.`
     : `${cleaned.length} cleaned, ${failed} failed.`;
   showMessage(baseMessage, cleaned.length > 0 ? "success" : "error");
+  if (cleaned.length > 0) celebrateHorribleClean();
+  if (cleaned.length > 0) horribleEffects.afterClean?.({ url: batchCopyValue, source: "batch" });
 
   if (allowAutoCopy && autoCopy.checked && batchCopyValue) {
     copyText(batchCopyValue).then((copied) => {
@@ -498,17 +550,30 @@ function showBatchResults(entries, { allowAutoCopy = true } = {}) {
   }
 }
 
+function requestClean(options = {}) {
+  if (!input.value.trim()) {
+    showMessage("Paste or type a URL to clean.", "error");
+    return;
+  }
+  if (horribleEffects.beforeClean?.({ source: options.source || "form", proceed: () => runClean(options) })) {
+    return;
+  }
+  runClean(options);
+}
+
 function runClean(options = {}) {
   hideResults();
+  const computedWith = currentCleanOptions();
 
   const entries = cleanBatch(input.value, {
-    aggressive: aggressiveMode.checked,
-    removeDuplicateParameters: removeDuplicates.checked
+    aggressive: computedWith.aggressive,
+    removeDuplicateParameters: computedWith.duplicates
   });
   if (entries.length === 0) {
     showMessage("Paste or type a URL to clean.", "error");
     return;
   }
+  resultCleanOptions = computedWith;
 
   if (entries.length === 1) {
     const [entry] = entries;
@@ -709,11 +774,22 @@ renderTrackerOfTheDay();
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (!input.value.trim()) {
-    showMessage("Paste or type a URL to clean.", "error");
+  requestClean({ source: "form" });
+});
+
+input.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  const chord = event.ctrlKey || event.metaKey;
+  const horribleOn = horribleIsOn();
+  if (chord) {
+    event.preventDefault();
+    requestClean({ source: "keyboard" });
     return;
   }
-  runClean();
+  if (horribleOn && !event.shiftKey) {
+    event.preventDefault();
+    requestClean({ source: "keyboard" });
+  }
 });
 
 input.addEventListener("input", () => {
@@ -721,6 +797,7 @@ input.addEventListener("input", () => {
     message.textContent = "";
     delete message.dataset.kind;
     hideResults();
+    resultCleanOptions = null;
   }
 });
 
@@ -737,15 +814,18 @@ input.addEventListener("paste", () => {
 });
 
 cleanOnPaste.addEventListener("change", () => {
+  if (horribleIsOn()) return;
   saveSetting(STORAGE_KEYS.cleanOnPaste, cleanOnPaste.checked);
 });
 
 autoCopy.addEventListener("change", () => {
+  if (horribleIsOn()) return;
   saveSetting(STORAGE_KEYS.autoCopy, autoCopy.checked);
 });
 
 for (const [toggle, key] of [[aggressiveMode, STORAGE_KEYS.aggressiveMode], [removeDuplicates, STORAGE_KEYS.removeDuplicates]]) {
   toggle.addEventListener("change", () => {
+    if (horribleIsOn()) return;
     saveSetting(key, toggle.checked);
     if (input.value.trim()) runClean({ allowAutoCopy: false });
   });
@@ -792,6 +872,38 @@ themeToggle.addEventListener("click", () => {
   applyTheme(next);
 });
 
+if (horribleMode) {
+  horribleMode.addEventListener("change", () => {
+    saveSetting(STORAGE_KEYS.horrible, horribleMode.checked);
+    applyHorribleMode(horribleMode.checked);
+  });
+}
+
+horribleEffects = bindHorriblePage({
+  stopButton: document.querySelector("#horrible-stop"),
+  cleanButton: document.querySelector("#clean-form button.primary-button[type='submit']"),
+  popupHost: document.querySelector("#horrible-popups"),
+  hitCounter: document.querySelector(".horrible-hit-counter"),
+  guestbook: document.querySelector("#horrible-guestbook"),
+  onClean: () => runClean(),
+  onStop: () => {
+    saveSetting(STORAGE_KEYS.horrible, false);
+    applyHorribleMode(false);
+  },
+  onSettingsRestored: ({ snap } = {}) => {
+    if (!snap || horribleIsOn()) return;
+    saveSetting(STORAGE_KEYS.cleanOnPaste, snap.paste);
+    saveSetting(STORAGE_KEYS.autoCopy, snap.copy);
+    saveSetting(STORAGE_KEYS.aggressiveMode, snap.aggressive);
+    saveSetting(STORAGE_KEYS.removeDuplicates, snap.duplicates);
+    const restored = { aggressive: snap.aggressive, duplicates: snap.duplicates };
+    if (hasVisibleResult() && input.value.trim() && cleaningOptionsChanged(resultCleanOptions, restored)) {
+      runClean({ allowAutoCopy: false });
+    }
+  }
+});
+horribleEffects.setEnabled(document.documentElement.dataset.horrible === "on");
+
 totdToggle.addEventListener("click", () => {
   totdCollapsed = !totdCollapsed;
   saveSetting(STORAGE_KEYS.totdCollapsed, totdCollapsed);
@@ -808,6 +920,14 @@ clipboardOfferDismiss.addEventListener("click", () => {
   clipboardOffer.hidden = true;
   clipboardOfferValue = "";
 });
+
+window.__urlCleaner = {
+  cleanCurrentInput: () => requestClean({ source: "keyboard" }),
+  setHorribleMode: (enabled) => {
+    saveSetting(STORAGE_KEYS.horrible, Boolean(enabled));
+    applyHorribleMode(Boolean(enabled));
+  }
+};
 
 if (!loadHandoff()) {
   offerClipboardIfPermitted();

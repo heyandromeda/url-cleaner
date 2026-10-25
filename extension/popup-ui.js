@@ -34,7 +34,7 @@ export function headlineFor(result, copyOutcome) {
   if (!copyOutcome.ok) {
     return { kind: "error", text: COPY_FAILED, check: false };
   }
-  if (!result.removedParams.length) {
+  if (!result.changed) {
     return { kind: "neutral", text: ALREADY_CLEAN, check: false };
   }
   return { kind: "success", text: COPIED, check: true };
@@ -150,12 +150,26 @@ export function renderResult(result, elements = popupElements()) {
   }
 
   const unique = [...new Set(result.removedParams)];
+  const unwrapHosts = [...new Set(result.unwrappedFrom ?? [])];
   if (elements.removedRow && elements.removedBadge && elements.chips) {
-    if (unique.length) {
+    if (unique.length || unwrapHosts.length) {
       elements.removedRow.hidden = false;
-      const countLabel = unique.length === 1 ? "1 removed" : `${unique.length} removed`;
-      elements.removedBadge.textContent = countLabel;
+      const parts = [];
+      if (unwrapHosts.length) parts.push("Unwrapped redirect");
+      if (unique.length) {
+        parts.push(unique.length === 1 ? "1 removed" : `${unique.length} removed`);
+      }
+      elements.removedBadge.textContent = parts.join(" · ");
       elements.chips.replaceChildren();
+      if (unwrapHosts.length) {
+        const chip = document.createElement("li");
+        chip.className = "chip-unwrap";
+        chip.textContent = "Unwrapped redirect";
+        chip.title = unwrapHosts.length === 1
+          ? `Redirect wrapper on ${unwrapHosts[0]}`
+          : `Redirect wrappers on ${unwrapHosts.join(", ")}`;
+        elements.chips.append(chip);
+      }
       for (const name of unique) {
         const chip = document.createElement("li");
         chip.textContent = name;

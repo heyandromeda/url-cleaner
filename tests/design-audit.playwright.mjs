@@ -91,8 +91,13 @@ try {
       if (Math.abs(pasteBox.top - inspectBox.top) > 2) {
         failures.push("390px: Paste and Inspect are not on the same row");
       }
-      for (const label of ["Paste", "Inspect URL", "Clean URL"]) {
-        const twoLine = await page.locator("button", { hasText: label }).evaluate((button) => button.scrollHeight > button.clientHeight + 1);
+      const actionButtons = {
+        Paste: page.locator("#paste-button"),
+        "Inspect URL": page.locator("#inspect-button"),
+        "Clean URL": page.locator('button.primary-button[type="submit"]')
+      };
+      for (const [label, button] of Object.entries(actionButtons)) {
+        const twoLine = await button.evaluate((node) => node.scrollHeight > node.clientHeight + 1);
         if (twoLine) failures.push(`390px: ${label} label wraps to two lines`);
       }
     }

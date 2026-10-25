@@ -1,12 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseHandoffParams, parseHandoffUrl } from "../dist/handoff.js";
 import { isOpaqueShortener } from "../extension/vendor/cleaner.js";
-import { ENGINE_FILES, buildExtensionVendor } from "../extension/build.mjs";
+import {
+  ENGINE_FILES,
+  buildExtensionVendor,
+  findExtensionVendorDrift,
+  formatExtensionVendorDriftMessage
+} from "../extension/build.mjs";
 import {
   CLEANER_ORIGIN,
   MAX_URL_LENGTH,
@@ -43,11 +48,24 @@ test("popup clean removes YouTube si and returns the shared result shape", () =>
   assert.equal(result.original, YOUTUBE);
   assert.equal(result.cleaned, YOUTUBE_CLEAN);
   assert.deepEqual(result.removedParams, ["si"]);
+  assert.equal(result.changed, true);
   assert.equal(result.error, "");
   assert.equal(result.copy, true);
   assert.equal(result.openSite, true);
   assert.match(result.summary, /Removed si\./);
   assert.match(result.summary, /Share identifier/i);
+});
+
+test("google /url unwrap is treated as changed and shows Copied after copy", () => {
+  const wrapped = "https://www.google.com/url?q=https%3A%2F%2Fexample.com%2F";
+  const result = cleanTabUrl(wrapped);
+  assert.equal(result.cleaned, "https://example.com/");
+  assert.equal(result.changed, true);
+  assert.deepEqual(result.unwrappedFrom, ["www.google.com"]);
+  assert.deepEqual(result.removedParams, []);
+  const headline = headlineFor(result, { ok: true });
+  assert.equal(headline.text, COPIED);
+  assert.equal(headline.kind, "success");
 });
 
 test("popup clean reports an error for 'not a url' instead of throwing", () => {
@@ -150,11 +168,11 @@ test("Copied is only shown after clipboard writeText resolves", async () => {
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(entered, true);
   assert.equal(settled, false);
-  assert.equal(headlineFor({ error: "", removedParams: ["si"] }, null).text, "");
+  assert.equal(headlineFor({ error: "", changed: true }, null).text, "");
   release();
   const outcome = await pending;
   assert.equal(outcome.ok, true);
-  assert.equal(headlineFor({ error: "", removedParams: ["si"] }, outcome).text, COPIED);
+  assert.equal(headlineFor({ error: "", changed: true }, outcome).text, COPIED);
 });
 
 test("writeText reject plus working fallback still shows Copied", async () => {
@@ -166,8 +184,8 @@ test("writeText reject plus working fallback still shows Copied", async () => {
     copyFallback: (text) => text === "https://example.com/a"
   });
   assert.equal(outcome.ok, true);
-  assert.equal(headlineFor({ error: "", removedParams: ["utm_source"] }, outcome).text, COPIED);
-  assert.equal(headlineFor({ error: "", removedParams: [] }, outcome).text, ALREADY_CLEAN);
+  assert.equal(headlineFor({ error: "", changed: true }, outcome).text, COPIED);
+  assert.equal(headlineFor({ error: "", changed: false }, outcome).text, ALREADY_CLEAN);
 });
 
 test("Copied is an error only when writeText and the fallback both fail", async () => {
@@ -179,7 +197,7 @@ test("Copied is an error only when writeText and the fallback both fail", async 
     copyFallback: () => false
   });
   assert.equal(outcome.ok, false);
-  const headline = headlineFor({ error: "", removedParams: ["utm_source"] }, outcome);
+  const headline = headlineFor({ error: "", changed: true }, outcome);
   assert.equal(headline.text, COPY_FAILED);
   assert.notEqual(headline.text, COPIED);
 });
@@ -215,17 +233,25 @@ test("extension vendor copies match the repo engine", () => {
   }
 });
 
-test("committed vendor matches a fresh extension/build.mjs output", () => {
+test("committed vendor matches a fresh extension/build.mjs output in a temp dir", () => {
   const tmp = mkdtempSync(join(tmpdir(), "url-cleaner-vendor-"));
   try {
     buildExtensionVendor(root, tmp);
-    for (const name of ENGINE_FILES) {
-      assert.equal(
-        readFileSync(join(root, "extension", "vendor", name), "utf8"),
-        readFileSync(join(tmp, name), "utf8"),
-        name
-      );
-    }
+    const drifted = findExtensionVendorDrift(root, tmp);
+    assert.deepEqual(drifted, []);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("vendor drift check reports a deliberately stale committed copy", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "url-cleaner-vendor-"));
+  try {
+    buildExtensionVendor(root, tmp);
+    writeFileSync(join(tmp, "cleaner.js"), `${readFileSync(join(tmp, "cleaner.js"), "utf8")}\n// stale\n`);
+    const drifted = findExtensionVendorDrift(root, tmp);
+    assert.deepEqual(drifted, ["cleaner.js"]);
+    assert.match(formatExtensionVendorDriftMessage(drifted), /extension\/vendor\/cleaner\.js/);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
