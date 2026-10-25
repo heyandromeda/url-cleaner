@@ -4,6 +4,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseHandoffParams, parseHandoffUrl } from "../dist/handoff.js";
+import { isOpaqueShortener } from "../extension/vendor/cleaner.js";
 import { ENGINE_FILES } from "../extension/build.mjs";
 import {
   CLEANER_ORIGIN,
@@ -91,16 +92,30 @@ test("long URLs are never truncated and past 8192 characters show a short error"
 });
 
 test("opaque shorteners are cleaned in place and warned about without being followed", () => {
-  const input = "https://bit.ly/abc?utm_source=x";
-  const result = cleanTabUrl(input);
+  const short = "https://bit.ly/abc";
+  const dirty = "https://bit.ly/abc?utm_source=x";
+  assert.equal(isOpaqueShortener(short), true);
+  assert.equal(isOpaqueShortener(dirty), true);
 
-  assert.equal(result.cleaned, "https://bit.ly/abc");
+  const plain = cleanTabUrl(short);
+  assert.equal(plain.cleaned, short);
+  assert.equal(plain.warning, SHORTENER_WARNING);
+  assert.equal(plain.error, "");
+
+  const result = cleanTabUrl(dirty);
+  assert.equal(result.cleaned, short);
   assert.deepEqual(result.removedParams, ["utm_source"]);
   assert.equal(result.warning, SHORTENER_WARNING);
   assert.equal(result.error, "");
   assert.equal(result.copy, true);
   assert.match(result.handoffUrl, /#url=/);
-  assert.doesNotMatch(readFileSync(join(root, "extension", "clean.js"), "utf8"), /fetch\s*\(/);
+
+  const clean = readFileSync(join(root, "extension", "clean.js"), "utf8");
+  const popup = readFileSync(join(root, "extension", "popup.js"), "utf8");
+  assert.match(clean, /isOpaqueShortener\(/);
+  assert.match(popup, /show\(warning, result\.warning\)/);
+  assert.doesNotMatch(clean, /\bfetch\s*\(/);
+  assert.doesNotMatch(popup, /\bfetch\s*\(/);
 });
 
 test("non-http(s) pages show nothing to clean and do not copy or open the site", () => {
