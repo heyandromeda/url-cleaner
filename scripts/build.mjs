@@ -16,6 +16,15 @@ export function listWebRootFiles(root) {
     .sort();
 }
 
+export function listHorribleFiles(root) {
+  const dir = join(root, "horrible");
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && WEB_EXTENSIONS.has(extname(entry.name)))
+    .map((entry) => `horrible/${entry.name}`)
+    .sort();
+}
+
 export function buildDist(root = join(dirname(fileURLToPath(import.meta.url)), "..")) {
   const dist = join(root, "dist");
   if (existsSync(dist)) {
@@ -24,6 +33,10 @@ export function buildDist(root = join(dirname(fileURLToPath(import.meta.url)), "
   mkdirSync(dist, { recursive: true });
   for (const name of listWebRootFiles(root)) {
     cpSync(join(root, name), join(dist, name));
+  }
+  const horribleSrc = join(root, "horrible");
+  if (existsSync(horribleSrc)) {
+    cpSync(horribleSrc, join(dist, "horrible"), { recursive: true });
   }
   return dist;
 }

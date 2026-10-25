@@ -457,6 +457,7 @@ function showCleanResult(result, { allowAutoCopy = true, originalValue = "", rev
 
   showMessage(baseMessage, result.unwrapLimitReached ? "info" : "success");
   celebrateHorribleClean();
+  horribleEffects.afterClean?.({ url: result.url, source: "single" });
 
   if (allowAutoCopy && autoCopy.checked) {
     copyText(cleanedValue).then((copied) => {
@@ -520,6 +521,7 @@ function showBatchResults(entries, { allowAutoCopy = true } = {}) {
     : `${cleaned.length} cleaned, ${failed} failed.`;
   showMessage(baseMessage, cleaned.length > 0 ? "success" : "error");
   if (cleaned.length > 0) celebrateHorribleClean();
+  if (cleaned.length > 0) horribleEffects.afterClean?.({ url: batchCopyValue, source: "batch" });
 
   if (allowAutoCopy && autoCopy.checked && batchCopyValue) {
     copyText(batchCopyValue).then((copied) => {
@@ -529,6 +531,17 @@ function showBatchResults(entries, { allowAutoCopy = true } = {}) {
       );
     });
   }
+}
+
+function requestClean(options = {}) {
+  if (!input.value.trim()) {
+    showMessage("Paste or type a URL to clean.", "error");
+    return;
+  }
+  if (horribleEffects.beforeClean?.({ source: options.source || "form", proceed: () => runClean(options) })) {
+    return;
+  }
+  runClean(options);
 }
 
 function runClean(options = {}) {
@@ -742,11 +755,22 @@ renderTrackerOfTheDay();
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (!input.value.trim()) {
-    showMessage("Paste or type a URL to clean.", "error");
+  requestClean({ source: "form" });
+});
+
+input.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  const chord = event.ctrlKey || event.metaKey;
+  const horribleOn = document.documentElement.dataset.horrible === "on";
+  if (chord) {
+    event.preventDefault();
+    requestClean({ source: "keyboard" });
     return;
   }
-  runClean();
+  if (horribleOn && !event.shiftKey) {
+    event.preventDefault();
+    requestClean({ source: "keyboard" });
+  }
 });
 
 input.addEventListener("input", () => {
@@ -838,6 +862,7 @@ horribleEffects = bindHorriblePage({
   popupHost: document.querySelector("#horrible-popups"),
   hitCounter: document.querySelector(".horrible-hit-counter"),
   guestbook: document.querySelector("#horrible-guestbook"),
+  onClean: () => runClean(),
   onStop: () => {
     saveSetting(STORAGE_KEYS.horrible, false);
     applyHorribleMode(false);
@@ -861,6 +886,14 @@ clipboardOfferDismiss.addEventListener("click", () => {
   clipboardOffer.hidden = true;
   clipboardOfferValue = "";
 });
+
+window.__urlCleaner = {
+  cleanCurrentInput: () => requestClean({ source: "keyboard" }),
+  setHorribleMode: (enabled) => {
+    saveSetting(STORAGE_KEYS.horrible, Boolean(enabled));
+    applyHorribleMode(Boolean(enabled));
+  }
+};
 
 if (!loadHandoff()) {
   offerClipboardIfPermitted();

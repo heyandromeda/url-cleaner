@@ -1,4 +1,6 @@
 import { STORAGE_KEYS, openAppStorage, readBooleanSetting, writeBooleanSetting } from "./storage.js";
+import { applyPopupDismissal, isCleanWindow, nextSpawnDelay } from "./horrible/logic.js";
+import { bindPlaybook } from "./horrible/playbook.js";
 
 export const HORRIBLE_STORAGE_KEY = STORAGE_KEYS.horrible;
 export const HORRIBLE_HITS_KEY = "url-cleaner.horrible-hits";
@@ -140,23 +142,6 @@ export function popHorribleStamp(stamp) {
   globalThis.setTimeout(() => stamp.classList.remove("is-popping"), 1600);
 }
 
-function bindRunawayClose(button, root) {
-  if (!button) return;
-  let dodges = 0;
-  let tiredUntil = 0;
-  button.addEventListener("mouseenter", () => {
-    if (prefersReducedMotion(root.defaultView || globalThis)) return;
-    const now = Date.now();
-    const next = resolveCleanDodge(dodges, tiredUntil, now);
-    dodges = next.dodges;
-    tiredUntil = next.tiredUntil;
-    button.classList.remove(...HORRIBLE_DODGE_CLASSES);
-    if (next.action === "dodge") {
-      button.classList.add(nextDodgeClass(dodges - 1));
-    }
-  });
-}
-
 export function bindHorriblePage({
   document: rootDocument = globalThis.document,
   stopButton,
@@ -164,7 +149,8 @@ export function bindHorriblePage({
   popupHost,
   hitCounter,
   guestbook,
-  onStop
+  onStop,
+  onClean
 } = {}) {
   const root = rootDocument;
   if (!root) return { dispose() {}, setEnabled() {}, clearPopups() {} };
@@ -219,13 +205,38 @@ export function bindHorriblePage({
 
   const openCount = () => popupHost?.querySelectorAll(".horrible-popup").length || 0;
 
-  const spawnPopup = () => {
-    if (!enabled || !isHorrible() || !popupHost) return null;
-    if (openCount() >= cap()) return null;
-    if (Date.now() < cleanWindowUntil) return null;
+  const quietNow = () => isCleanWindow(Date.now(), cleanWindowUntil);
 
-    const copy = nextPopupCopy(copyIndex);
-    copyIndex += 1;
+  const recordDismissal = (openBeforeRemove) => {
+    const next = applyPopupDismissal({
+      openCount: openBeforeRemove,
+      closes,
+      now: Date.now(),
+      cap: cap(),
+      multiply: HORRIBLE_POPUP_MULTIPLY,
+      cleanWindowUntil,
+      every: HORRIBLE_CLEAN_WINDOW_EVERY,
+      windowMs: HORRIBLE_CLEAN_WINDOW_MS
+    });
+    closes = next.closes;
+    cleanWindowUntil = next.cleanWindowUntil;
+    if (next.inWindow || quietNow()) {
+      queueSpawn();
+      return;
+    }
+    for (let index = 0; index < next.extras; index += 1) {
+      if (quietNow()) break;
+      spawnPopup();
+    }
+  };
+
+  const spawnPopup = (override) => {
+    if (!enabled || !isHorrible() || !popupHost) return null;
+    if (quietNow()) return null;
+    if (openCount() >= cap()) return null;
+
+    const copy = override && override.title ? override : nextPopupCopy(copyIndex);
+    if (!override) copyIndex += 1;
     const slot = pickPopupSlot(usedSlots());
     const skin = (slot % 4) + 1;
     const popup = root.createElement("aside");
@@ -233,6 +244,7 @@ export function bindHorriblePage({
     popup.dataset.slot = String(slot);
     popup.setAttribute("role", "dialog");
     popup.setAttribute("aria-label", "Joke popup");
+    popup.tabIndex = -1;
 
     const tag = root.createElement("p");
     tag.className = "horrible-joke-tag";
@@ -257,35 +269,69 @@ export function bindHorriblePage({
 
     popup.append(tag, close, title, body, action);
     popupHost.append(popup);
-    bindRunawayClose(close, root);
-    close.addEventListener("click", () => dismissPopup(popup));
-    action.addEventListener("click", () => dismissPopup(popup));
     return popup;
   };
 
   const dismissPopup = (popup) => {
     if (!popup?.isConnected) return;
-    const current = openCount();
-    const inWindow = Date.now() < cleanWindowUntil;
-    const extras = popupsToSpawnOnClose(current, cap(), HORRIBLE_POPUP_MULTIPLY, inWindow);
     popup.remove();
-    closes += 1;
-    const nextWindow = nextCleanWindowUntil(closes, Date.now());
-    if (nextWindow) cleanWindowUntil = nextWindow;
-    for (let index = 0; index < extras; index += 1) spawnPopup();
   };
+
+  const onPopupHostClick = (event) => {
+    const button = event.target.closest?.(".horrible-popup-x, .horrible-popup-action");
+    if (!button || !popupHost?.contains(button)) return;
+    const popup = button.closest(".horrible-popup");
+    if (!popup) return;
+    event.preventDefault();
+    dismissPopup(popup);
+  };
+
+  const onPopupHostMutate = (records) => {
+    if (!enabled) return;
+    for (const record of records) {
+      for (const node of record.removedNodes) {
+        if (node?.classList?.contains("horrible-popup")) {
+          recordDismissal(openCount() + 1);
+        }
+      }
+    }
+  };
+
+  const popupObserver = popupHost && typeof view().MutationObserver === "function"
+    ? new (view().MutationObserver)(onPopupHostMutate)
+    : null;
+  popupObserver?.observe(popupHost, { childList: true });
 
   const clearPopups = () => {
     if (!popupHost) return;
+    popupObserver?.disconnect();
     popupHost.replaceChildren();
+    popupObserver?.observe(popupHost, { childList: true });
   };
 
   const stopStorm = () => {
-    if (spawnTimer) view().clearInterval(spawnTimer);
+    if (spawnTimer) view().clearTimeout(spawnTimer);
     spawnTimer = 0;
     clearPopups();
     cleanWindowUntil = 0;
     closes = 0;
+  };
+
+  const queueSpawn = () => {
+    if (spawnTimer) view().clearTimeout(spawnTimer);
+    spawnTimer = 0;
+    if (!enabled || !isHorrible()) return;
+    const base = reduced() ? 5000 : 2800;
+    const delay = nextSpawnDelay(Date.now(), cleanWindowUntil, base);
+    spawnTimer = view().setTimeout(() => {
+      spawnTimer = 0;
+      if (quietNow()) {
+        queueSpawn();
+        return;
+      }
+      spawnPopup();
+      queueSpawn();
+    }, delay);
   };
 
   const startStorm = () => {
@@ -293,27 +339,44 @@ export function bindHorriblePage({
     enabled = true;
     spawnPopup();
     if (!reduced()) spawnPopup();
-    const interval = reduced() ? 5000 : 2800;
-    spawnTimer = view().setInterval(() => {
-      if (Date.now() >= cleanWindowUntil) spawnPopup();
-    }, interval);
+    queueSpawn();
+  };
+
+  let playbook = {
+    enable() {},
+    disable() {},
+    beforeClean() { return false; },
+    afterClean() {}
   };
 
   const setEnabled = (nextEnabled) => {
     enabled = Boolean(nextEnabled);
-    if (enabled && isHorrible()) startStorm();
-    else stopStorm();
+    if (enabled && isHorrible()) {
+      startStorm();
+      playbook.enable();
+    } else {
+      stopStorm();
+      playbook.disable();
+    }
   };
 
   const stopEverything = () => {
     enabled = false;
     stopStorm();
+    playbook.disable();
     onStop?.();
   };
 
   const onEscape = (event) => {
     if (event.key !== "Escape") return;
     if (!isHorrible() && !enabled) return;
+    const popup = event.target.closest?.(".horrible-popup");
+    if (popup && popupHost?.contains(popup) && enabled) {
+      event.preventDefault();
+      event.stopPropagation();
+      dismissPopup(popup);
+      return;
+    }
     event.preventDefault();
     stopEverything();
   };
@@ -323,10 +386,18 @@ export function bindHorriblePage({
     cleanButton.addEventListener("focus", clearDodges);
   }
   root.addEventListener("pointermove", onPointerMove, { passive: true });
+  popupHost?.addEventListener("click", onPopupHostClick);
   stopButton?.addEventListener("click", stopEverything);
   view().addEventListener?.("keydown", onEscape);
   guestbook?.addEventListener("click", () => {
     guestbook.textContent = "THANKS FOR SIGNING MY GUESTBOOK!!!1";
+  });
+
+  playbook = bindPlaybook({
+    document: root,
+    onClean,
+    spawnPopup,
+    prefersReduced: prefersReducedMotion
   });
 
   if (hitCounter) {
@@ -347,13 +418,17 @@ export function bindHorriblePage({
   return {
     dispose() {
       stopStorm();
+      popupObserver?.disconnect();
       cleanButton?.removeEventListener("mouseenter", onCleanEnter);
       cleanButton?.removeEventListener("focus", clearDodges);
       root.removeEventListener("pointermove", onPointerMove);
+      popupHost?.removeEventListener("click", onPopupHostClick);
       view().removeEventListener?.("keydown", onEscape);
     },
     setEnabled,
     clearPopups,
-    spawnPopup
+    spawnPopup,
+    beforeClean: (...args) => playbook.beforeClean?.(...args),
+    afterClean: (...args) => playbook.afterClean?.(...args)
   };
 }
