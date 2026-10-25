@@ -235,6 +235,10 @@ export function pickNarratorLine(index = 0) {
   return NARRATOR_LINES[Math.abs(Math.trunc(index)) % NARRATOR_LINES.length];
 }
 
+export function shouldCommitSlotReveal(generation, activeGeneration, enabled) {
+  return Boolean(enabled) && generation === activeGeneration;
+}
+
 export function slotCharsForTick(finalText, tick, alphabet = "abcdefghijklmnopqrstuvwxyz0123456789:/?&=._-%") {
   const text = String(finalText ?? "");
   if (tick >= SLOT_TICKS) return text;

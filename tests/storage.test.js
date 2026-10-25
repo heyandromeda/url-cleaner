@@ -2,10 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   STORAGE_KEYS,
+  clearHorribleSettingsSnapshot,
   openAppStorage,
+  parseHorribleSettingsSnapshot,
   readBooleanSetting,
+  readHorribleSettingsSnapshot,
   readThemePreference,
   writeBooleanSetting,
+  writeHorribleSettingsSnapshot,
   writeThemePreference
 } from "../storage.js";
 
@@ -16,6 +20,9 @@ class MemoryStorage {
   }
   setItem(key, value) {
     this.#values.set(key, String(value));
+  }
+  removeItem(key) {
+    this.#values.delete(key);
   }
 }
 
@@ -40,6 +47,39 @@ test("theme preference reads and writes light or dark only", () => {
   assert.equal(readThemePreference(storage), "dark");
   storage.setItem(STORAGE_KEYS.theme, "system");
   assert.equal(readThemePreference(storage), null);
+});
+
+test("horrible settings snapshot survives reload and clears on restore", () => {
+  const storage = new MemoryStorage();
+  assert.equal(STORAGE_KEYS.horribleSettings, "url-cleaner.horrible-settings");
+  assert.equal(readHorribleSettingsSnapshot(storage), null);
+  assert.equal(parseHorribleSettingsSnapshot("not-json"), null);
+
+  writeHorribleSettingsSnapshot(storage, { paste: true, copy: false, aggressive: false, duplicates: true });
+  assert.deepEqual(readHorribleSettingsSnapshot(storage), {
+    paste: true,
+    copy: false,
+    aggressive: false,
+    duplicates: true
+  });
+
+  const reloaded = readHorribleSettingsSnapshot(storage);
+  writeHorribleSettingsSnapshot(storage, { paste: false, copy: true, aggressive: true, duplicates: false });
+  assert.deepEqual(reloaded, {
+    paste: true,
+    copy: false,
+    aggressive: false,
+    duplicates: true
+  });
+  assert.deepEqual(readHorribleSettingsSnapshot(storage), {
+    paste: false,
+    copy: true,
+    aggressive: true,
+    duplicates: false
+  });
+
+  clearHorribleSettingsSnapshot(storage);
+  assert.equal(readHorribleSettingsSnapshot(storage), null);
 });
 
 test("openAppStorage returns null when localStorage is blocked", () => {

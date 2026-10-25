@@ -44,6 +44,7 @@ import {
   resetPrimes,
   shellIsClean,
   shuffleCups,
+  shouldCommitSlotReveal,
   slotCharsForTick,
   splitCaptchaCell,
   stepGravity,
@@ -140,6 +141,7 @@ test("app stops horrible mode from the panic button and Escape", () => {
   assert.match(app, /metaKey/);
   assert.match(app, /__urlCleaner/);
   assert.match(app, /source:\s*"keyboard"/);
+  assert.match(app, /if \(horribleIsOn\(\)\) return;/);
 });
 
 test("dodge helpers cycle a few classes then give up", () => {
@@ -220,8 +222,11 @@ test("playbook ships all 33 ideas behind the horrible toggle", () => {
   assert.doesNotMatch(css, /@import/);
   assert.doesNotMatch(css, /https?:\/\//);
   assert.match(js, /Skip, I'm a robot|skip-captcha/);
-  assert.match(js, /snapshotSettings/);
+  assert.match(js, /rememberSettings/);
   assert.match(js, /restoreSettings/);
+  assert.match(js, /stopSlotReveal/);
+  assert.match(js, /shouldCommitSlotReveal/);
+  assert.match(js, /readHorribleSettingsSnapshot/);
 });
 
 test("playbook helpers stay local and never block the real URL", () => {
@@ -246,4 +251,7 @@ test("playbook helpers stay local and never block the real URL", () => {
   assert.equal(dialupMs(false), 1500);
   assert.notEqual(slotCharsForTick("https://ok", 1), "https://ok");
   assert.equal(slotCharsForTick("https://ok", 8), "https://ok");
+  assert.equal(shouldCommitSlotReveal(1, 1, true), true);
+  assert.equal(shouldCommitSlotReveal(1, 2, true), false);
+  assert.equal(shouldCommitSlotReveal(3, 3, false), false);
 });
