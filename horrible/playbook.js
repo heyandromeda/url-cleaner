@@ -1,4 +1,10 @@
 import {
+  clearHorribleSettingsSnapshot,
+  openAppStorage,
+  readHorribleSettingsSnapshot,
+  writeHorribleSettingsSnapshot
+} from "../storage.js";
+import {
   CAPTCHA_FRAGMENTS,
   HOLD_CLEAN_MS,
   HORRIBLE_THEMES,
@@ -24,6 +30,7 @@ import {
   resetPrimes,
   shellIsClean,
   shuffleCups,
+  shouldCommitSlotReveal,
   slotCharsForTick,
   splitCaptchaCell,
   stepGravity,
@@ -116,6 +123,9 @@ export function bindPlaybook({
   let querrySpawned = false;
   let savedLabels = null;
   let savedSettings = null;
+  let slotTimer = 0;
+  let slotRevealTimer = 0;
+  let slotGeneration = 0;
   const gravity = {
     paste: 100,
     copy: 0,
@@ -158,10 +168,12 @@ export function bindPlaybook({
     }
   };
 
-  const setCheckbox = (box, on) => {
-    if (!box || box.checked === on) return;
-    box.checked = on;
-    box.dispatchEvent(new Event("change", { bubbles: true }));
+  const settingsStorage = () => openAppStorage(view());
+
+  const setCheckbox = (box, on, { persist = false } = {}) => {
+    if (!box) return;
+    if (box.checked !== on) box.checked = on;
+    if (persist) box.dispatchEvent(new Event("change", { bubbles: true }));
   };
 
   const syncGravityUi = () => {
@@ -186,14 +198,34 @@ export function bindPlaybook({
     duplicates: Boolean(removeDuplicates?.checked)
   });
 
+  const rememberSettings = () => {
+    const stored = readHorribleSettingsSnapshot(settingsStorage());
+    savedSettings = stored || snapshotSettings();
+    writeHorribleSettingsSnapshot(settingsStorage(), savedSettings);
+  };
+
   const restoreSettings = () => {
-    if (!savedSettings) return;
-    const snap = savedSettings;
+    const snap = savedSettings || readHorribleSettingsSnapshot(settingsStorage());
     savedSettings = null;
-    setCheckbox(cleanOnPaste, snap.paste);
-    setCheckbox(autoCopy, snap.copy);
-    setCheckbox(aggressiveMode, snap.aggressive);
-    setCheckbox(removeDuplicates, snap.duplicates);
+    clearHorribleSettingsSnapshot(settingsStorage());
+    if (!snap) return;
+    setCheckbox(cleanOnPaste, snap.paste, { persist: true });
+    setCheckbox(autoCopy, snap.copy, { persist: true });
+    setCheckbox(aggressiveMode, snap.aggressive, { persist: true });
+    setCheckbox(removeDuplicates, snap.duplicates, { persist: true });
+  };
+
+  const stopSlotReveal = () => {
+    if (slotTimer) view().clearInterval(slotTimer);
+    if (slotRevealTimer) view().clearTimeout(slotRevealTimer);
+    slotTimer = 0;
+    slotRevealTimer = 0;
+    slotGeneration += 1;
+    const slot = q("[data-idea='11']");
+    if (slot) {
+      slot.hidden = true;
+      slot.textContent = "";
+    }
   };
 
   const tickGravity = (now) => {
@@ -616,6 +648,7 @@ export function bindPlaybook({
   };
 
   const beforeClean = ({ source, proceed } = {}) => {
+    stopSlotReveal();
     if (!enabled || !isOn()) return false;
     if (source === "form" || source === "keyboard") {
       captchaDone = true;
@@ -627,6 +660,7 @@ export function bindPlaybook({
   };
 
   const afterClean = ({ url } = {}) => {
+    stopSlotReveal();
     if (!enabled || !isOn()) return;
     setSwap(!swapLabels);
     zoomSeed += 1;
@@ -640,15 +674,23 @@ export function bindPlaybook({
     }
     const slot = q("[data-idea='11']");
     if (slot && url && !reduced()) {
+      const generation = slotGeneration;
       slot.hidden = false;
       let tick = 0;
-      const timer = view().setInterval(() => {
+      slotTimer = view().setInterval(() => {
+        if (!shouldCommitSlotReveal(generation, slotGeneration, enabled && isOn())) {
+          stopSlotReveal();
+          return;
+        }
         tick += 1;
         slot.textContent = slotCharsForTick(url, tick);
         if (tick >= SLOT_TICKS) {
-          view().clearInterval(timer);
+          view().clearInterval(slotTimer);
+          slotTimer = 0;
           slot.textContent = url;
-          view().setTimeout(() => {
+          slotRevealTimer = view().setTimeout(() => {
+            slotRevealTimer = 0;
+            if (!shouldCommitSlotReveal(generation, slotGeneration, enabled && isOn())) return;
             slot.hidden = true;
             if (cleanedUrl) cleanedUrl.textContent = url;
           }, 400);
@@ -679,7 +721,7 @@ export function bindPlaybook({
   const enable = () => {
     enabled = true;
     bindOnce();
-    savedSettings = snapshotSettings();
+    rememberSettings();
     applyLabels();
     applyTheme();
     applyZoom();
@@ -724,6 +766,7 @@ export function bindPlaybook({
   const disable = () => {
     enabled = false;
     stopGravity();
+    stopSlotReveal();
     view().clearTimeout(holdTimer);
     holdTimer = 0;
     restoreLabels();

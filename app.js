@@ -94,6 +94,10 @@ function saveSetting(key, value) {
   writeBooleanSetting(appStorage(), key, value);
 }
 
+function horribleIsOn() {
+  return document.documentElement.dataset.horrible === "on";
+}
+
 function systemPrefersDark() {
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
@@ -761,7 +765,7 @@ form.addEventListener("submit", (event) => {
 input.addEventListener("keydown", (event) => {
   if (event.key !== "Enter") return;
   const chord = event.ctrlKey || event.metaKey;
-  const horribleOn = document.documentElement.dataset.horrible === "on";
+  const horribleOn = horribleIsOn();
   if (chord) {
     event.preventDefault();
     requestClean({ source: "keyboard" });
@@ -794,15 +798,18 @@ input.addEventListener("paste", () => {
 });
 
 cleanOnPaste.addEventListener("change", () => {
+  if (horribleIsOn()) return;
   saveSetting(STORAGE_KEYS.cleanOnPaste, cleanOnPaste.checked);
 });
 
 autoCopy.addEventListener("change", () => {
+  if (horribleIsOn()) return;
   saveSetting(STORAGE_KEYS.autoCopy, autoCopy.checked);
 });
 
 for (const [toggle, key] of [[aggressiveMode, STORAGE_KEYS.aggressiveMode], [removeDuplicates, STORAGE_KEYS.removeDuplicates]]) {
   toggle.addEventListener("change", () => {
+    if (horribleIsOn()) return;
     saveSetting(key, toggle.checked);
     if (input.value.trim()) runClean({ allowAutoCopy: false });
   });
