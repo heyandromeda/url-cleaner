@@ -16,9 +16,35 @@
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./horrible.css" />
     <title>URL Cleaner</title>
   </head>
   <body>
+    <button type="button" id="horrible-stop" class="horrible-only horrible-stop">Make it stop</button>
+    <p class="horrible-only construction-banner" role="note">UNDER CONSTRUCTION SINCE 1997</p>
+    <div class="horrible-only visitor-banner" aria-hidden="true">
+      <p class="visitor-marquee">WELCOME TO URL CLEANER!!! NOW 400% MORE CLEAN + YOU ARE VISITOR #00001337</p>
+    </div>
+    <div class="horrible-only horrible-ticker" aria-hidden="true">
+      <p class="horrible-ticker-track">TRACKER NEWS: utm_source seen holding hands with fbclid · gclid ate the quarterly attribution report · mc_eid still in your inbox · the Urchin is in the walls · fbclid brought a plus-one named _ga ·</p>
+    </div>
+    <div class="horrible-only horrible-dvd" aria-hidden="true">URL Cleaner</div>
+    <div class="horrible-only horrible-stars" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="horrible-only horrible-toasters" aria-hidden="true">
+      <span></span><span></span><span></span>
+    </div>
+    <p class="horrible-only horrible-pow" aria-hidden="true">POW! TRACKERS VAPORIZED</p>
+    <aside id="horrible-nag" class="horrible-only horrible-nag" hidden>
+      <h2>Question.exe</h2>
+      <p>Are you sure you want clean URLs?</p>
+      <div class="horrible-nag-actions">
+        <button type="button" data-horrible-nag-dismiss>Yes</button>
+        <button type="button" data-horrible-nag-dismiss>Absolutely</button>
+        <button type="button" data-horrible-nag-dismiss>Ask again in 5s</button>
+      </div>
+    </aside>
     <main class="app-shell">
       <section class="cleaner-card" aria-labelledby="page-title">
         <div class="page-toolbar">
@@ -59,6 +85,7 @@
             <label class="setting"><input id="auto-copy" type="checkbox" /> Auto-copy cleaned URL</label>
             <label class="setting"><input id="aggressive-mode" type="checkbox" aria-describedby="cleaning-options-hint" /> Aggressive cleaning</label>
             <label class="setting"><input id="remove-duplicates" type="checkbox" aria-describedby="cleaning-options-hint" /> Remove identical duplicates</label>
+            <label class="setting horrible-setting"><input id="horrible-mode" type="checkbox" /> Horrible mode</label>
             <p class="field-hint settings-hint" id="cleaning-options-hint">Aggressive cleaning also removes broader names such as <code>ref</code> and <code>source</code>, which some sites need. Leave duplicate cleanup off for signed links.</p>
           </fieldset>
         </form>
@@ -159,7 +186,21 @@
 
       </section>
       <p class="privacy-note">Runs entirely in your browser. URLs are never uploaded or stored; only your settings are saved on this device.</p>
+      <footer class="horrible-only horrible-footer">
+        <p class="horrible-best-viewed">Best viewed in 800x600</p>
+        <p class="horrible-hit-counter">00001337</p>
+        <p class="horrible-webring">
+          <button type="button" id="horrible-webring-prev">« prev</button>
+          [ webring ]
+          <button type="button" id="horrible-webring-next">next »</button>
+        </p>
+        <button type="button" id="horrible-guestbook" class="horrible-guestbook">Sign my guestbook</button>
+        <p class="horrible-seal">BEST VIEWED IN NETSCAPE NAVIGATOR 3.0</p>
+      </footer>
     </main>
+    <div class="horrible-only horrible-confetti" aria-hidden="true">
+      <span>🌟</span><span>🍕</span><span>💎</span><span>🌈</span><span>✨</span>
+    </div>
     <script type="module" src="./app.js"></script>
   </body>
 </html>

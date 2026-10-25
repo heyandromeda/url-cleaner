@@ -22,4 +22,16 @@
   if (meta) {
     meta.setAttribute("content", theme === "dark" ? "#141414" : "#ffffff");
   }
+
+  var horrible = false;
+  try {
+    horrible = localStorage.getItem("url-cleaner.horrible") === "true";
+  } catch {
+    horrible = false;
+  }
+  if (horrible) {
+    document.documentElement.dataset.horrible = "on";
+  } else {
+    delete document.documentElement.dataset.horrible;
+  }
 })();
